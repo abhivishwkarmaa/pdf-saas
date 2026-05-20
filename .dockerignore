@@ -10,7 +10,7 @@ data
 worker
 Dockerfile.worker
 *.md
-.env
+.env 
 .env.*
 !.env.example
 apps/web/.env
