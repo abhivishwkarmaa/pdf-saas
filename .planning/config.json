@@ -1,0 +1,7 @@
+{
+  "granularity": "standard",
+  "execution": "parallel",
+  "commit_docs": true,
+  "phase_research": true,
+  "model_profile": "balanced"
+}

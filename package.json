@@ -1,0 +1,19 @@
+{
+  "name": "pdf-saas",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @pdf-saas/web",
+    "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web",
+    "start": "npm run start -w @pdf-saas/web",
+    "docker:check": "sh scripts/check-docker.sh",
+    "docker:build": "sh scripts/check-docker.sh && docker compose build",
+    "docker:up": "sh scripts/check-docker.sh && docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f web",
+    "setup:mac": "sh scripts/install-mac-cli.sh"
+  }
+}
