@@ -15,5 +15,8 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f web",
     "setup:mac": "sh scripts/install-mac-cli.sh"
+  },
+  "dependencies": {
+    "lightningcss": "^1.32.0"
   }
 }

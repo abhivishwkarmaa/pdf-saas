@@ -135,6 +135,92 @@ export async function addPageNumbers(file: File): Promise<Blob> {
   return blobFromPdf(doc);
 }
 
+export async function txtToPdf(file: File): Promise<Blob> {
+  const text = await file.text();
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  let page = doc.addPage([612, 792]);
+  const margin = 50;
+  const fontSize = 11;
+  const lineHeight = 14;
+  let y = 792 - margin;
+  const lines = text.split("\n");
+  for (const line of lines) {
+    if (y < margin + lineHeight) {
+      page = doc.addPage([612, 792]);
+      y = 792 - margin;
+    }
+    const cleanLine = line.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
+    page.drawText(cleanLine, {
+      x: margin,
+      y,
+      size: fontSize,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    y -= lineHeight;
+  }
+  return blobFromPdf(doc);
+}
+
+export async function cropPdf(file: File): Promise<Blob> {
+  const buf = await file.arrayBuffer();
+  const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    const dx = width * 0.1;
+    const dy = height * 0.1;
+    page.setCropBox(dx, dy, width - 2 * dx, height - 2 * dy);
+  }
+  return blobFromPdf(doc);
+}
+
+export async function redactPdf(file: File): Promise<Blob> {
+  const buf = await file.arrayBuffer();
+  const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    page.drawRectangle({
+      x: 50,
+      y: height - 100,
+      width: width - 100,
+      height: 60,
+      color: rgb(0, 0, 0),
+    });
+  }
+  return blobFromPdf(doc);
+}
+
+export async function signPdf(files: File[]): Promise<Blob> {
+  if (files.length < 2) {
+    throw new Error("Please upload both a PDF and a signature image.");
+  }
+  const pdfFile = files.find((f) => f.type === "application/pdf");
+  const imgFile = files.find((f) => f.type.startsWith("image/"));
+  if (!pdfFile || !imgFile) {
+    throw new Error("Please upload one PDF file and one image file.");
+  }
+  const pdfBuf = await pdfFile.arrayBuffer();
+  const imgBuf = await imgFile.arrayBuffer();
+  const doc = await PDFDocument.load(pdfBuf, { ignoreEncryption: true });
+  const image =
+    imgFile.type === "image/png"
+      ? await doc.embedPng(imgBuf)
+      : await doc.embedJpg(imgBuf);
+  const pages = doc.getPages();
+  if (pages.length > 0) {
+    const firstPage = pages[0];
+    const { width } = firstPage.getSize();
+    firstPage.drawImage(image, {
+      x: width - 200,
+      y: 50,
+      width: 150,
+      height: 75,
+    });
+  }
+  return blobFromPdf(doc);
+}
+
 function parsePages(pages: string, total: number): Set<number> {
   const set = new Set<number>();
   for (const part of pages.split(",").map((p) => p.trim())) {

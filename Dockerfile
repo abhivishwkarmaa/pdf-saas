@@ -10,8 +10,9 @@ COPY packages/shared/package.json packages/shared/
 COPY scripts/docker-npm-native.sh /tmp/docker-npm-native.sh
 
 # Install inside Linux container so native modules match the image arch (not macOS lockfile)
-RUN npm ci --include=optional \
-  && sh /tmp/docker-npm-native.sh
+RUN sed -i 's/\r$//' /tmp/docker-npm-native.sh \
+  && npm ci --include=optional \
+  && bash /tmp/docker-npm-native.sh
 
 COPY packages/shared packages/shared
 COPY apps/web apps/web

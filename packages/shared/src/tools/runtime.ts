@@ -26,6 +26,9 @@ export const SERVER_TOOL_SLUGS = new Set<string>([
   "heic-to-jpg",
   "svg-to-png",
   "avif-to-jpg",
+  "pdf-to-jpg",
+  "pdf-to-png",
+  "pdf-to-text",
 ]);
 
 export type ToolRuntime = "browser" | "server" | "utility";
