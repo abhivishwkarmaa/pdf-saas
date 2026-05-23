@@ -12,8 +12,9 @@
     "docker:check": "sh scripts/check-docker.sh",
     "docker:build": "sh scripts/check-docker.sh && docker compose build",
     "docker:up": "sh scripts/check-docker.sh && docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f web",
+    "docker:down": "sh scripts/check-docker.sh && docker compose down",
+    "docker:logs": "sh scripts/check-docker.sh && docker compose logs -f web",
+    "setup:docker": "sh scripts/setup-docker-plugin.sh",
     "setup:mac": "sh scripts/install-mac-cli.sh"
   },
   "dependencies": {
