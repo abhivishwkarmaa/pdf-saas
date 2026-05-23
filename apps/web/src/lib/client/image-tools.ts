@@ -77,3 +77,23 @@ export async function rotateImage(file: File, angle: number): Promise<Blob> {
     );
   });
 }
+
+export async function cropImage(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  const dx = bitmap.width * 0.1;
+  const dy = bitmap.height * 0.1;
+  const w = bitmap.width - 2 * dx;
+  const h = bitmap.height - 2 * dy;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, dx, dy, w, h, 0, 0, w, h);
+  bitmap.close();
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Crop failed"))),
+      file.type || "image/png"
+    );
+  });
+}

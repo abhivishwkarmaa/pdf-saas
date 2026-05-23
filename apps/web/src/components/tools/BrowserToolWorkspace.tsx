@@ -83,6 +83,22 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           blob = await pdf.addPageNumbers(files[0]);
           downloadBlob(blob, "numbered.pdf");
           break;
+        case "txt-to-pdf":
+          blob = await pdf.txtToPdf(files[0]);
+          downloadBlob(blob, "document.pdf");
+          break;
+        case "crop-pdf":
+          blob = await pdf.cropPdf(files[0]);
+          downloadBlob(blob, "cropped.pdf");
+          break;
+        case "redact-pdf":
+          blob = await pdf.redactPdf(files[0]);
+          downloadBlob(blob, "redacted.pdf");
+          break;
+        case "sign-pdf":
+          blob = await pdf.signPdf(files);
+          downloadBlob(blob, "signed.pdf");
+          break;
         case "jpg-to-png":
           blob = await img.convertImageFormat(files[0], "image/png");
           downloadBlob(blob, imageDownloadName(files[0]));
@@ -110,6 +126,10 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
             Number(options.width) || 800,
             Number(options.height) || 600
           );
+          downloadBlob(blob, imageDownloadName(files[0]));
+          break;
+        case "crop-image":
+          blob = await img.cropImage(files[0]);
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
         case "rotate-image":

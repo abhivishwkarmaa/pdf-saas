@@ -7,6 +7,7 @@ import { imageToWord } from "./handlers/image-word";
 import { repairPdf } from "./handlers/repair";
 import { pdfToPdfA } from "./handlers/pdfa";
 import { protectPdf, unlockPdf } from "../pdf/security";
+import { pdfToText, pdfToImage } from "./handlers/pdf-extract";
 import sharp from "sharp";
 
 export interface ServerProcessResult {
@@ -90,6 +91,18 @@ export async function processOnServer(
     case "unlock-pdf": {
       const out = await unlockPdf(buffers[0], String(options.password ?? ""));
       return { buffer: out, mimeType: "application/pdf", fileName: "unlocked.pdf" };
+    }
+    case "pdf-to-text": {
+      const out = await pdfToText(buffers[0]);
+      return { buffer: out, mimeType: "text/plain", fileName: "extracted.txt" };
+    }
+    case "pdf-to-jpg": {
+      const out = await pdfToImage(buffers[0], "jpeg");
+      return { buffer: out, mimeType: "image/jpeg", fileName: "converted.jpg" };
+    }
+    case "pdf-to-png": {
+      const out = await pdfToImage(buffers[0], "png");
+      return { buffer: out, mimeType: "image/png", fileName: "converted.png" };
     }
     default:
       throw new Error(`Server processing not available for: ${toolSlug}`);
