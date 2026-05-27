@@ -9,6 +9,7 @@
     "dev": "npm run dev -w @pdf-saas/web",
     "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web",
     "start": "npm run start -w @pdf-saas/web",
+    "tools:check": "sh scripts/check-server-tools.sh",
     "docker:check": "sh scripts/check-docker.sh",
     "docker:build": "sh scripts/check-docker.sh && docker compose build",
     "docker:up": "sh scripts/check-docker.sh && docker compose up -d",
@@ -16,6 +17,28 @@
     "docker:logs": "sh scripts/check-docker.sh && docker compose logs -f web",
     "setup:docker": "sh scripts/setup-docker-plugin.sh",
     "setup:mac": "sh scripts/install-mac-cli.sh"
+  },
+  "systemDependencies": {
+    "binaries": [
+      "soffice",
+      "gs",
+      "qpdf",
+      "pdftoppm",
+      "tesseract"
+    ],
+    "debianApt": [
+      "ca-certificates",
+      "ghostscript",
+      "poppler-utils",
+      "qpdf",
+      "tesseract-ocr",
+      "tesseract-ocr-eng",
+      "libreoffice-writer",
+      "libreoffice-calc",
+      "libreoffice-impress",
+      "fonts-dejavu-core",
+      "fonts-liberation"
+    ]
   },
   "dependencies": {
     "lightningcss": "^1.32.0"

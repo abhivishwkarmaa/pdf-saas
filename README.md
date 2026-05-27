@@ -83,6 +83,12 @@ npm run docker:down
 
 ## Install CLI on host (without Docker)
 
+Check required server CLI tools are installed:
+
+```bash
+npm run tools:check
+```
+
 macOS — one command:
 
 ```bash
