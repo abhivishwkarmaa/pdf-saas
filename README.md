@@ -14,11 +14,19 @@ Free online PDF tools: merge, split, compress, convert, OCR, and more.
 
 ```bash
 cp .env.example apps/web/.env
-npm install
+npm run install:optional
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+If you see errors like `Cannot find native binding` from Tailwind `@tailwindcss/oxide`,
+reinstall with:
+
+```bash
+rm -rf node_modules package-lock.json
+npm run install:optional
+```
 
 Local `npm run dev` does **not** include LibreOffice unless you install it on your Mac. Use Docker below for full server tools.
 
