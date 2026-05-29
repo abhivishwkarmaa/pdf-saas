@@ -15,6 +15,7 @@ import { PrimaryButton } from "./PrimaryButton";
 import { ToolOptionsForm } from "./ToolOptionsForm";
 import { SubmissionPreview } from "./SubmissionPreview";
 import { CATEGORY_THEME } from "@/lib/category-theme";
+import { getToolOptionDefaults } from "@/lib/tool-options";
 
 interface BrowserToolWorkspaceProps {
   tool: ToolDefinition;
@@ -24,7 +25,9 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
   const theme = CATEGORY_THEME[tool.category];
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [options, setOptions] = useState<Record<string, string>>({});
+  const [options, setOptions] = useState<Record<string, string>>(
+    getToolOptionDefaults(tool.slug)
+  );
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
@@ -44,21 +47,21 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           downloadBlob(blob, "merged.pdf");
           break;
         case "split-pdf": {
-          const parts = await pdf.splitPdf(files[0], options.ranges ?? "1");
+          const parts = await pdf.splitPdf(files[0], options.ranges || "1");
           parts.forEach((b, i) => downloadBlob(b, `part-${i + 1}.pdf`));
           toast.success(`Downloaded ${parts.length} file(s)`);
           return;
         }
         case "remove-pages":
-          blob = await pdf.removePages(files[0], options.pages ?? "1");
+          blob = await pdf.removePages(files[0], options.pages || "1");
           downloadBlob(blob, "removed.pdf");
           break;
         case "extract-pages":
-          blob = await pdf.extractPages(files[0], options.pages ?? "1");
+          blob = await pdf.extractPages(files[0], options.pages || "1");
           downloadBlob(blob, "extracted.pdf");
           break;
         case "organize-pdf":
-          blob = await pdf.organizePdf(files[0], options.order ?? "1");
+          blob = await pdf.organizePdf(files[0], options.order || "1");
           downloadBlob(blob, "organized.pdf");
           break;
         case "rotate-pdf":
@@ -76,7 +79,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           downloadBlob(blob, "document.pdf");
           break;
         case "watermark-pdf":
-          blob = await pdf.watermarkPdf(files[0], options.text ?? "CONFIDENTIAL");
+          blob = await pdf.watermarkPdf(files[0], options.text || "CONFIDENTIAL");
           downloadBlob(blob, "watermarked.pdf");
           break;
         case "page-numbers":

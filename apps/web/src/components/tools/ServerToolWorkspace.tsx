@@ -11,6 +11,7 @@ import { PrimaryButton } from "./PrimaryButton";
 import { ToolOptionsForm } from "./ToolOptionsForm";
 import { SubmissionPreview } from "./SubmissionPreview";
 import { CATEGORY_THEME } from "@/lib/category-theme";
+import { getToolOptionDefaults } from "@/lib/tool-options";
 
 interface ServerToolWorkspaceProps {
   tool: ToolDefinition;
@@ -20,7 +21,9 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
   const theme = CATEGORY_THEME[tool.category];
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [options, setOptions] = useState<Record<string, string>>({});
+  const [options, setOptions] = useState<Record<string, string>>(
+    getToolOptionDefaults(tool.slug)
+  );
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
@@ -33,7 +36,10 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
       toast.error(`Maximum ${tool.maxFiles} file(s)`);
       return;
     }
+
     setProcessing(true);
+    // Progress and status state are not displayed in this workspace.
+
     try {
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f));
@@ -53,7 +59,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
 
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition");
-      const match = disposition?.match(/filename="([^"]+)"/);
+      const match = disposition?.match(/filename="([^\"]+)"/);
       const fileName = match?.[1] ?? "result";
 
       const url = URL.createObjectURL(blob);

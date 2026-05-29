@@ -69,36 +69,7 @@ export default function HomePage() {
           );
         })}
       </section>
-
-      <footer className="border-t border-border bg-zinc-100 px-4 py-12 text-zinc-900 dark:bg-zinc-950 dark:text-white">
-        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-2">
-          <div>
-            <p className="mb-4 font-bold">CONVERTHUB</p>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              {categories.map((cat) => (
-                <li key={cat}>
-                  <Link
-                    href={`/#${cat}`}
-                    className="hover:text-zinc-900 dark:hover:text-white"
-                  >
-                    {TOOL_CATEGORIES[cat].label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="mb-4 font-bold">About &amp; Support</p>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li>About Us</li>
-              <li>Contact</li>
-              <li>Privacy Policy</li>
-              <li>Terms of Service</li>
-              <li>FAQ</li>
-            </ul>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
+

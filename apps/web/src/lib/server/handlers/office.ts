@@ -15,9 +15,37 @@ const extMap: Record<string, string> = {
 export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
   const dir = await mkdtemp(join(tmpdir(), "pdf-word-"));
   const input = join(dir, "input.pdf");
+  const outputDocx = join(dir, "output.docx");
   const outputTxt = join(dir, "text.txt");
   try {
     await writeFile(input, buffer);
+
+    // ── Strategy 1: pdf2docx (image-preserving) ──────────────────────────
+    const hasPython = (await exists("python3")) || (await exists("python"));
+    if (hasPython) {
+      const pythonBin = (await exists("python3")) ? "python3" : "python";
+
+      // Check whether pdf2docx is installed
+      let hasPdf2docx = false;
+      try {
+        await run(pythonBin, ["-c", "import pdf2docx"]);
+        hasPdf2docx = true;
+      } catch {}
+
+      if (hasPdf2docx) {
+        try {
+          await run(pythonBin, [
+            "-c",
+            `from pdf2docx import Converter; cv=Converter(r"${input}"); cv.convert(r"${outputDocx}"); cv.close()`,
+          ]);
+          return await readFile(outputDocx);
+        } catch (err) {
+          console.error("pdf2docx conversion error, falling back:", err);
+        }
+      }
+    }
+
+    // ── Strategy 2: Original Text/OCR fallback ──────────────────────────
     let text = "";
     if (await exists("pdftotext")) {
       try {

@@ -4,6 +4,9 @@ import { getToolBySlug, resolveRuntime, TOOL_CATEGORIES } from "@pdf-saas/shared
 import { BrowserToolWorkspace } from "@/components/tools/BrowserToolWorkspace";
 import { ServerToolWorkspace } from "@/components/tools/ServerToolWorkspace";
 import { UtilityWorkspace } from "@/components/tools/UtilityWorkspace";
+import { VideoConverterWorkspace } from "@/components/tools/VideoConverterWorkspace";
+import { ImageEditorWorkspace } from "@/components/tools/ImageEditorWorkspace";
+import { VideoEditorWorkspace } from "@/components/tools/VideoEditorWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -36,6 +39,14 @@ export default async function ToolPage({ params }: PageProps) {
   const tool = getToolBySlug(slug);
   if (!tool || !tool.enabled) notFound();
 
+  // Full-screen editors bypass the standard tool page layout
+  if (slug === "image-editor") {
+    return <ImageEditorWorkspace tool={tool} />;
+  }
+  if (slug === "video-editor") {
+    return <VideoEditorWorkspace tool={tool} />;
+  }
+
   const theme = CATEGORY_THEME[tool.category];
   const Icon = theme.icon;
   const categoryMeta = TOOL_CATEGORIES[tool.category];
@@ -56,7 +67,9 @@ export default async function ToolPage({ params }: PageProps) {
           {tool.description}
         </p>
       </div>
-      {resolveRuntime(tool) === "utility" ? (
+      {slug === "video-converter" ? (
+        <VideoConverterWorkspace tool={tool} />
+      ) : resolveRuntime(tool) === "utility" ? (
         <UtilityWorkspace tool={tool} />
       ) : resolveRuntime(tool) === "server" ? (
         <ServerToolWorkspace tool={tool} />
@@ -66,3 +79,4 @@ export default async function ToolPage({ params }: PageProps) {
     </div>
   );
 }
+

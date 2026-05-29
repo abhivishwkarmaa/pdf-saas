@@ -4,7 +4,7 @@ import { CATEGORY_THEME } from "@/lib/category-theme";
 import { ArrowRight } from "lucide-react";
 
 export function ToolCard({ tool }: { tool: ToolDefinition }) {
-  const theme = CATEGORY_THEME[tool.category];
+  const theme = CATEGORY_THEME[tool.category] ?? CATEGORY_THEME.pdf;
   const Icon = theme.icon;
 
   return (

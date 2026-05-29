@@ -37,11 +37,12 @@ export async function POST(
       options = JSON.parse(optionsRaw) as Record<string, unknown>;
     }
 
+    const filenames = files.map((f) => f.name);
     const buffers = await Promise.all(
       files.map(async (f) => Buffer.from(await f.arrayBuffer()))
     );
 
-    const result = await processOnServer(slug, buffers, options);
+    const result = await processOnServer(slug, buffers, options, filenames);
 
     const fileName =
       tool.category === "image" && files[0]?.name

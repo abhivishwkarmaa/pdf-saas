@@ -1,27 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "./ThemeProvider";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "h-9 w-[108px] rounded-lg bg-zinc-200/80 dark:bg-zinc-800",
-          className
-        )}
-        aria-hidden
-      />
-    );
-  }
+  // We render client-only UI; this component is a client component so it's safe
+  // to consider it mounted on first render.
+  const mounted = true;
 
   const options: { id: ThemeMode; icon: typeof Sun; label: string }[] = [
     { id: "light", icon: Sun, label: "Light" },

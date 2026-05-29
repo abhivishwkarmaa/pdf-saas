@@ -29,6 +29,7 @@ export const SERVER_TOOL_SLUGS = new Set<string>([
   "pdf-to-jpg",
   "pdf-to-png",
   "pdf-to-text",
+  "video-converter",
 ]);
 
 export type ToolRuntime = "browser" | "server" | "utility";

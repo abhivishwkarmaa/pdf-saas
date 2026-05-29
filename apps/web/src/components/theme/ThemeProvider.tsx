@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -35,9 +36,28 @@ function applyTheme(resolved: "light" | "dark") {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Use safe SSR defaults so server and client render identical HTML on first pass.
+  // The real localStorage value is applied after mount via useEffect below.
   const [theme, setThemeState] = useState<ThemeMode>("system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+
+  // Hydrate from localStorage after mount to avoid SSR/client mismatch.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
+      const mode: ThemeMode =
+        stored === "light" || stored === "dark" || stored === "system"
+          ? stored
+          : "system";
+      const resolved = mode === "system" ? getSystemTheme() : mode;
+      setThemeState(mode);
+      setResolvedTheme(resolved);
+      applyTheme(resolved);
+    } catch {
+      // localStorage unavailable – keep defaults.
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resolve = useCallback((mode: ThemeMode) => {
     return mode === "system" ? getSystemTheme() : mode;
@@ -45,8 +65,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback(
     (mode: ThemeMode) => {
-      setThemeState(mode);
       localStorage.setItem(STORAGE_KEY, mode);
+      setThemeState(mode);
       const resolved = resolve(mode);
       setResolvedTheme(resolved);
       applyTheme(resolved);
@@ -54,18 +74,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [resolve]
   );
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-    const initial: ThemeMode =
-      stored === "light" || stored === "dark" || stored === "system"
-        ? stored
-        : "system";
-    setThemeState(initial);
-    const resolved = resolve(initial);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
-    setMounted(true);
+  useLayoutEffect(() => {
+    applyTheme(resolvedTheme);
+  }, [resolvedTheme]);
 
+  useLayoutEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onSystemChange = () => {
       const mode = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
@@ -77,26 +90,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
     mq.addEventListener("change", onSystemChange);
     return () => mq.removeEventListener("change", onSystemChange);
-  }, [resolve]);
+  }, []);
 
   const value = useMemo(
     () => ({ theme, resolvedTheme, setTheme }),
     [theme, resolvedTheme, setTheme]
   );
 
-  if (!mounted) {
-    return (
-      <ThemeContext.Provider
-        value={{ theme: "system", resolvedTheme: "light", setTheme: () => {} }}
-      >
-        {children}
-      </ThemeContext.Provider>
-    );
-  }
-
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

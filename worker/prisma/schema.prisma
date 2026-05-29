@@ -1,0 +1,38 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Job {
+  id          String    @id @default(uuid())
+  toolSlug    String
+  status      String    // queued, processing, completed, failed
+  progress    Int       @default(0)
+  speed       String?   // e.g. "1.2x"
+  eta         String?   // e.g. "00:15"
+  error       String?
+  inputKeys   String[]
+  outputKey   String?
+  outputKeys  String[]
+  mimeType    String?
+  fileName    String?
+  logs        String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+}
+
+model Preset {
+  id         String   @id @default(uuid())
+  name       String
+  format     String
+  resolution String
+  fps        String
+  codec      String
+  bitrate    String
+  createdAt  DateTime @default(now())
+}

@@ -25,7 +25,8 @@ export async function runCommand(
 
 export async function commandExists(cmd: string): Promise<boolean> {
   try {
-    await runCommand("which", [cmd]);
+    const whichCmd = process.platform === "win32" ? "where" : "which";
+    await runCommand(whichCmd, [cmd]);
     return true;
   } catch {
     return false;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ToolCategory } from "@pdf-saas/shared";
-import { ArrowRight, Upload, FileText, Image, Code } from "lucide-react";
+import { ArrowRight, Upload, FileText, Image as ImageIcon, Play } from "lucide-react";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { CATEGORY_PREVIEW } from "@/lib/category-preview";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,8 @@ function PreviewMock({ category }: { category: ToolCategory }) {
       return <PdfPreview />;
     case "image":
       return <ImagePreview />;
+    case "video":
+      return <VideoPreview />;
     case "text":
       return <TextPreview />;
     case "developer":
@@ -123,10 +125,37 @@ function ImagePreview() {
       </div>
       <ArrowRight className="h-5 w-5 shrink-0 text-blue-500" />
       <div className="flex flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/40">
-        <Image className="h-8 w-8 text-blue-500" />
+        <ImageIcon className="h-8 w-8 text-blue-500" />
         <span className="text-[10px] font-medium text-blue-700 dark:text-blue-300">
           output.webp
         </span>
+      </div>
+    </div>
+  );
+}
+
+function VideoPreview() {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border-2 border-dashed border-pink-200 bg-pink-50/50 px-4 py-6 text-center dark:border-pink-900/60 dark:bg-pink-950/20">
+        <Play className="mx-auto h-8 w-8 text-pink-400" />
+        <p className="mt-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          Drop video files here
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        {["sample.mov", "demo.avi"].map((name) => (
+          <div
+            key={name}
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800"
+          >
+            <Play className="h-4 w-4 text-pink-500" />
+            <span className="truncate text-zinc-700 dark:text-zinc-300">{name}</span>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg bg-pink-600 py-2 text-center text-xs font-semibold text-white">
+        Convert to MP4
       </div>
     </div>
   );

@@ -17,6 +17,11 @@ export const CATEGORY_PREVIEW: Record<ToolCategory, CategoryPreviewMeta> = {
     featuredLabel: "Compress Image",
     highlights: ["Resize & crop", "JPG, PNG, WebP", "Instant download"],
   },
+  video: {
+    featuredSlug: "video-converter",
+    featuredLabel: "Video Converter",
+    highlights: ["MP4, MOV, AVI", "Compress & convert", "Extract audio MP3"],
+  },
   text: {
     featuredSlug: "markdown-to-pdf",
     featuredLabel: "Markdown to PDF",

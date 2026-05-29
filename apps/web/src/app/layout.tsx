@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,20 +22,8 @@ export const metadata: Metadata = {
     template: "%s | CONVERTHUB",
   },
   description:
-    "Convert PDF, images, documents, and more. 60+ free tools, no registration required.",
+    "Convert PDF, images, documents, and more. 70+ free tools, no registration required.",
 };
-
-const themeScript = `
-(function() {
-  try {
-    var k = 'converthub-theme';
-    var t = localStorage.getItem(k);
-    var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (dark) document.documentElement.classList.add('dark');
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-  } catch (e) {}
-})();
-`;
 
 export default function RootLayout({
   children,
@@ -47,17 +36,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {themeScript}
-        </Script>
-      </head>
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
         <ThemeProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
+          <ErrorBoundary>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

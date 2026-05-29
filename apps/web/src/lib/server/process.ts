@@ -8,6 +8,7 @@ import { repairPdf } from "./handlers/repair";
 import { pdfToPdfA } from "./handlers/pdfa";
 import { protectPdf, unlockPdf } from "../pdf/security";
 import { pdfToText, pdfToImage } from "./handlers/pdf-extract";
+import { processVideo } from "./handlers/video";
 import sharp from "sharp";
 
 export interface ServerProcessResult {
@@ -19,7 +20,8 @@ export interface ServerProcessResult {
 export async function processOnServer(
   toolSlug: string,
   buffers: Buffer[],
-  options: Record<string, unknown> = {}
+  options: Record<string, unknown> = {},
+  fileNames: string[] = []
 ): Promise<ServerProcessResult> {
   switch (toolSlug) {
     case "compress-pdf": {
@@ -103,6 +105,10 @@ export async function processOnServer(
     case "pdf-to-png": {
       const out = await pdfToImage(buffers[0], "png");
       return { buffer: out, mimeType: "image/png", fileName: "converted.png" };
+    }
+    case "video-converter": {
+      const fileName = fileNames[0] ?? undefined;
+      return processVideo(buffers.length > 1 ? buffers : buffers[0], options as any, fileName);
     }
     default:
       throw new Error(`Server processing not available for: ${toolSlug}`);

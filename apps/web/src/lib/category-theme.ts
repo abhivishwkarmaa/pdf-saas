@@ -5,6 +5,7 @@ import {
   FileText,
   Image,
   Type,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,16 @@ export const CATEGORY_THEME: Record<ToolCategory, CategoryTheme> = {
     sectionBg: "bg-white dark:bg-zinc-900",
     button: "bg-blue-600 hover:bg-blue-700",
     ring: "focus:ring-blue-500",
+  },
+  video: {
+    icon: Video,
+    label: "Video",
+    accent: "text-cyan-600",
+    accentBg: "bg-cyan-50 dark:bg-cyan-950/50",
+    accentBorder: "border-cyan-200 dark:border-cyan-900",
+    sectionBg: "bg-white dark:bg-zinc-900",
+    button: "bg-cyan-600 hover:bg-cyan-700",
+    ring: "focus:ring-cyan-500",
   },
   text: {
     icon: Type,

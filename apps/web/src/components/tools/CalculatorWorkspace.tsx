@@ -152,12 +152,14 @@ function PercentageCalc({
   const [a, setA] = useState("");
   const [b, setB] = useState("");
   const [result, setResult] = useState<string | null>(null);
-
-  const modes: { id: PercentMode; label: string }[] = [
-    { id: "of", label: "X% of Y" },
-    { id: "is", label: "X is % of Y" },
-    { id: "change", label: "% change" },
-  ];
+  const modes = useMemo(
+    () => [
+      { id: "of", label: "X% of Y" },
+      { id: "is", label: "X is % of Y" },
+      { id: "change", label: "% change" },
+    ] as const,
+    []
+  );
 
   useEffect(() => {
     onPreview({
@@ -173,7 +175,10 @@ function PercentageCalc({
         ? { title: "Result", value: result }
         : undefined,
     });
-  }, [a, b, mode, result, onPreview]);
+  }, [a, b, mode, result, onPreview, modes]);
+  // `modes` is stable in this component and used by the preview summary.
+  // It is safe to include here since the array literal is recreated only when
+  // the component rerenders and the values are stable.
 
   const calculate = () => {
     onError(null);

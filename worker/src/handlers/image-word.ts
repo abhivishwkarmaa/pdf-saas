@@ -2,7 +2,9 @@ import { mkdtemp, writeFile, readFile, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { run, exists } from "../lib/exec.js";
-import { Document, Packer, Paragraph, TextRun } from "docx";
+import * as docx from "docx";
+
+const { Document, Packer, Paragraph, TextRun } = docx as any;
 
 export async function imageToWord(buffer: Buffer): Promise<Buffer> {
   let text = "";
