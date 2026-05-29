@@ -17,10 +17,21 @@ const DOCX_MIME =
  *                 images, screenshots, and vector graphics.
  *  2. LibreOffice – text-only fallback for environments without Python.
  */
-export async function pdfToWord(buffer: Buffer): Promise<HandlerResult> {
-  const dir = await mkdtemp(join(tmpdir(), "pdf2word-"));
-  const input = join(dir, "input.pdf");
-  const output = join(dir, "output.docx");
+function getBaseName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex === -1) return fileName;
+  return fileName.slice(0, dotIndex);
+}
+
+export async function pdfToWord(
+  buffer: Buffer,
+  originalFileName?: string
+): Promise<HandlerResult> {
+  const dir = (await mkdtemp(join(tmpdir(), "pdf2word-"))).replace(/\\/g, "/");
+  const input = join(dir, "input.pdf").replace(/\\/g, "/");
+  const output = join(dir, "output.docx").replace(/\\/g, "/");
+  const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+  const outFileName = `${baseName}.docx`;
 
   try {
     await writeFile(input, buffer);
@@ -49,45 +60,58 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 doc = fitz.open(r"${input}")
 word_doc = Document()
-for section in word_doc.sections:
+
+for i in range(len(doc)):
+    page = doc[i]
+    w = page.rect.width / 72.0
+    h = page.rect.height / 72.0
+    
+    # Scale down if it exceeds Microsoft Word's maximum page size limit (22 inches)
+    max_dim = 22.0
+    if w > max_dim or h > max_dim:
+        scale = max_dim / max(w, h)
+        w = w * scale
+        h = h * scale
+        
+    if i > 0:
+        section = word_doc.add_section()
+    else:
+        section = word_doc.sections[0]
+        
     section.top_margin = Pt(0)
     section.bottom_margin = Pt(0)
     section.left_margin = Pt(0)
     section.right_margin = Pt(0)
-    section.page_width = Inches(8.5)
-    section.page_height = Inches(11)
-
-for i in range(len(doc)):
-    page = doc[i]
+    section.page_width = Inches(w)
+    section.page_height = Inches(h)
+    
     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
     img_path = f"${dir}/page_{i}.png"
     pix.save(img_path)
-    if i > 0:
-        word_doc.add_page_break()
+    
     p = word_doc.add_paragraph()
     p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.line_spacing = Pt(0)
     r = p.add_run()
-    r.add_picture(img_path, width=Inches(8.5), height=Inches(11))
+    r.add_picture(img_path, width=Inches(w), height=Inches(h))
 
 word_doc.save(r"${output}")
 `;
           await run(pythonBin, ["-c", pyScript]);
 
           const out = await readFile(output);
-          const key = `outputs/${uuidv4()}/converted.docx`;
+          const key = `outputs/${uuidv4()}/${outFileName}`;
           await putObjectBuffer(key, out, DOCX_MIME);
-          return { outputKey: key, mimeType: DOCX_MIME, fileName: "converted.docx" };
+          return { outputKey: key, mimeType: DOCX_MIME, fileName: outFileName };
         } catch (e) {
           console.error("Image DOCX conversion failed, falling back to LibreOffice", e);
         }
       }
     }
 
-    // ── Strategy 2: Li
-    // breOffice fallback ─────────────────────────────────
+    // ── Strategy 2: LibreOffice fallback ─────────────────────────────────
     if (!(await exists("soffice"))) {
       throw new Error(
         "Neither pdf2docx (Python) nor LibreOffice is available. " +
@@ -104,9 +128,9 @@ word_doc.save(r"${output}")
     // LibreOffice names the output after the input file
     const outFile = "input.docx";
     const out = await readFile(join(dir, outFile));
-    const key = `outputs/${uuidv4()}/converted.docx`;
+    const key = `outputs/${uuidv4()}/${outFileName}`;
     await putObjectBuffer(key, out, DOCX_MIME);
-    return { outputKey: key, mimeType: DOCX_MIME, fileName: "converted.docx" };
+    return { outputKey: key, mimeType: DOCX_MIME, fileName: outFileName };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

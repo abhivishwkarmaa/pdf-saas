@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Send, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", subject: "General", message: "" });
@@ -10,9 +11,33 @@ export function ContactForm() {
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSent(true);
-    setLoading(false);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/contact`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSent(true);
+        toast.success(data.message || "Message sent successfully!");
+        setForm({ name: "", email: "", subject: "General", message: "" });
+      } else {
+        toast.error(data.message || "Failed to send message. Please try again.");
+      }
+    } catch (error) {
+      console.error("Contact submission error:", error);
+      toast.error("An error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (sent) {

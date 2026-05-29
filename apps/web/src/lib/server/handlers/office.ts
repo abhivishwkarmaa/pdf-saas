@@ -13,10 +13,10 @@ const extMap: Record<string, string> = {
 };
 
 export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
-  const dir = await mkdtemp(join(tmpdir(), "pdf-word-"));
-  const input = join(dir, "input.pdf");
-  const outputDocx = join(dir, "output.docx");
-  const outputTxt = join(dir, "text.txt");
+  const dir = (await mkdtemp(join(tmpdir(), "pdf-word-"))).replace(/\\/g, "/");
+  const input = join(dir, "input.pdf").replace(/\\/g, "/");
+  const outputDocx = join(dir, "output.docx").replace(/\\/g, "/");
+  const outputTxt = join(dir, "text.txt").replace(/\\/g, "/");
   try {
     await writeFile(input, buffer);
 
@@ -42,28 +42,42 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 doc = fitz.open(r"${input}")
 word_doc = Document()
-for section in word_doc.sections:
+
+for i in range(len(doc)):
+    page = doc[i]
+    w = page.rect.width / 72.0
+    h = page.rect.height / 72.0
+    
+    # Scale down if it exceeds Microsoft Word's maximum page size limit (22 inches)
+    max_dim = 22.0
+    if w > max_dim or h > max_dim:
+        scale = max_dim / max(w, h)
+        w = w * scale
+        h = h * scale
+        
+    if i > 0:
+        section = word_doc.add_section()
+    else:
+        section = word_doc.sections[0]
+        
     section.top_margin = Pt(0)
     section.bottom_margin = Pt(0)
     section.left_margin = Pt(0)
     section.right_margin = Pt(0)
-    section.page_width = Inches(8.5)
-    section.page_height = Inches(11)
-
-for i in range(len(doc)):
-    page = doc[i]
+    section.page_width = Inches(w)
+    section.page_height = Inches(h)
+    
     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
     img_path = f"${dir}/page_{i}.png"
     pix.save(img_path)
-    if i > 0:
-        word_doc.add_page_break()
+    
     p = word_doc.add_paragraph()
     p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.line_spacing = Pt(0)
     r = p.add_run()
-    r.add_picture(img_path, width=Inches(8.5), height=Inches(11))
+    r.add_picture(img_path, width=Inches(w), height=Inches(h))
 
 word_doc.save(r"${outputDocx}")
 `;
@@ -257,25 +271,34 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
   }
 }
 
+function getBaseName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex === -1) return fileName;
+  return fileName.slice(0, dotIndex);
+}
+
 export async function convertOffice(
   buffer: Buffer,
   targetFormat: string,
-  toolSlug: string
+  toolSlug: string,
+  originalFileName?: string
 ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
   const inputExt = guessInputExt(toolSlug, buffer);
+  const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+  const outFileName = `${baseName}.${targetFormat}`;
 
   if (inputExt === ".pdf") {
     if (targetFormat === "docx") {
       const out = await pdfToWord(buffer);
-      return { buffer: out, mimeType: mimeFor("docx"), fileName: "converted.docx" };
+      return { buffer: out, mimeType: mimeFor("docx"), fileName: outFileName };
     }
     if (targetFormat === "pptx") {
       const out = await pdfToPowerPoint(buffer);
-      return { buffer: out, mimeType: mimeFor("pptx"), fileName: "converted.pptx" };
+      return { buffer: out, mimeType: mimeFor("pptx"), fileName: outFileName };
     }
     if (targetFormat === "xlsx") {
       const out = await pdfToExcel(buffer);
-      return { buffer: out, mimeType: mimeFor("xlsx"), fileName: "converted.xlsx" };
+      return { buffer: out, mimeType: mimeFor("xlsx"), fileName: outFileName };
     }
   }
 
@@ -314,7 +337,7 @@ export async function convertOffice(
 
     const out = await readFile(join(dir, chosen));
     const mime = mimeFor(targetFormat);
-    return { buffer: out, mimeType: mime, fileName: chosen };
+    return { buffer: out, mimeType: mime, fileName: outFileName };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

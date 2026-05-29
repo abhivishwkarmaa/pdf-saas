@@ -8,8 +8,11 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @pdf-saas/web",
-    "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web && npm run build -w @pdf-saas/worker",
+    "dev:api": "npm run dev -w @pdf-saas/api",
+    "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web && npm run build -w @pdf-saas/worker && npm run build -w @pdf-saas/api",
+    "build:api": "npm run build -w @pdf-saas/api",
     "start": "npm run start -w @pdf-saas/web",
+    "start:api": "npm run start -w @pdf-saas/api",
     "install:optional": "npm ci --include=optional",
     "tools:check": "sh scripts/check-server-tools.sh",
     "docker:check": "sh scripts/check-docker.sh",

@@ -20,42 +20,56 @@ export interface HandlerResult {
   fileName: string;
 }
 
+function getBaseName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex === -1) return fileName;
+  return fileName.slice(0, dotIndex);
+}
+
 export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
   const buffers = await Promise.all(payload.inputKeys.map(getObjectBuffer));
   const opts = payload.options ?? {};
+  const fileNames = (opts._fileNames as string[]) || [];
+  const originalFileName = fileNames[0] || undefined;
 
   switch (payload.toolSlug) {
     case "compress-pdf": {
       const quality = String(opts.quality ?? "ebook");
       const out = await compressPdf(buffers[0], quality);
-      const key = `outputs/${uuidv4()}/compressed.pdf`;
+      const baseName = originalFileName ? getBaseName(originalFileName) : "compressed";
+      const outFileName = `${baseName}_compressed.pdf`;
+      const key = `outputs/${uuidv4()}/${outFileName}`;
       await putObjectBuffer(key, out, "application/pdf");
-      return { outputKey: key, mimeType: "application/pdf", fileName: "compressed.pdf" };
+      return { outputKey: key, mimeType: "application/pdf", fileName: outFileName };
     }
     case "pdf-to-pdfa": {
       const out = await pdfToPdfA(buffers[0]);
-      const key = `outputs/${uuidv4()}/output.pdf`;
+      const baseName = originalFileName ? getBaseName(originalFileName) : "pdfa";
+      const outFileName = `${baseName}.pdf`;
+      const key = `outputs/${uuidv4()}/${outFileName}`;
       await putObjectBuffer(key, out, "application/pdf");
-      return { outputKey: key, mimeType: "application/pdf", fileName: "pdfa.pdf" };
+      return { outputKey: key, mimeType: "application/pdf", fileName: outFileName };
     }
     case "repair-pdf": {
       const out = await repairPdf(buffers[0]);
-      const key = `outputs/${uuidv4()}/repaired.pdf`;
+      const baseName = originalFileName ? getBaseName(originalFileName) : "repaired";
+      const outFileName = `${baseName}_repaired.pdf`;
+      const key = `outputs/${uuidv4()}/${outFileName}`;
       await putObjectBuffer(key, out, "application/pdf");
-      return { outputKey: key, mimeType: "application/pdf", fileName: "repaired.pdf" };
+      return { outputKey: key, mimeType: "application/pdf", fileName: outFileName };
     }
     case "pdf-to-word":
-      return pdfToWord(buffers[0]);
+      return pdfToWord(buffers[0], originalFileName);
     case "pdf-to-powerpoint":
-      return convertOffice(buffers[0], "pptx", "pdf-to-powerpoint");
+      return convertOffice(buffers[0], "pptx", "pdf-to-powerpoint", originalFileName);
     case "pdf-to-excel":
-      return convertOffice(buffers[0], "xlsx", "pdf-to-excel");
+      return convertOffice(buffers[0], "xlsx", "pdf-to-excel", originalFileName);
     case "word-to-pdf":
-      return convertOffice(buffers[0], "pdf", "word-to-pdf");
+      return convertOffice(buffers[0], "pdf", "word-to-pdf", originalFileName);
     case "powerpoint-to-pdf":
-      return convertOffice(buffers[0], "pdf", "powerpoint-to-pdf");
+      return convertOffice(buffers[0], "pdf", "powerpoint-to-pdf", originalFileName);
     case "excel-to-pdf":
-      return convertOffice(buffers[0], "pdf", "excel-to-pdf");
+      return convertOffice(buffers[0], "pdf", "excel-to-pdf", originalFileName);
     case "html-to-pdf": {
       const html = buffers[0].toString("utf-8");
       const out = await htmlToPdf(html);
@@ -81,9 +95,11 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
     case "ocr-pdf": {
       const lang = String(opts.language ?? "eng");
       const out = await ocrPdf(buffers[0], lang);
-      const key = `outputs/${uuidv4()}/searchable.pdf`;
+      const baseName = originalFileName ? getBaseName(originalFileName) : "searchable";
+      const outFileName = `${baseName}_ocr.pdf`;
+      const key = `outputs/${uuidv4()}/${outFileName}`;
       await putObjectBuffer(key, out, "application/pdf");
-      return { outputKey: key, mimeType: "application/pdf", fileName: "searchable.pdf" };
+      return { outputKey: key, mimeType: "application/pdf", fileName: outFileName };
     }
     case "markdown-to-pdf":
     case "markdown-to-word":
@@ -93,10 +109,11 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
       return convertOffice(
         buffers[0],
         payload.toolSlug.includes("pdf") ? "pdf" : "docx",
-        payload.toolSlug
+        payload.toolSlug,
+        originalFileName
       );
     case "epub-to-pdf": {
-      const out = await convertOffice(buffers[0], "pdf", "epub-to-pdf");
+      const out = await convertOffice(buffers[0], "pdf", "epub-to-pdf", originalFileName);
       return out;
     }
     case "svg-to-png": {

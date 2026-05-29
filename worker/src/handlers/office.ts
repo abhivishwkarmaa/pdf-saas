@@ -13,10 +13,17 @@ const extMap: Record<string, string> = {
   pdf: ".pdf",
 };
 
+function getBaseName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex === -1) return fileName;
+  return fileName.slice(0, dotIndex);
+}
+
 export async function convertOffice(
   buffer: Buffer,
   targetFormat: string,
-  toolSlug: string
+  toolSlug: string,
+  originalFileName?: string
 ): Promise<HandlerResult> {
   if (!(await exists("soffice"))) {
     throw new Error(
@@ -27,6 +34,9 @@ export async function convertOffice(
   const dir = await mkdtemp(join(tmpdir(), "office-"));
   const inputExt = guessInputExt(toolSlug, buffer);
   const input = join(dir, `input${inputExt}`);
+  const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+  const outFileName = `${baseName}.${targetFormat}`;
+
   try {
     await writeFile(input, buffer);
     await run(
@@ -52,24 +62,23 @@ export async function convertOffice(
       if (!any) throw new Error("Conversion produced no output");
       const out = await readFile(join(dir, any));
       const mime = mimeFor(targetFormat);
-      const fileName = any;
-      const key = `outputs/${uuidv4()}/${fileName}`;
+      const key = `outputs/${uuidv4()}/${outFileName}`;
       await putObjectBuffer(key, out, mime);
       return {
         outputKey: key,
         mimeType: mime,
-        fileName,
+        fileName: outFileName,
       };
     }
 
     const out = await readFile(join(dir, outFile));
     const mime = mimeFor(targetFormat);
-    const key = `outputs/${uuidv4()}/${outFile}`;
+    const key = `outputs/${uuidv4()}/${outFileName}`;
     await putObjectBuffer(key, out, mime);
     return {
       outputKey: key,
       mimeType: mime,
-      fileName: outFile,
+      fileName: outFileName,
     };
   } finally {
     await rm(dir, { recursive: true, force: true });

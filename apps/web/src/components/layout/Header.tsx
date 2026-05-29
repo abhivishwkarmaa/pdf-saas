@@ -122,14 +122,15 @@ export function Header() {
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
           {/* Logo */}
-          <Link href="/" className="flex shrink-0 items-center gap-2.5 group">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/" className="flex shrink-0 items-center gap-2.5 group">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20 group-hover:shadow-violet-600/40 transition-shadow">
               <Zap className="h-4.5 w-4.5" />
             </span>
             <span className="hidden sm:inline font-extrabold text-lg tracking-tight">
               CONVERT<span className="text-violet-600 dark:text-violet-400">HUB</span>
             </span>
-          </Link>
+          </a>
 
           {/* Desktop Nav */}
           <nav className="hidden items-center gap-0.5 lg:flex">

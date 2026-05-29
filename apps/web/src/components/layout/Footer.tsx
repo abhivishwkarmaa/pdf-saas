@@ -29,7 +29,9 @@ import {
   Calculator,
   Music,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -130,13 +132,40 @@ const SOCIALS = [
 export function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setEmail("");
+    if (!email) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/newsletter/subscribe`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, source: "footer" }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSubscribed(true);
+        setEmail("");
+        toast.success(data.message || "Successfully subscribed!");
+      } else {
+        toast.error(data.message || "Failed to subscribe. Please try again.");
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error("An error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,14 +199,15 @@ export function Footer() {
         <div className="mb-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/" className="inline-flex items-center gap-2 mb-4 group">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30 group-hover:shadow-violet-600/40 transition-shadow">
                 <Zap className="h-4 w-4 text-white" />
               </div>
               <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
                 CONVERTHUB
               </span>
-            </Link>
+            </a>
             <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mb-5">
               The all-in-one file conversion platform. 70+ free tools for PDF, images, video, audio, and more. 
               No signup. No watermark. Privacy first.
@@ -245,14 +275,20 @@ export function Footer() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full rounded-xl bg-zinc-800 border border-zinc-700 focus:border-violet-500 focus:outline-none text-sm text-white placeholder-zinc-600 pl-9 pr-3 py-2.5 transition"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-zinc-800 border border-zinc-700 focus:border-violet-500 focus:outline-none text-sm text-white placeholder-zinc-600 pl-9 pr-3 py-2.5 transition disabled:opacity-50"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-violet-600/25 flex items-center gap-1.5"
+                  disabled={loading}
+                  className="rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-violet-600/25 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ArrowRight className="h-3.5 w-3.5" />
+                  {loading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </form>
             )}
