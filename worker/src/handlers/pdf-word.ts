@@ -30,33 +30,64 @@ export async function pdfToWord(buffer: Buffer): Promise<HandlerResult> {
     if (hasPython) {
       const pythonBin = (await exists("python3")) ? "python3" : "python";
 
-      // Check whether pdf2docx is installed
-      let hasPdf2docx = false;
+      // Check whether PyMuPDF and python-docx are installed
+      let hasImageDocx = false;
       try {
-        await run(pythonBin, ["-c", "import pdf2docx"]);
-        hasPdf2docx = true;
+        await run(pythonBin, ["-c", "import fitz, docx"]);
+        hasImageDocx = true;
       } catch {
-        hasPdf2docx = false;
+        hasImageDocx = false;
       }
 
-      if (hasPdf2docx) {
+      if (hasImageDocx) {
         try {
-          await run(pythonBin, [
-            "-c",
-            `from pdf2docx import Converter; cv=Converter(r"${input}"); cv.convert(r"${output}"); cv.close()`,
-          ]);
+          const pyScript = `
+import fitz
+from docx import Document
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
+doc = fitz.open(r"${input}")
+word_doc = Document()
+for section in word_doc.sections:
+    section.top_margin = Pt(0)
+    section.bottom_margin = Pt(0)
+    section.left_margin = Pt(0)
+    section.right_margin = Pt(0)
+    section.page_width = Inches(8.5)
+    section.page_height = Inches(11)
+
+for i in range(len(doc)):
+    page = doc[i]
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+    img_path = f"${dir}/page_{i}.png"
+    pix.save(img_path)
+    if i > 0:
+        word_doc.add_page_break()
+    p = word_doc.add_paragraph()
+    p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = Pt(0)
+    r = p.add_run()
+    r.add_picture(img_path, width=Inches(8.5), height=Inches(11))
+
+word_doc.save(r"${output}")
+`;
+          await run(pythonBin, ["-c", pyScript]);
 
           const out = await readFile(output);
           const key = `outputs/${uuidv4()}/converted.docx`;
           await putObjectBuffer(key, out, DOCX_MIME);
           return { outputKey: key, mimeType: DOCX_MIME, fileName: "converted.docx" };
         } catch (e) {
-          console.error("pdf2docx failed, falling back to LibreOffice", e);
+          console.error("Image DOCX conversion failed, falling back to LibreOffice", e);
         }
       }
     }
 
-    // ── Strategy 2: LibreOffice fallback ─────────────────────────────────
+    // ── Strategy 2: Li
+    // breOffice fallback ─────────────────────────────────
     if (!(await exists("soffice"))) {
       throw new Error(
         "Neither pdf2docx (Python) nor LibreOffice is available. " +
