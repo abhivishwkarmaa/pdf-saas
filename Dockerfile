@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
+COPY packages/storage/package.json packages/storage/
+COPY worker/package.json worker/
+COPY worker/prisma/schema.prisma worker/prisma/
 
 COPY scripts/docker-npm-native.sh /tmp/docker-npm-native.sh
 
@@ -15,6 +18,8 @@ RUN sed -i 's/\r$//' /tmp/docker-npm-native.sh \
   && bash /tmp/docker-npm-native.sh
 
 COPY packages/shared packages/shared
+COPY packages/storage packages/storage
+COPY worker worker
 COPY apps/web apps/web
 
 ENV PATH="/app/node_modules/.bin:${PATH}"
@@ -38,6 +43,9 @@ RUN apt-get update \
     libreoffice-impress \
     fonts-dejavu-core \
     fonts-liberation \
+    python3 \
+    python3-pip \
+  && pip3 install --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
   && rm -rf /var/lib/apt/lists/* \
   && command -v soffice \
   && command -v gs \
@@ -56,10 +64,15 @@ ENV PATH="/app/node_modules/.bin:${PATH}"
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
+COPY packages/storage/package.json packages/storage/
+COPY worker/package.json worker/
+COPY worker/prisma/schema.prisma worker/prisma/
 
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/packages/shared packages/shared
+COPY --from=builder /app/packages/storage packages/storage
+COPY --from=builder /app/worker/prisma worker/prisma
 COPY --from=builder /app/apps/web/.next apps/web/.next
 COPY --from=builder /app/apps/web/public apps/web/public
 COPY apps/web/next.config.ts apps/web/

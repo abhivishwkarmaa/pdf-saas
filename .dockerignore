@@ -7,8 +7,6 @@ packages/shared/node_modules
 .gitignore
 .planning
 data
-worker
-Dockerfile.worker
 *.md
 .env 
 .env.*

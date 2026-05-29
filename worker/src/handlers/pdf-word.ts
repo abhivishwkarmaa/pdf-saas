@@ -40,15 +40,19 @@ export async function pdfToWord(buffer: Buffer): Promise<HandlerResult> {
       }
 
       if (hasPdf2docx) {
-        await run(pythonBin, [
-          "-c",
-          `from pdf2docx import Converter; cv=Converter(r"${input}"); cv.convert(r"${output}"); cv.close()`,
-        ]);
+        try {
+          await run(pythonBin, [
+            "-c",
+            `from pdf2docx import Converter; cv=Converter(r"${input}"); cv.convert(r"${output}"); cv.close()`,
+          ]);
 
-        const out = await readFile(output);
-        const key = `outputs/${uuidv4()}/converted.docx`;
-        await putObjectBuffer(key, out, DOCX_MIME);
-        return { outputKey: key, mimeType: DOCX_MIME, fileName: "converted.docx" };
+          const out = await readFile(output);
+          const key = `outputs/${uuidv4()}/converted.docx`;
+          await putObjectBuffer(key, out, DOCX_MIME);
+          return { outputKey: key, mimeType: DOCX_MIME, fileName: "converted.docx" };
+        } catch (e) {
+          console.error("pdf2docx failed, falling back to LibreOffice", e);
+        }
       }
     }
 

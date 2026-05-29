@@ -10,18 +10,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-impress \
     python3 \
     python3-pip \
-  && pip3 install --no-cache-dir pdf2docx --break-system-packages \
+  && pip3 install --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/storage/package.json packages/storage/
 COPY worker/package.json worker/
 
-RUN npm install --workspace=@pdf-saas/shared --workspace=@pdf-saas/worker 2>/dev/null || true
+RUN npm install --workspace=@pdf-saas/shared --workspace=@pdf-saas/storage --workspace=@pdf-saas/worker 2>/dev/null || true
 
 COPY packages/shared packages/shared
+COPY packages/storage packages/storage
 COPY worker worker
 
 RUN cd packages/shared && npm run build
