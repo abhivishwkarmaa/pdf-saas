@@ -12,6 +12,7 @@ import { repairPdf } from "./repair.js";
 import { pdfToPdfA } from "./pdfa.js";
 import { processVideo } from "./video.js";
 import { prisma } from "../lib/db.js";
+import { handleAiPdf } from "./aiPdf.js";
 
 export interface HandlerResult {
   outputKey: string;
@@ -139,25 +140,36 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
     }
     case "video-converter": {
       const fileNames = (opts._fileNames as string[]) || ["video.mp4"];
+      opts.jobId = payload.jobId;
+
+      let lastDbUpdate = 0;
+
       const result = await processVideo(
         buffers.length > 1 ? buffers : buffers[0],
         opts as any,
         fileNames[0],
         async (progress, speed, eta, logLine) => {
-          try {
-            await prisma.job.update({
-              where: { id: payload.jobId },
-              data: {
-                progress,
-                speed,
-                eta,
-                logs: {
-                  push: logLine,
+          const now = Date.now();
+          if (now - lastDbUpdate >= 1000 || progress === 100) {
+            lastDbUpdate = now;
+            try {
+              await prisma.job.update({
+                where: { id: payload.jobId },
+                data: {
+                  progress,
+                  speed,
+                  eta,
+                  ffmpegProgress: progress,
+                  ffmpegSpeed: speed,
+                  ffmpegEta: eta,
+                  logs: {
+                    push: logLine,
+                  },
                 },
-              },
-            });
-          } catch (e) {
-            // ignore database write errors
+              });
+            } catch (e) {
+              // ignore database write errors
+            }
           }
         }
       );
@@ -178,7 +190,7 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
         outputKeys = [outputKey];
       }
 
-      // Update database outputs
+      // Update database outputs and thumbnail
       try {
         await prisma.job.update({
           where: { id: payload.jobId },
@@ -187,11 +199,12 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
             outputKeys,
             mimeType: result.mimeType,
             fileName: result.fileName,
+            thumbnailKey: result.thumbnailKey || null,
           },
         });
       } catch (e) {}
 
-      // Append mock captions or scene analysis logs if generated
+      // Save real captions
       if (result.captions) {
         const captionsKey = `${outputKey}.srt`;
         await putObjectBuffer(captionsKey, Buffer.from(result.captions), "text/plain");
@@ -207,6 +220,22 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
         } catch {}
       }
 
+      // Save scene data
+      if (result.sceneData && result.sceneData.length > 0) {
+        const sceneKey = `${outputKey}.scenes.json`;
+        await putObjectBuffer(sceneKey, Buffer.from(JSON.stringify(result.sceneData, null, 2)), "application/json");
+        try {
+          await prisma.job.update({
+            where: { id: payload.jobId },
+            data: {
+              logs: {
+                push: `[AI Scene analysis completed. Detected ${result.sceneData.length} scenes. Details saved to: ${sceneKey}]`,
+              },
+            },
+          });
+        } catch {}
+      }
+
       return {
         outputKey,
         outputKeys,
@@ -214,6 +243,8 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
         fileName: result.fileName,
       };
     }
+    case "ai-pdf":
+      return handleAiPdf(payload);
     default:
       throw new Error(`No async handler for ${payload.toolSlug}`);
   }

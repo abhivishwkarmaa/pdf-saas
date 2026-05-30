@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { AppError } from "@pdf-saas/shared";
 
 /**
  * Wrapper to catch async errors and pass them to the Express error handler
@@ -11,18 +12,31 @@ export const asyncHandler = (fn: Function) => (req: Request, res: Response, next
  * Global application error handler middleware
  */
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  const statusCode = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
+  let statusCode = err.status || err.statusCode || 500;
+  let message = err.message || "Internal Server Error";
+  let userMessage = err.userMessage || "An unexpected error occurred.";
+  let code = err.code || "INTERNAL_SERVER_ERROR";
 
-  console.error(`[Error Handler] ${req.method} ${req.url} - Status: ${statusCode} - Error: ${message}`);
-  
-  if (err.stack && process.env.NODE_ENV !== "production") {
-    console.error(err.stack);
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    message = err.message;
+    userMessage = err.userMessage;
+    code = err.code;
   }
+
+  console.error("API Error:", {
+    path: req.path,
+    method: req.method,
+    error: message,
+    stack: err.stack,
+  });
 
   res.status(statusCode).json({
     success: false,
-    message,
+    code,
+    error: userMessage || message,
+    message: userMessage,
+    developerMessage: message,
     ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
   });
 };

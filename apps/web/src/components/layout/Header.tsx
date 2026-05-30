@@ -13,6 +13,25 @@ import { TOOLS, type ToolCategory } from "@pdf-saas/shared";
 
 // ─── Nav Config ─────────────────────────────────────────────────────────────
 
+const AI_TOOLS_LIST = [
+  { slug: "remove-pages", name: "Remove Pages" },
+  { slug: "replace-page", name: "Replace Page" },
+  { slug: "extract-pages", name: "Extract Pages" },
+  { slug: "rotate-pages", name: "Rotate Pages" },
+  { slug: "merge", name: "Merge PDFs" },
+  { slug: "split", name: "Split PDF" },
+  { slug: "compress", name: "Compress PDF" },
+  { slug: "watermark", name: "Add Watermark" },
+  { slug: "convert-to-word", name: "Convert to Word" },
+  { slug: "reorder-pages", name: "Reorder Pages" },
+  { slug: "delete-blank-pages", name: "Delete Blank Pages" },
+  { slug: "add-page-numbers", name: "Add Page Numbers" },
+  { slug: "encrypt", name: "Encrypt PDF" },
+  { slug: "decrypt", name: "Decrypt PDF" },
+  { slug: "resize-pages", name: "Resize Pages" },
+  { slug: "universal", name: "Universal AI" },
+];
+
 const NAV_ITEMS = [
   {
     label: "PDF",
@@ -47,7 +66,7 @@ const NAV_ITEMS = [
     href: "/ai-tools",
     icon: Sparkles,
     color: "text-fuchsia-400",
-    tools: TOOLS.filter(t => t.enabled).slice(0, 8),
+    tools: AI_TOOLS_LIST,
   },
   {
     label: "Dev",
@@ -159,7 +178,7 @@ export function Header() {
                 {/* Mega Dropdown */}
                 {activeDropdown === item.label && item.tools.length > 0 && (
                   <div
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 rounded-2xl border border-zinc-200/80 bg-white/95 backdrop-blur-xl shadow-xl dark:border-zinc-700/80 dark:bg-zinc-900/95 overflow-hidden"
+                    className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 ${item.label === "AI Tools" ? "w-[30rem]" : "w-64"} rounded-2xl border border-zinc-200/80 bg-white/95 backdrop-blur-xl shadow-xl dark:border-zinc-700/80 dark:bg-zinc-900/95 overflow-hidden`}
                     onMouseEnter={() => handleDropdownEnter(item.label)}
                     onMouseLeave={handleDropdownLeave}
                   >
@@ -168,16 +187,18 @@ export function Header() {
                         <item.icon className={`h-4 w-4 ${item.color}`} />
                         <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{item.label}</span>
                       </div>
-                      {item.tools.map((tool) => (
-                        <Link
-                          key={tool.slug}
-                          href={`/tools/${tool.slug}`}
-                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors group"
-                        >
-                          <span className="truncate">{tool.name}</span>
-                          <ArrowRight className="h-3 w-3 ml-auto text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </Link>
-                      ))}
+                      <div className={item.label === "AI Tools" ? "grid grid-cols-2 gap-x-2" : "flex flex-col"}>
+                        {item.tools.map((tool) => (
+                          <Link
+                            key={tool.slug}
+                            href={item.label === "AI Tools" ? (tool.slug === "universal" ? "/ai-tools" : `/ai-tools/${tool.slug}`) : `/tools/${tool.slug}`}
+                            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors group"
+                          >
+                            <span className="truncate">{tool.name}</span>
+                            <ArrowRight className="h-3 w-3 ml-auto text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+                        ))}
+                      </div>
                       <Link
                         href={item.href}
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"

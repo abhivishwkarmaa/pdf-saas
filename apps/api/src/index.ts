@@ -1,18 +1,30 @@
-import dotenv from "dotenv";
-// Load environment variables as early as possible
-dotenv.config();
+import "dotenv/config";
+
+// Validate environment variables immediately
+import "./env";
 
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { connectDB } from "./config/db";
 import { errorHandler } from "./middlewares/errorHandler";
+import { startDailyLimitResetScheduler } from "./middlewares/planLimiter";
+
+// Original Routes
 import newsletterRoutes from "./routes/newsletterRoutes";
 import authRoutes from "./routes/authRoutes";
 import contactRoutes from "./routes/contactRoutes";
 import suggestionRoutes from "./routes/suggestionRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import feedbackRoutes from "./routes/feedbackRoutes";
+
+// New SaaS & Job Routes
+import jobRoutes from "./routes/jobRoutes";
+import stripeRoutes from "./routes/stripeRoutes";
+import tusUploadRouter from "./routes/tusUpload";
+import apiRoutes from "./routes/apiRoutes";
+import aiToolsRoutes from "./routes/aiToolsRoutes";
+
 import { User } from "./models/User";
 
 const app = express();
@@ -28,7 +40,11 @@ app.use(
       // Allow requests with no origin (like mobile apps, curl, or direct tool requests)
       if (!origin) return callback(null, true);
       
-      const allowedOrigins = [CLIENT_URL];
+      const allowedOrigins = [
+        "http://localhost:3000",
+        CLIENT_URL,
+        process.env.FRONTEND_URL ?? "",
+      ].filter(Boolean);
       
       // Allow localhost in development
       if (process.env.NODE_ENV !== "production" && origin.startsWith("http://localhost:")) {
@@ -44,6 +60,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Mount Tus chunked upload before express.json() to prevent body parsing issues
+app.use("/upload/tus", tusUploadRouter);
 
 app.use(express.json());
 
@@ -69,6 +88,10 @@ app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/billing", stripeRoutes);
+app.use("/api/v1", apiRoutes);
+app.use("/api/ai-tools", aiToolsRoutes);
 
 // Catch-all route for unhandled paths
 app.use((req, res) => {
@@ -82,6 +105,9 @@ app.use(errorHandler);
 const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
+
+  // Start daily conversions limit reset scheduler
+  startDailyLimitResetScheduler();
 
   // Seed default admin if no users exist
   try {
@@ -109,14 +135,30 @@ const startServer = async () => {
     console.error("Failed to seed default administrator user:", err);
   }
 
-  app.listen(PORT, () => {
-    console.log(`========================================`);
-    console.log(` ConvertHub API Server Running...`);
-    console.log(` Port: ${PORT}`);
-    console.log(` Env: ${process.env.NODE_ENV || "development"}`);
-    console.log(` Client URL: ${CLIENT_URL}`);
-    console.log(`========================================`);
-  });
+  const startListen = () => {
+    const server = app.listen(PORT, () => {
+      console.log(`========================================`);
+      console.log(` ConvertHub API Server Running...`);
+      console.log(` Port: ${PORT}`);
+      console.log(` Env: ${process.env.NODE_ENV || "development"}`);
+      console.log(` Client URL: ${CLIENT_URL}`);
+      console.log(`========================================`);
+    });
+
+    server.on("error", (error: any) => {
+      if (error.code === "EADDRINUSE") {
+        console.warn(`[EADDRINUSE] Port ${PORT} is busy. The old process might still be releasing it. Retrying in 1.5s...`);
+        setTimeout(() => {
+          server.close();
+          startListen();
+        }, 1500);
+      } else {
+        console.error("Server startup error:", error);
+      }
+    });
+  };
+
+  startListen();
 };
 
 startServer().catch((error) => {

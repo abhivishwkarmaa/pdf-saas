@@ -1,32 +1,20 @@
-# Production Dockerfile for Express API
-FROM node:22-bookworm-slim AS builder
+FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/
+# Copy root workspace settings
+COPY package*.json ./
 
+# Copy dependencies and source code
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+
+# Install dependencies
 RUN npm ci
 
-COPY apps/api apps/api
-
-RUN npm run build -w @pdf-saas/api
-
-# --- Runner ---
-FROM node:22-bookworm-slim AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=5000
-
-COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/
-
-RUN npm ci --omit=dev
-
-COPY --from=builder /app/apps/api/dist apps/api/dist
+WORKDIR /app/apps/api
+RUN npm run build
 
 EXPOSE 5000
 
-CMD ["npm", "run", "start", "-w", "@pdf-saas/api"]
+CMD ["npm", "start"]

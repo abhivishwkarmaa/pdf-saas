@@ -1,14 +1,40 @@
+import "./env.js";
 import { Worker } from "bullmq";
-import { Redis } from "ioredis";
 import type { JobPayload } from "@pdf-saas/shared";
 import { prisma } from "./lib/db.js";
 import { runHandler } from "./handlers/index.js";
 import { cleanupExpiredFiles } from "./cleanup.js";
+import { getObjectBuffer } from "@pdf-saas/storage";
 
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-const connection = new Redis(redisUrl, { maxRetriesPerRequest: null }) as any;
+let connection: any;
+if (process.env.REDIS_URL) {
+  try {
+    const parsed = new URL(process.env.REDIS_URL);
+    connection = {
+      host: parsed.hostname,
+      port: parsed.port ? parseInt(parsed.port) : 6379,
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+      username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+      maxRetriesPerRequest: null,
+    };
+  } catch {
+    connection = {
+      host: process.env.REDIS_HOST ?? "localhost",
+      port: parseInt(process.env.REDIS_PORT ?? "6379"),
+      password: process.env.REDIS_PASSWORD ?? undefined,
+      maxRetriesPerRequest: null,
+    };
+  }
+} else {
+  connection = {
+    host: process.env.REDIS_HOST ?? "localhost",
+    port: parseInt(process.env.REDIS_PORT ?? "6379"),
+    password: process.env.REDIS_PASSWORD ?? undefined,
+    maxRetriesPerRequest: null,
+  };
+}
 
-const worker = new Worker<JobPayload>(
+const worker = new Worker<JobPayload, any, string>(
   "pdf-jobs",
   async (job) => {
     const payload = job.data;
@@ -20,7 +46,7 @@ const worker = new Worker<JobPayload>(
     try {
       const result = await runHandler(payload);
 
-      await prisma.job.update({
+      const jobRecord = await prisma.job.update({
         where: { id: payload.jobId },
         data: {
           status: "completed",
@@ -32,6 +58,36 @@ const worker = new Worker<JobPayload>(
           completedAt: new Date(),
         },
       });
+
+      // Write Usage Conversion Log
+      try {
+        let totalSize = 0;
+        for (const key of payload.inputKeys) {
+          try {
+            const buf = await getObjectBuffer(key);
+            totalSize += buf.length;
+          } catch {}
+        }
+        const fileSizeMb = totalSize / (1024 * 1024);
+        const inputFormat = payload.inputKeys[0] ? payload.inputKeys[0].split(".").pop() || "mp4" : "mp4";
+        const outputFormat = result.fileName ? result.fileName.split(".").pop() || "mp4" : "mp4";
+        const processingMs = jobRecord ? (Date.now() - jobRecord.createdAt.getTime()) : 0;
+
+        await prisma.conversion.create({
+          data: {
+            userId: jobRecord?.userId || "anonymous",
+            jobId: payload.jobId,
+            inputFormat,
+            outputFormat,
+            fileSizeMb,
+            processingMs,
+            plan: (payload.options as any)?.plan || "free",
+          },
+        });
+      } catch (err) {
+        console.error("Usage Tracking failed:", err);
+      }
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Processing failed";
       await prisma.job.update({
@@ -41,7 +97,7 @@ const worker = new Worker<JobPayload>(
       throw err;
     }
   },
-  { connection, concurrency: 2 }
+  { connection, concurrency: parseInt(process.env.WORKER_CONCURRENCY ?? "4") }
 );
 
 worker.on("completed", (job) => {

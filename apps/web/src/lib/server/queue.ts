@@ -5,7 +5,7 @@ import type { JobPayload } from "@pdf-saas/shared";
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 let connection: Redis | null = null;
-let jobQueue: Queue<JobPayload> | null = null;
+let jobQueue: Queue<JobPayload, any, string> | null = null;
 
 export function getRedisConnection(): Redis {
   if (!connection) {
@@ -22,11 +22,38 @@ export function getRedisConnection(): Redis {
   return connection;
 }
 
-export function getJobQueue(): Queue<JobPayload> {
+export function getJobQueue(): Queue<JobPayload, any, string> {
   if (!jobQueue) {
-    const conn = getRedisConnection();
-    jobQueue = new Queue<JobPayload>("pdf-jobs", {
-      connection: conn as any,
+    let connectionOpts: any;
+    if (process.env.REDIS_URL) {
+      try {
+        const parsed = new URL(process.env.REDIS_URL);
+        connectionOpts = {
+          host: parsed.hostname,
+          port: parsed.port ? parseInt(parsed.port) : 6379,
+          password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+          username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+          maxRetriesPerRequest: null,
+        };
+      } catch {
+        connectionOpts = {
+          host: process.env.REDIS_HOST ?? "localhost",
+          port: parseInt(process.env.REDIS_PORT ?? "6379"),
+          password: process.env.REDIS_PASSWORD ?? undefined,
+          maxRetriesPerRequest: null,
+        };
+      }
+    } else {
+      connectionOpts = {
+        host: process.env.REDIS_HOST ?? "localhost",
+        port: parseInt(process.env.REDIS_PORT ?? "6379"),
+        password: process.env.REDIS_PASSWORD ?? undefined,
+        maxRetriesPerRequest: null,
+      };
+    }
+
+    jobQueue = new Queue<JobPayload, any, string>("pdf-jobs", {
+      connection: connectionOpts,
       defaultJobOptions: {
         attempts: 3,
         backoff: {

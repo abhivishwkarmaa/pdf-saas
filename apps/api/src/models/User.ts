@@ -5,7 +5,12 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: "admin" | "developer";
+  role: "admin" | "developer" | "user";
+  plan: "free" | "pro";
+  stripeCustomerId?: string;
+  stripePriceId?: string;
+  planExpiresAt?: Date;
+  dailyConversions: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -32,8 +37,26 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["admin", "developer"],
-      default: "admin",
+      enum: ["admin", "developer", "user"],
+      default: "user",
+    },
+    plan: {
+      type: String,
+      enum: ["free", "pro"],
+      default: "free",
+    },
+    stripeCustomerId: {
+      type: String,
+    },
+    stripePriceId: {
+      type: String,
+    },
+    planExpiresAt: {
+      type: Date,
+    },
+    dailyConversions: {
+      type: Number,
+      default: 0,
     },
   },
   {

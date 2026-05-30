@@ -8,22 +8,28 @@ generator client {
 }
 
 model Job {
-  id          String    @id @default(uuid())
-  toolSlug    String
-  status      String    // queued, processing, completed, failed
-  progress    Int       @default(0)
-  speed       String?   // e.g. "1.2x"
-  eta         String?   // e.g. "00:15"
-  error       String?
-  inputKeys   String[]
-  outputKey   String?
-  outputKeys  String[]
-  mimeType    String?
-  fileName    String?
-  logs        String[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime?
+  id             String    @id @default(uuid())
+  userId         String?
+  batchId        String?
+  toolSlug       String
+  status         String    // queued, processing, completed, failed
+  progress       Int       @default(0)
+  speed          String?   // e.g. "1.2x"
+  eta            String?   // e.g. "00:15"
+  ffmpegProgress Int       @default(0)
+  ffmpegSpeed    String?
+  ffmpegEta      String?
+  thumbnailKey   String?
+  error          String?
+  inputKeys      String[]
+  outputKey      String?
+  outputKeys     String[]
+  mimeType       String?
+  fileName       String?
+  logs           String[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
 }
 
 model Preset {
@@ -35,4 +41,38 @@ model Preset {
   codec      String
   bitrate    String
   createdAt  DateTime @default(now())
+}
+
+model Conversion {
+  id           String   @id @default(cuid())
+  userId       String
+  jobId        String
+  inputFormat  String
+  outputFormat String
+  fileSizeMb   Float
+  durationSec  Float?
+  processingMs Int?
+  plan         String
+  createdAt    DateTime @default(now())
+}
+
+model ShareToken {
+  id           String   @id @default(cuid())
+  jobId        String   @unique
+  token        String   @unique @default(cuid())
+  expiresAt    DateTime
+  downloads    Int      @default(0)
+  maxDownloads Int      @default(10)
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String   @unique
+  name      String
+  lastUsed  DateTime?
+  requests  Int      @default(0)
+  rateLimit Int      @default(100)
+  createdAt DateTime @default(now())
+  active    Boolean  @default(true)
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,6 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authorized, setAuthorized] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const verifiedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Skip protection for login page
@@ -40,11 +41,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (userString) {
-      setAdminUser(JSON.parse(userString));
+    // If we already verified this exact token during this session, skip re-verification
+    if (token === verifiedTokenRef.current) {
+      if (userString && !adminUser) {
+        setAdminUser(JSON.parse(userString));
+      }
+      setAuthorized(true);
+      return;
     }
-    setAuthorized(true);
-  }, [pathname, router]);
+
+    const verifyToken = async () => {
+      setAuthorized(false);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/admin/stats`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.status === 401) {
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_user");
+          verifiedTokenRef.current = null;
+          toast.error("Session expired or invalid. Please log in again.");
+          router.push("/admin/login");
+          return;
+        }
+
+        // Token is valid! Cache it in ref
+        verifiedTokenRef.current = token;
+        if (userString) {
+          setAdminUser(JSON.parse(userString));
+        }
+        setAuthorized(true);
+      } catch (err) {
+        console.error("Token verification failed:", err);
+        // If it's a connection/network error, we still allow access so they can see offline states
+        if (userString) {
+          setAdminUser(JSON.parse(userString));
+        }
+        setAuthorized(true);
+      }
+    };
+
+    verifyToken();
+  }, [pathname, router, adminUser]);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
