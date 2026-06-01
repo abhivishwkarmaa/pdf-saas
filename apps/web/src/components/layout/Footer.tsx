@@ -17,8 +17,6 @@ import {
   Trash2,
   CheckCircle2,
   Building2,
-  Mail,
-  ArrowRight,
   Globe,
   FileText,
   Image,
@@ -29,9 +27,7 @@ import {
   Calculator,
   Music,
   ExternalLink,
-  Loader2,
 } from "lucide-react";
-import { toast } from "sonner";
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -130,227 +126,104 @@ const SOCIALS = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function Footer() {
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
-
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/newsletter/subscribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, source: "footer" }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setSubscribed(true);
-        setEmail("");
-        toast.success(data.message || "Successfully subscribed!");
-      } else {
-        toast.error(data.message || "Failed to subscribe. Please try again.");
-      }
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("An error occurred. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <footer className="relative bg-zinc-950 text-white overflow-hidden">
+    <footer className="relative w-full bg-zinc-50 dark:bg-[#060608] text-zinc-900 dark:text-white border-t border-zinc-200 dark:border-white/5 px-[5vw] pt-20 pb-8 overflow-hidden">
       {/* Top gradient glow */}
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent dark:via-purple-500/30" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-purple-500/5 dark:bg-purple-600/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Trust badges strip */}
-      <div className="border-b border-zinc-800/60 bg-zinc-900/40 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 py-5">
-          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6">
-            {TRUST_BADGES.map(({ icon: Icon, label, color, bg }) => (
-              <div
+      {/* Main footer grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-9 gap-8 mb-16">
+        {/* Brand column — takes 2 cols */}
+        <div className="col-span-2">
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-900/30 group-hover:shadow-purple-500/50 transition-shadow">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-700 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
+              CONVERTHUB
+            </span>
+          </Link>
+          <p className="text-sm text-zinc-600 dark:text-zinc-500 leading-relaxed max-w-sm mb-6">
+            The all-in-one file conversion platform. 70+ free tools for PDF, images, video, audio, and more. 
+            No signup. No watermark. Privacy first.
+          </p>
+          {/* Socials */}
+          <div className="flex items-center gap-2">
+            {SOCIALS.map(({ icon: Icon, label, href, color }) => (
+              <a
                 key={label}
-                className={`flex items-center gap-2 rounded-full ${bg} border border-white/5 px-3 py-1.5 transition-transform hover:scale-105`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                title={label}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-200/50 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 ${color} transition-all duration-200 hover:scale-110 hover:-translate-y-0.5`}
               >
-                <Icon className={`h-3.5 w-3.5 ${color} shrink-0`} />
-                <span className="text-xs font-medium text-zinc-300 whitespace-nowrap">{label}</span>
-              </div>
+                <Icon className="h-4 w-4" />
+              </a>
             ))}
           </div>
+        </div>
+
+        {/* Links columns */}
+        {Object.entries(FOOTER_LINKS).map(([section, links]) => (
+          <div key={section} className="col-span-1">
+            <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+              {section}
+            </h4>
+            <ul className="space-y-3">
+              {links.map(({ label, href }) => (
+                <li key={label}>
+                  <Link
+                    href={href}
+                    className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-500 dark:hover:text-white text-sm transition-colors block"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Trust badges strip — full width */}
+      <div className="border-t border-zinc-200 dark:border-white/5 py-8 mb-8">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {TRUST_BADGES.map(({ icon: Icon, label, color, bg }) => (
+            <div
+              key={label}
+              className={`flex items-center gap-2 rounded-full ${bg} border border-zinc-200 dark:border-white/5 px-4 py-1.5 transition-transform hover:scale-105`}
+            >
+              <Icon className={`h-4 w-4 ${color} shrink-0`} />
+              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Main footer body */}
-      <div className="mx-auto max-w-7xl px-4 pt-14 pb-8">
-
-        {/* Top section: Brand + Newsletter */}
-        <div className="mb-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-          {/* Brand */}
-          <div className="lg:col-span-1">
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href="/" className="inline-flex items-center gap-2 mb-4 group">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30 group-hover:shadow-violet-600/40 transition-shadow">
-                <Zap className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-                CONVERTHUB
-              </span>
-            </a>
-            <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mb-5">
-              The all-in-one file conversion platform. 70+ free tools for PDF, images, video, audio, and more. 
-              No signup. No watermark. Privacy first.
-            </p>
-            {/* Socials */}
-            <div className="flex items-center gap-2">
-              {SOCIALS.map(({ icon: Icon, label, href, color }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  title={label}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 ${color} transition-all duration-200 hover:scale-110 hover:-translate-y-0.5`}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Tool categories quick nav */}
-          <div>
-            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-zinc-500">
-              Product Tools
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TOOL_CATEGORIES.map(({ icon: Icon, label, href, color }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all duration-200 group"
-                >
-                  <Icon className={`h-3.5 w-3.5 ${color} shrink-0 group-hover:scale-110 transition-transform`} />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-zinc-500">
-              Newsletter
-            </p>
-            <h3 className="mb-2 text-base font-bold text-white">
-              Get updates & new tools
-            </h3>
-            <p className="mb-4 text-sm text-zinc-400">
-              We&apos;ll notify you when new tools, features, and AI upgrades are released.
-            </p>
-            {subscribed ? (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span className="text-sm text-emerald-300 font-medium">You&apos;re subscribed!</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    disabled={loading}
-                    className="w-full rounded-xl bg-zinc-800 border border-zinc-700 focus:border-violet-500 focus:outline-none text-sm text-white placeholder-zinc-600 pl-9 pr-3 py-2.5 transition disabled:opacity-50"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-violet-600/25 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </form>
-            )}
-            <p className="mt-2 text-xs text-zinc-600">No spam. Unsubscribe anytime.</p>
+      {/* Bottom bar */}
+      <div className="border-t border-zinc-200 dark:border-white/5 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <p className="text-xs text-zinc-500 dark:text-zinc-600">
+            © {new Date().getFullYear()} ConvertHub. All rights reserved.
+          </p>
+          <div className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] font-medium text-emerald-400">All systems operational</span>
           </div>
         </div>
-
-        {/* Links grid */}
-        <div className="border-t border-zinc-800/60 pt-10 mb-10">
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-7">
-            {Object.entries(FOOTER_LINKS).map(([section, links]) => (
-              <div key={section}>
-                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-500">
-                  {section}
-                </p>
-                <ul className="space-y-2">
-                  {links.map(({ label, href }) => (
-                    <li key={label}>
-                      <Link
-                        href={href}
-                        onMouseEnter={() => setHoveredLink(`${section}-${label}`)}
-                        onMouseLeave={() => setHoveredLink(null)}
-                        className={`text-sm transition-all duration-150 flex items-center gap-1 group ${
-                          hoveredLink === `${section}-${label}`
-                            ? "text-white"
-                            : "text-zinc-500 hover:text-zinc-200"
-                        }`}
-                      >
-                        <span className="group-hover:translate-x-0.5 transition-transform duration-150">
-                          {label}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="border-t border-zinc-800/60 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <p className="text-xs text-zinc-600">
-              © {new Date().getFullYear()} ConvertHub. All rights reserved.
-            </p>
-            <div className="hidden sm:flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-medium text-emerald-400">All systems operational</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-zinc-600">
-            <Link href="/privacy" className="hover:text-zinc-400 transition">Privacy</Link>
-            <span>·</span>
-            <Link href="/terms" className="hover:text-zinc-400 transition">Terms</Link>
-            <span>·</span>
-            <Link href="/cookies" className="hover:text-zinc-400 transition">Cookies</Link>
-            <span>·</span>
-            <div className="flex items-center gap-1">
-              <Globe className="h-3 w-3" />
-              <span>English</span>
-            </div>
+        <div className="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-600">
+          <Link href="/privacy" className="hover:text-zinc-800 dark:hover:text-zinc-400 transition">Privacy</Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-zinc-800 dark:hover:text-zinc-400 transition">Terms</Link>
+          <span>·</span>
+          <Link href="/cookies" className="hover:text-zinc-800 dark:hover:text-zinc-400 transition">Cookies</Link>
+          <span>·</span>
+          <div className="flex items-center gap-1">
+            <Globe className="h-3 w-3" />
+            <span>English</span>
           </div>
         </div>
       </div>

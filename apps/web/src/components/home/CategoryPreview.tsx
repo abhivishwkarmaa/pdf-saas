@@ -105,9 +105,6 @@ function PdfPreview() {
           </div>
         ))}
       </div>
-      <div className="rounded-lg bg-red-600 py-2 text-center text-xs font-semibold text-white">
-        Merge PDF
-      </div>
     </div>
   );
 }
@@ -154,9 +151,6 @@ function VideoPreview() {
           </div>
         ))}
       </div>
-      <div className="rounded-lg bg-pink-600 py-2 text-center text-xs font-semibold text-white">
-        Convert to MP4
-      </div>
     </div>
   );
 }
@@ -174,9 +168,6 @@ function TextPreview() {
         <div className="h-2 w-full rounded bg-violet-200/80 dark:bg-violet-800/50" />
         <div className="h-2 w-4/5 rounded bg-violet-200/60 dark:bg-violet-800/40" />
         <div className="h-2 w-3/5 rounded bg-violet-200/40 dark:bg-violet-800/30" />
-      </div>
-      <div className="mt-4 rounded-lg bg-violet-600 py-2 text-center text-xs font-semibold text-white">
-        Convert to PDF
       </div>
     </div>
   );

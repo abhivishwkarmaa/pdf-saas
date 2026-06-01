@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npm run lint --workspaces --if-present
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Prisma generate
+        run: npx prisma generate --schema worker/prisma/schema.prisma
+      - name: Typecheck shared package
+        run: npx tsc --noEmit -p packages/shared/tsconfig.json
+      - name: Typecheck storage package
+        run: npx tsc --noEmit -p packages/storage/tsconfig.json
+      - name: Typecheck worker package
+        run: npx tsc --noEmit -p worker/tsconfig.json
+      - name: Typecheck API app
+        run: npx tsc --noEmit -p apps/api/tsconfig.json
+      - name: Typecheck Web app
+        run: npx tsc --noEmit -p apps/web/tsconfig.json
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Prisma generate
+        run: npx prisma generate --schema worker/prisma/schema.prisma
+      - name: Build monorepo packages
+        run: npm run build

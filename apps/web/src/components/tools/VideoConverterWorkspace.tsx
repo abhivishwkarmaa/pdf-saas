@@ -6,7 +6,8 @@ import { toast, Toaster } from "sonner";
 import { 
   Play, Pause, Sliders, Cpu, History, Zap, Settings, Terminal, 
   Download, RefreshCw, Plus, Check, ChevronDown, Trash, Clock, 
-  Sparkles, FileVideo, HardDrive, Percent, Gauge, Video, Wrench, X, AlertCircle
+  Sparkles, FileVideo, HardDrive, Percent, Gauge, Video, Wrench, X, AlertCircle,
+  ExternalLink
 } from "lucide-react";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -136,9 +137,17 @@ export function VideoConverterWorkspace({ tool }: VideoConverterWorkspaceProps) 
   const [activeWrenchTab, setActiveWrenchTab] = useState<"video" | "audio" | "trim" | "compress" | "ai">("video");
   const [activeLogItem, setActiveLogItem] = useState<FileItem | null>(null);
 
-  // Load presets on mount
+  // FFmpeg availability check
+  const [ffmpegStatus, setFfmpegStatus] = useState<"checking" | "available" | "missing">("checking");
+
+  // Load presets on mount + check FFmpeg
   useEffect(() => {
     fetchPresets();
+    // Check whether FFmpeg is available on the server
+    fetch("/api/jobs/health")
+      .then(r => r.json())
+      .then(d => setFfmpegStatus(d.ffmpeg ? "available" : "missing"))
+      .catch(() => setFfmpegStatus("missing"));
   }, []);
 
   // Poll status of all processing files in loop
@@ -514,6 +523,31 @@ export function VideoConverterWorkspace({ tool }: VideoConverterWorkspaceProps) 
           Convert and compress video files online. Adjust resolution, trim clips, split segments, overlay watermarks, stitch image slideshows, and mix background audio in a single cloud dashboard.
         </p>
       </div>
+
+      {/* FFmpeg missing warning banner */}
+      {ffmpegStatus === "missing" && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-shrink-0 p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30">
+            <AlertCircle className="h-6 w-6 text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-300">FFmpeg is not installed on this server</p>
+            <p className="text-xs text-amber-400/80 mt-1 leading-relaxed">
+              Video conversion requires FFmpeg to be installed and available in the system PATH.
+              After installing, restart the dev server with <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-amber-300 text-[11px]">npm run dev</code>.
+            </p>
+          </div>
+          <a
+            href="https://ffmpeg.org/download.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/20 hover:bg-amber-500/30 px-4 py-2 text-xs font-bold text-amber-300 transition"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Install FFmpeg
+          </a>
+        </div>
+      )}
 
       {/* Main workspace Card */}
       <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950 p-6 shadow-2xl backdrop-blur-md">

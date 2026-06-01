@@ -14,16 +14,11 @@ export function CategorySection({ category, tools, index }: CategorySectionProps
   const meta = TOOL_CATEGORIES[category];
   const theme = CATEGORY_THEME[category];
   const Icon = theme.icon;
-  const altBg = index % 2 === 1;
 
   return (
     <section
       id={category}
-      className={
-        altBg
-          ? "scroll-mt-20 rounded-3xl border border-border bg-card px-4 py-10 shadow-sm sm:px-8"
-          : "scroll-mt-20 py-10"
-      }
+      className="scroll-mt-20 rounded-3xl border border-border bg-card px-4 py-10 shadow-sm sm:px-8"
     >
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start gap-4">
@@ -50,7 +45,7 @@ export function CategorySection({ category, tools, index }: CategorySectionProps
 
       <div className="grid gap-8 lg:grid-cols-[minmax(260px,320px)_1fr] lg:items-start">
         <CategoryPreview category={category} />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
           {tools.map((tool) => (
             <ToolCard key={tool.slug} tool={tool} />
           ))}

@@ -26,6 +26,20 @@ const memoryJobs = new Map<string, {
 
 export async function POST(req: NextRequest) {
   try {
+    // Pre-flight: ensure FFmpeg is available before parsing the (potentially large) body
+    const ffmpegAvailable = await exists("ffmpeg").catch(() => false);
+    if (!ffmpegAvailable) {
+      return NextResponse.json(
+        {
+          error:
+            "FFmpeg is not installed on this server. " +
+            "Please install FFmpeg and add it to your system PATH, then restart the dev server. " +
+            "Download: https://ffmpeg.org/download.html",
+        },
+        { status: 503 }
+      );
+    }
+
     const formData = await req.formData();
     const files = formData.getAll("files").filter((f): f is File => f instanceof File);
     if (files.length === 0) {

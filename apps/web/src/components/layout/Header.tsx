@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { TOOLS, type ToolCategory } from "@pdf-saas/shared";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Nav Config ─────────────────────────────────────────────────────────────
 
@@ -59,7 +60,16 @@ const NAV_ITEMS = [
     href: "/text-tools",
     icon: Type,
     color: "text-emerald-400",
-    tools: TOOLS.filter(t => t.category === "text" && t.enabled).slice(0, 8),
+    tools: [
+      { slug: "word-counter", name: "Word Counter" },
+      { slug: "case-converter", name: "Case Converter" },
+      { slug: "json-formatter", name: "JSON Formatter" },
+      { slug: "base64", name: "Base64 Encode/Decode" },
+      { slug: "url-encoder", name: "URL Encode/Decode" },
+      { slug: "find-replace", name: "Find & Replace" },
+      { slug: "text-diff", name: "Text Diff" },
+      { slug: "lorem-ipsum", name: "Lorem Ipsum" },
+    ],
   },
   {
     label: "AI Tools",
@@ -135,21 +145,20 @@ export function Header() {
       <header
         className={`sticky top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "border-b border-zinc-200/80 bg-white/95 dark:border-zinc-800/80 dark:bg-zinc-950/95 shadow-sm"
-            : "border-b border-transparent bg-white/80 dark:bg-zinc-950/80"
-        } backdrop-blur-xl text-zinc-900 dark:text-white`}
+            ? "border-b border-zinc-200/80 bg-white/80 dark:border-white/10 dark:bg-[#0a0a0f]/80 backdrop-blur-xl shadow-lg shadow-black/5"
+            : "border-b border-transparent bg-transparent"
+        } text-zinc-900 dark:text-white`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
+        <div className="w-full flex h-16 items-center justify-between gap-3 px-[4vw]">
           {/* Logo */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/" className="flex shrink-0 items-center gap-2.5 group">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20 group-hover:shadow-violet-600/40 transition-shadow">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5 group">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 group-hover:shadow-purple-500/50 transition-all duration-300">
               <Zap className="h-4.5 w-4.5" />
             </span>
-            <span className="hidden sm:inline font-extrabold text-lg tracking-tight">
-              CONVERT<span className="text-violet-600 dark:text-violet-400">HUB</span>
+            <span className="hidden sm:inline font-bold text-lg tracking-tight">
+              CONVERT<span className="text-purple-600 dark:text-purple-400">HUB</span>
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden items-center gap-0.5 lg:flex">
@@ -176,38 +185,50 @@ export function Header() {
                 </Link>
 
                 {/* Mega Dropdown */}
-                {activeDropdown === item.label && item.tools.length > 0 && (
-                  <div
-                    className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 ${item.label === "AI Tools" ? "w-[30rem]" : "w-64"} rounded-2xl border border-zinc-200/80 bg-white/95 backdrop-blur-xl shadow-xl dark:border-zinc-700/80 dark:bg-zinc-900/95 overflow-hidden`}
-                    onMouseEnter={() => handleDropdownEnter(item.label)}
-                    onMouseLeave={handleDropdownLeave}
-                  >
-                    <div className="p-1.5">
-                      <div className={`flex items-center gap-2 px-3 py-2 mb-1 rounded-lg ${item.color.replace("text-", "bg-").replace("-400", "-50")} dark:bg-zinc-800`}>
-                        <item.icon className={`h-4 w-4 ${item.color}`} />
-                        <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{item.label}</span>
+                <AnimatePresence>
+                  {activeDropdown === item.label && item.tools.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className={`absolute top-full left-1/2 -translate-x-1/2 mt-1.5 ${item.label === "AI Tools" ? "w-[30rem]" : "w-64"} rounded-2xl border border-zinc-200/80 bg-white/95 backdrop-blur-xl shadow-xl dark:border-zinc-700/80 dark:bg-zinc-900/95 overflow-hidden z-50`}
+                      onMouseEnter={() => handleDropdownEnter(item.label)}
+                      onMouseLeave={handleDropdownLeave}
+                    >
+                      <div className="p-1.5">
+                        <div className={`flex items-center gap-2 px-3 py-2 mb-1 rounded-lg ${item.color.replace("text-", "bg-").replace("-400", "-50")} dark:bg-zinc-800`}>
+                          <item.icon className={`h-4 w-4 ${item.color}`} />
+                          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{item.label}</span>
+                        </div>
+                        <div className={item.label === "AI Tools" ? "grid grid-cols-2 gap-x-2" : "flex flex-col"}>
+                          {item.tools.map((tool) => (
+                            <Link
+                              key={tool.slug}
+                              href={
+                                item.label === "AI Tools"
+                                  ? (tool.slug === "universal" ? "/ai-tools" : `/ai-tools/${tool.slug}`)
+                                  : item.label === "Text"
+                                  ? `/text-tools/${tool.slug}`
+                                  : `/tools/${tool.slug}`
+                              }
+                              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors group"
+                            >
+                              <span className="truncate">{tool.name}</span>
+                              <ArrowRight className="h-3 w-3 ml-auto text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </Link>
+                          ))}
+                        </div>
+                        <Link
+                          href={item.href}
+                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"
+                        >
+                          View all {item.label} tools <ArrowRight className="h-3 w-3 ml-auto" />
+                        </Link>
                       </div>
-                      <div className={item.label === "AI Tools" ? "grid grid-cols-2 gap-x-2" : "flex flex-col"}>
-                        {item.tools.map((tool) => (
-                          <Link
-                            key={tool.slug}
-                            href={item.label === "AI Tools" ? (tool.slug === "universal" ? "/ai-tools" : `/ai-tools/${tool.slug}`) : `/tools/${tool.slug}`}
-                            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors group"
-                          >
-                            <span className="truncate">{tool.name}</span>
-                            <ArrowRight className="h-3 w-3 ml-auto text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </Link>
-                        ))}
-                      </div>
-                      <Link
-                        href={item.href}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"
-                      >
-                        View all {item.label} tools <ArrowRight className="h-3 w-3 ml-auto" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ))}
           </nav>
@@ -226,13 +247,19 @@ export function Header() {
 
             <ThemeToggle />
 
-            <Link
-              href="/tools"
-              className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-violet-600/25 sm:inline-flex"
+            <motion.div
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(139,92,246,0.4)" }}
+              whileTap={{ scale: 0.97 }}
+              className="hidden sm:inline-block"
             >
-              <Layers className="h-3.5 w-3.5" />
-              All Tools
-            </Link>
+              <Link
+                href="/tools"
+                className="shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white transition-all sm:inline-flex"
+              >
+                <Layers className="h-3.5 w-3.5" />
+                All Tools
+              </Link>
+            </motion.div>
 
             {/* Mobile hamburger */}
             <button
@@ -248,7 +275,7 @@ export function Header() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 lg:hidden">
-            <div className="mx-auto max-w-7xl px-4 py-4 space-y-1">
+            <div className="w-full px-[5vw] py-4 space-y-1">
               {/* Mobile search */}
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
