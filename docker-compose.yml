@@ -3,6 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Stable Server Actions encryption key — must be passed at BUILD time
+        # (it gets baked into .next/server/server-reference-manifest.json).
+        # Keeps action IDs consistent across rebuilds so older browser tabs
+        # don't break with "Failed to find Server Action" after deploys.
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: QfreXudQtBtP/IXtmYsnzY9sovXvhPN1krI9VQHr4dI=
     ports:
       - "3000:3000"
     environment:

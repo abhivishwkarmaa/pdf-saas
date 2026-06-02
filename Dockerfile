@@ -24,6 +24,12 @@ COPY apps/web apps/web
 
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
+# Stable Server Actions encryption key. Without this, Next.js generates a new
+# random key on every build, which breaks any browser tab loaded from a previous
+# deployment with "Failed to find Server Action".
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+
 RUN npm run build -w @pdf-saas/shared \
   && npm run build -w @pdf-saas/web
 
