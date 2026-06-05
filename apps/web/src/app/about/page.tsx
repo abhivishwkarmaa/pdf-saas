@@ -4,7 +4,7 @@ import { Zap, Users, Globe, Award, ArrowRight, CheckCircle2, Sparkles, Shield, C
 
 export const metadata: Metadata = {
   title: "About ConvertHub — Our Mission",
-  description: "Learn about ConvertHub — the AI-powered file conversion platform built for everyone.",
+  description: "Learn about ConvertHub — the file conversion platform built for everyone.",
 };
 
 const STATS = [
@@ -16,7 +16,7 @@ const STATS = [
 
 const VALUES = [
   { icon: Shield, title: "Privacy First", desc: "Files are never stored permanently. Auto-deleted within 1 hour. We never sell your data." },
-  { icon: Sparkles, title: "AI-Powered", desc: "Smart compression, background removal, auto-captions, and image enhancement powered by ML." },
+  { icon: Zap, title: "Super Fast", desc: "Convert, merge, compress and split your files in seconds with zero delay." },
   { icon: Globe, title: "Accessible to All", desc: "Free for everyone, everywhere. No signup required for most tools." },
   { icon: Cpu, title: "Enterprise-Grade", desc: "Built on enterprise cloud infrastructure with 99.9% uptime and bank-grade security." },
 ];
@@ -37,7 +37,7 @@ export default function AboutPage() {
             <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">File Conversion Platform</span>
           </h1>
           <p className="text-zinc-400 text-xl max-w-2xl mx-auto leading-relaxed">
-            ConvertHub is an AI-powered online platform offering 70+ free tools for PDF, images, video, audio, and more — 
+            ConvertHub is an online platform offering 70+ free tools for PDF, images, video, audio, and more — 
             with privacy-first architecture and enterprise-grade reliability.
           </p>
         </div>
@@ -62,7 +62,7 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
             <p className="text-zinc-400 leading-relaxed mb-4">
               We believe powerful file tools should be accessible to everyone — not locked behind expensive software subscriptions. 
-              ConvertHub was built to democratize file processing with modern AI, enterprise infrastructure, and an obsession with privacy.
+              ConvertHub was built to democratize file processing with enterprise infrastructure, and an obsession with privacy.
             </p>
             <p className="text-zinc-400 leading-relaxed mb-6">
               Every tool runs on our secure cloud infrastructure. Files are encrypted in transit, processed in isolation, and auto-deleted 

@@ -55,11 +55,7 @@ const FOOTER_LINKS = {
     { label: "AI Image Enhancer", href: "/tools/image-editor" },
     { label: "Image to PDF", href: "/tools/jpg-to-pdf" },
   ],
-  "AI Tools": [
-    { label: "AI Image Enhancer", href: "/tools/image-editor" },
-    { label: "AI Compression", href: "/tools/compress-image" },
-    { label: "AI Thumbnail Generator", href: "/tools/image-editor" },
-  ],
+
   Company: [
     { label: "About Us", href: "/about" },
     { label: "Careers", href: "/careers" },
@@ -87,7 +83,7 @@ const TRUST_BADGES = [
   { icon: Shield, label: "SSL Secured", color: "text-emerald-400", bg: "bg-emerald-400/10" },
   { icon: Lock, label: "End-to-End Encrypted", color: "text-blue-400", bg: "bg-blue-400/10" },
   { icon: Trash2, label: "Auto File Deletion", color: "text-orange-400", bg: "bg-orange-400/10" },
-  { icon: Cpu, label: "AI-Powered", color: "text-violet-400", bg: "bg-violet-400/10" },
+
   { icon: Cloud, label: "Cloud Processing", color: "text-cyan-400", bg: "bg-cyan-400/10" },
   { icon: Zap, label: "Fast Conversion", color: "text-yellow-400", bg: "bg-yellow-400/10" },
   { icon: CheckCircle2, label: "No Watermark", color: "text-pink-400", bg: "bg-pink-400/10" },
@@ -97,10 +93,8 @@ const TRUST_BADGES = [
 const TOOL_CATEGORIES = [
   { icon: FileText, label: "PDF Tools", href: "/#pdf", color: "text-rose-400" },
   { icon: Image, label: "Image Tools", href: "/#image", color: "text-sky-400" },
-  { icon: Music, label: "Audio Tools", href: "/#audio", color: "text-amber-400" },
   { icon: Type, label: "Text Tools", href: "/#text", color: "text-emerald-400" },
   { icon: Code2, label: "Developer Tools", href: "/#developer", color: "text-cyan-400" },
-  { icon: Sparkles, label: "AI Tools", href: "/#ai", color: "text-fuchsia-400" },
   { icon: Calculator, label: "Calculators", href: "/#calculator", color: "text-orange-400" },
 ];
 
@@ -195,7 +189,7 @@ export function Footer() {
               </span>
             </a>
             <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mb-5">
-              The all-in-one file conversion platform. 70+ free tools for PDF, images, video, audio, and more. 
+              The all-in-one file conversion platform. 70+ free tools for PDF, images, text, and developer utilities. 
               No signup. No watermark. Privacy first.
             </p>
             {/* Socials */}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Shield, ChevronRight, Search, Lock, Database, Cookie, Eye, Globe, Mail, Trash2, Cpu, AlertTriangle } from "lucide-react";
+import { Shield, ChevronRight, Search, Lock, Database, Cookie, Eye, Globe, Mail, Trash2, AlertTriangle } from "lucide-react";
 
 const SECTIONS = [
   { id: "overview", title: "Overview", icon: Shield },
@@ -10,7 +10,7 @@ const SECTIONS = [
   { id: "file-handling", title: "File Upload & Handling", icon: Lock },
   { id: "auto-deletion", title: "Auto File Deletion", icon: Trash2 },
   { id: "security", title: "Security Standards", icon: Shield },
-  { id: "ai-processing", title: "AI Processing", icon: Cpu },
+
   { id: "third-party", title: "Third-Party Services", icon: Globe },
   { id: "cookies", title: "Cookies & Tracking", icon: Cookie },
   { id: "user-rights", title: "Your Rights (GDPR)", icon: Eye },
@@ -136,9 +136,7 @@ export function PrivacyContent() {
               <li><strong className="text-white">No indexing:</strong> Your files are never indexed, analyzed for advertising, or used to train AI models without explicit consent.</li>
               <li><strong className="text-white">Temporary storage:</strong> Files are stored on encrypted cloud servers only for the duration of conversion + a 1-hour deletion window.</li>
             </ul>
-            <InfoBox color="violet">
-              <strong>AI-powered tools:</strong> When using AI features (background removal, AI enhancement), your file is processed by our private inference server. Files are never shared with third-party AI providers unless explicitly stated.
-            </InfoBox>
+
           </Section>
 
           <Section id="auto-deletion" title="Auto File Deletion Policy" icon={Trash2} badge="Auto Delete">
@@ -168,20 +166,7 @@ export function PrivacyContent() {
             </ul>
           </Section>
 
-          <Section id="ai-processing" title="AI Processing Disclosure" icon={Cpu} badge="AI Powered">
-            <p>ConvertHub uses AI models for certain features. Here is a full disclosure:</p>
-            <SubSection title="AI Features and Data Handling">
-              <ul>
-                <li><strong className="text-white">AI Background Removal:</strong> Uses a local inference model. Files are not sent to external AI APIs.</li>
-                <li><strong className="text-white">AI Image Enhancement:</strong> Processed on our own inference infrastructure.</li>
-                <li><strong className="text-white">AI Auto-Captions:</strong> Speech-to-text is processed server-side. Audio is not retained after caption generation.</li>
-                <li><strong className="text-white">AI Compression:</strong> ML-based compression algorithms run locally — no external sharing.</li>
-              </ul>
-            </SubSection>
-            <InfoBox color="orange">
-              Your files are <strong>never used to train AI models</strong> without your explicit written consent. AI processing is solely for delivering the requested service.
-            </InfoBox>
-          </Section>
+
 
           <Section id="third-party" title="Third-Party Services" icon={Globe}>
             <p>We use trusted third-party providers to operate our platform:</p>
@@ -216,7 +201,7 @@ export function PrivacyContent() {
             <ul>
               <li><strong className="text-white">Right of Access:</strong> Request a copy of personal data we hold about you.</li>
               <li><strong className="text-white">Right to Rectification:</strong> Correct inaccurate personal data.</li>
-              <li><strong className="text-white">Right to Erasure:</strong> Request deletion of your personal data ("right to be forgotten").</li>
+              <li><strong className="text-white">Right to Erasure:</strong> Request deletion of your personal data (&quot;right to be forgotten&quot;).</li>
               <li><strong className="text-white">Right to Portability:</strong> Receive your data in a machine-readable format.</li>
               <li><strong className="text-white">Right to Object:</strong> Object to processing based on legitimate interest.</li>
               <li><strong className="text-white">Right to Restrict Processing:</strong> Request restriction of processing under certain circumstances.</li>

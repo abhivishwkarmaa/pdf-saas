@@ -35,13 +35,7 @@ const NAV_ITEMS = [
     color: "text-emerald-400",
     tools: TOOLS.filter(t => t.category === "text" && t.enabled).slice(0, 8),
   },
-  {
-    label: "AI Tools",
-    href: "/#all-tools",
-    icon: Sparkles,
-    color: "text-fuchsia-400",
-    tools: TOOLS.filter(t => t.enabled).slice(0, 8),
-  },
+
   {
     label: "Dev",
     href: "/#developer",

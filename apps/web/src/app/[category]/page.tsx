@@ -50,7 +50,6 @@ const SLUG_TO_CATEGORY: Record<string, ToolCategory> = {
   "text-tools": "text",
   "developer-tools": "developer",
   "calculators": "calculator",
-  "ai-tools": "image", // fallback — shows AI-capable tools
 };
 
 export async function generateStaticParams() {

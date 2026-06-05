@@ -5,21 +5,20 @@ import { Search, FileText, Image, Video, Type, Code2, Calculator, Sparkles, Musi
 
 export const metadata: Metadata = {
   title: "All Tools — ConvertHub",
-  description: "Browse all 70+ free online tools for PDF, image, video, audio, text, developer utilities, and AI-powered processing.",
+  description: "Browse all 70+ free online tools for PDF, image, text, and developer utilities.",
 };
 
 const CAT_ICONS: Record<string, React.ElementType> = {
-  pdf: FileText, image: Image, video: Video, text: Type,
+  pdf: FileText, image: Image, text: Type,
   developer: Code2, calculator: Calculator,
 };
 const CAT_COLORS: Record<string, string> = {
-  pdf: "text-rose-400", image: "text-sky-400", video: "text-violet-400",
+  pdf: "text-rose-400", image: "text-sky-400",
   text: "text-emerald-400", developer: "text-cyan-400", calculator: "text-orange-400",
 };
 const CAT_BG: Record<string, string> = {
   pdf: "bg-rose-500/10 border-rose-500/20",
   image: "bg-sky-500/10 border-sky-500/20",
-  video: "bg-violet-500/10 border-violet-500/20",
   text: "bg-emerald-500/10 border-emerald-500/20",
   developer: "bg-cyan-500/10 border-cyan-500/20",
   calculator: "bg-orange-500/10 border-orange-500/20",
@@ -41,7 +40,7 @@ export default function AllToolsPage() {
             </span>
           </h1>
           <p className="text-zinc-400 text-lg mb-8">
-            PDF, Image, Video, Audio, Text, Developer & AI tools — no signup, no watermark.
+            PDF, Image, Text, and Developer tools — no signup, no watermark.
           </p>
         </div>
       </div>

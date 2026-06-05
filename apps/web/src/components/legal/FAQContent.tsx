@@ -63,7 +63,7 @@ const FAQ_DATA: FaqCategory[] = [
         id: "g1",
         question: "What is ConvertHub?",
         answer:
-          "ConvertHub is an AI-powered online platform that provides modern file conversion, image editing, video editing, compression, and productivity tools — all in one place. With 70+ free tools covering PDF, image, video, audio, text, and developer utilities, ConvertHub is the ultimate all-in-one file processing solution. No signup required for most tools.",
+          "ConvertHub is an online platform that provides modern file conversion, image editing, compression, and productivity tools — all in one place. With 70+ free tools covering PDF, image, text, and developer utilities, ConvertHub is the ultimate all-in-one file processing solution. No signup required for most tools.",
         popular: true,
         tags: ["intro", "platform"],
       },
@@ -71,7 +71,7 @@ const FAQ_DATA: FaqCategory[] = [
         id: "g2",
         question: "Is ConvertHub free to use?",
         answer:
-          "Yes! ConvertHub offers a generous free tier that covers most use cases. Free users can access all core tools including PDF conversion, image compression, video conversion, and basic AI features. Optional premium plans unlock larger file sizes, batch processing, advanced AI tools, and priority processing queues.",
+          "Yes! ConvertHub offers a generous free tier that covers most use cases. Free users can access all core tools including PDF conversion, image compression, video conversion, and basic features. Optional premium plans unlock larger file sizes, batch processing, and priority processing queues.",
         popular: true,
         tags: ["pricing", "free"],
       },
@@ -94,7 +94,7 @@ const FAQ_DATA: FaqCategory[] = [
         id: "g5",
         question: "How many tools does ConvertHub offer?",
         answer:
-          "ConvertHub currently offers 70+ free tools across 8 categories: PDF Tools, Image Tools, Video Tools, Audio Tools, Text Tools, Developer Tools, AI Tools, and Calculators. New tools are added regularly based on community requests and usage trends.",
+          "ConvertHub currently offers 70+ free tools across 7 categories: PDF Tools, Image Tools, Video Tools, Audio Tools, Text Tools, Developer Tools, and Calculators. New tools are added regularly based on community requests and usage trends.",
         tags: ["tools", "features"],
       },
       {
@@ -106,61 +106,7 @@ const FAQ_DATA: FaqCategory[] = [
       },
     ],
   },
-  {
-    id: "video",
-    label: "Video Tools",
-    icon: Video,
-    color: "text-fuchsia-400",
-    bgColor: "bg-fuchsia-500/10",
-    borderColor: "border-fuchsia-500/20",
-    count: 6,
-    items: [
-      {
-        id: "v1",
-        question: "Which video formats does ConvertHub support?",
-        answer:
-          "ConvertHub supports a wide range of video formats for both input and output: MP4, MOV, AVI, MKV, WEBM, FLV, WMV, 3GP, TS, GIF, and more. Our video converter handles virtually any video format you throw at it, powered by a server-side FFmpeg processing engine.",
-        popular: true,
-        tags: ["formats", "mp4", "mov"],
-      },
-      {
-        id: "v2",
-        question: "Can I compress videos without losing quality?",
-        answer:
-          "Yes. Our AI-powered video compression engine analyzes your video content and intelligently reduces file size while maintaining high visual quality. You can choose between lossless, high quality, balanced, or maximum compression presets. Typical compression rates are 40–70% size reduction with minimal perceptible quality loss.",
-        tags: ["compression", "quality", "ai"],
-      },
-      {
-        id: "v3",
-        question: "Does ConvertHub support batch video conversion?",
-        answer:
-          "Yes. The Video Editor and Video Converter support multiple file uploads simultaneously. Free users can process up to 3 files concurrently, while premium users can process larger batches with priority queue access.",
-        tags: ["batch", "multiple", "concurrent"],
-      },
-      {
-        id: "v4",
-        question: "What can I do with the online Video Editor?",
-        answer:
-          "The ConvertHub Video Editor is a full-featured browser-based editor with: multi-track timeline editing, video trimming and splitting, clip dragging and reordering, background music and audio import, volume control per track, AI auto-caption generation, text overlays at any point on the timeline, transition effects (fade, crossfade, zoom, wipe, slide), cinematic color filters, speed control (0.25x–4x), and export in MP4, MOV, WEBM, or GIF.",
-        popular: true,
-        tags: ["editor", "timeline", "captions"],
-      },
-      {
-        id: "v5",
-        question: "How does AI subtitle generation work?",
-        answer:
-          "Our AI Auto-Captions feature uses speech-to-text technology to analyze the audio track of your video and automatically generate time-aligned subtitle entries. You can then edit each caption inline, adjust timing, change text color and font size, and position captions at the top, middle, or bottom of the video. Captions are included in the exported video.",
-        tags: ["subtitles", "captions", "ai", "speech-to-text"],
-      },
-      {
-        id: "v6",
-        question: "What is the maximum video file size I can upload?",
-        answer:
-          "Free users can upload video files up to 500 MB per file. Premium users can upload files up to 2 GB. For very large files (broadcast quality, 4K RAW), we recommend using the batch processing API available in enterprise plans.",
-        tags: ["size", "limit", "upload"],
-      },
-    ],
-  },
+
   {
     id: "image",
     label: "Image Tools",
@@ -174,7 +120,7 @@ const FAQ_DATA: FaqCategory[] = [
         id: "i1",
         question: "Can I remove image backgrounds automatically?",
         answer:
-          "Yes. The ConvertHub AI Background Remover uses a machine learning model to automatically detect the subject in your image and remove the background in seconds. Works best on photos with a clear subject (portraits, product photos, logos). You can fine-tune the result or export with a transparent background as PNG.",
+          "Yes. The ConvertHub Background Remover automatically detects the subject in your image and removes the background in seconds. Works best on photos with a clear subject (portraits, product photos, logos). You can fine-tune the result or export with a transparent background as PNG.",
         popular: true,
         tags: ["background", "ai", "transparent"],
       },
@@ -189,7 +135,7 @@ const FAQ_DATA: FaqCategory[] = [
         id: "i3",
         question: "What can I do with the Image Editor?",
         answer:
-          "The ConvertHub Image Editor is a Canva-style browser-based editor featuring: layer-based canvas (images, text, shapes, stickers), drag-to-move and rotation for every layer, undo/redo with 50-step history, 8 filter presets (Vivid, Noir, Vintage, Warm, etc.), per-layer adjustments (brightness, contrast, saturation, blur, hue, sepia, grayscale, invert), AI background removal and AI enhancement, canvas size presets (Instagram, Facebook, A4, HD), and PNG/JPG/WEBP export.",
+          "The ConvertHub Image Editor is a Canva-style browser-based editor featuring: layer-based canvas (images, text, shapes, stickers), drag-to-move and rotation for every layer, undo/redo with 50-step history, 8 filter presets (Vivid, Noir, Vintage, Warm, etc.), per-layer adjustments (brightness, contrast, saturation, blur, hue, sepia, grayscale, invert), background removal and image enhancements, canvas size presets (Instagram, Facebook, A4, HD), and PNG/JPG/WEBP export.",
         popular: true,
         tags: ["editor", "layers", "filters", "canva"],
       },
@@ -257,54 +203,7 @@ const FAQ_DATA: FaqCategory[] = [
       },
     ],
   },
-  {
-    id: "ai",
-    label: "AI Features",
-    icon: Sparkles,
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/10",
-    borderColor: "border-amber-500/20",
-    count: 5,
-    items: [
-      {
-        id: "a1",
-        question: "What AI tools are available on ConvertHub?",
-        answer:
-          "ConvertHub offers a growing suite of AI-powered tools: AI Background Remover (remove backgrounds from images), AI Image Enhancer (auto-improve quality, sharpness, colors), AI Video Enhancer (upscale and improve video quality), AI Auto-Captions (generate subtitles from video audio), AI Smart Compression (optimize files with content-aware algorithms), and AI Thumbnail Generator (create video thumbnails).",
-        popular: true,
-        tags: ["ai", "features", "tools"],
-      },
-      {
-        id: "a2",
-        question: "How does AI compression work?",
-        answer:
-          "Our AI compression algorithm analyzes the content of your file — for images it detects regions of detail vs. uniform areas; for videos it analyzes motion complexity and scene changes. It then selectively applies higher compression in less-important regions while preserving detail where the human eye is most sensitive. This typically achieves 30–60% better compression than traditional methods at equivalent quality.",
-        tags: ["compression", "algorithm", "quality"],
-      },
-      {
-        id: "a3",
-        question: "Are AI tools included in the free plan?",
-        answer:
-          "Basic AI tools (AI background removal, AI auto-captions, AI enhancement) are available to free users with some daily usage limits. Advanced AI features like AI video upscaling, AI batch processing, and priority AI inference are available in premium plans.",
-        tags: ["free", "premium", "limits"],
-      },
-      {
-        id: "a4",
-        question: "Are my files used to train AI models?",
-        answer:
-          "No. Your files are never used to train ConvertHub's AI models without your explicit written consent. All AI processing is purely for delivering the service you requested. Files are deleted automatically after processing and are never stored in training datasets.",
-        popular: true,
-        tags: ["privacy", "training", "data"],
-      },
-      {
-        id: "a5",
-        question: "How accurate is AI auto-caption generation?",
-        answer:
-          "AI auto-captions are typically 85–95% accurate for clear English speech. Accuracy may vary with accents, background noise, multiple speakers, or technical jargon. We always recommend reviewing and editing captions before publishing. The Video Editor makes it easy to edit any caption inline.",
-        tags: ["accuracy", "captions", "subtitles"],
-      },
-    ],
-  },
+
   {
     id: "security",
     label: "Security & Privacy",
@@ -830,6 +729,13 @@ function AccordionItem({
   catBorder: string;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      setHeight(contentRef.current.scrollHeight);
+    }
+  }, [isOpen]);
 
   const highlight = (text: string) => {
     if (!searchQuery.trim()) return text;
@@ -882,7 +788,7 @@ function AccordionItem({
         ref={contentRef}
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: isOpen ? (contentRef.current?.scrollHeight ?? 1000) + "px" : "0px",
+          maxHeight: isOpen ? (height !== null ? height + "px" : "1000px") : "0px",
           opacity: isOpen ? 1 : 0,
         }}
       >

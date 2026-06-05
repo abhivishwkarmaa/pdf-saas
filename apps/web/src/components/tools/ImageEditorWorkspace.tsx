@@ -19,7 +19,6 @@ import {
   FlipVertical,
   Sliders,
   Wand2,
-  Sparkles,
   Trash2,
   Download,
   Undo2,
@@ -180,7 +179,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [_resizing, _setResizing] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState<string | null>(null);
+
   const [showExport, setShowExport] = useState(false);
   const [canvasBackground, setCanvasBackground] = useState("#ffffff");
   const [textInput, setTextInput] = useState("Your text here");
@@ -367,26 +366,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [deleteLayer, undo, redo, duplicateLayer]);
 
-  // ─── AI Simulations ─────────────────────────────────────────────────────────
-  const aiRemoveBackground = async () => {
-    const sel = selectedLayer as ImageLayer;
-    if (!sel || sel.type !== "image") return;
-    setAiLoading("bg-remove");
-    await new Promise(r => setTimeout(r, 2200));
-    updateLayer(sel.id, { filters: { ...sel.filters, grayscale: 0, sepia: 0 } } as Partial<ImageLayer>);
-    setAiLoading(null);
-  };
 
-  const aiEnhance = async () => {
-    const sel = selectedLayer as ImageLayer;
-    if (!sel || sel.type !== "image") return;
-    setAiLoading("enhance");
-    await new Promise(r => setTimeout(r, 1800));
-    updateLayer(sel.id, {
-      filters: { ...sel.filters, brightness: 108, contrast: 112, saturation: 118, sharpness: 30 }
-    } as Partial<ImageLayer>);
-    setAiLoading(null);
-  };
 
   // ─── Export ─────────────────────────────────────────────────────────────────
   const exportImage = async (format: "png" | "jpg" | "webp") => {
@@ -894,34 +874,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
             </button>
           </div>
 
-          {/* AI Tools (image layers only) */}
-          {selectedLayer.type === "image" && (
-            <div className="border-t border-zinc-800 pt-3 space-y-2">
-              <p className="text-[10px] text-zinc-600 uppercase tracking-widest">AI Tools</p>
-              <button
-                onClick={aiRemoveBackground}
-                disabled={!!aiLoading}
-                className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50 text-white text-xs font-semibold py-2.5 flex items-center justify-center gap-2 transition"
-              >
-                {aiLoading === "bg-remove" ? (
-                  <><span className="animate-spin">⚡</span> Processing...</>
-                ) : (
-                  <><Wand2 className="h-3.5 w-3.5" /> Remove Background</>
-                )}
-              </button>
-              <button
-                onClick={aiEnhance}
-                disabled={!!aiLoading}
-                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 text-white text-xs font-semibold py-2.5 flex items-center justify-center gap-2 transition"
-              >
-                {aiLoading === "enhance" ? (
-                  <><span className="animate-spin">✨</span> Enhancing...</>
-                ) : (
-                  <><Sparkles className="h-3.5 w-3.5" /> AI Enhance</>
-                )}
-              </button>
-            </div>
-          )}
+
 
           {/* Delete */}
           <button onClick={deleteLayer} className="w-full rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-900/30 text-red-400 hover:text-red-300 text-xs font-semibold py-2 flex items-center justify-center gap-1.5 transition">
@@ -995,21 +948,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
               }}
             >
               {layers.map(renderLayerContent)}
-              {aiLoading && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                  <div className="text-center">
-                    <div className="text-4xl animate-bounce mb-3">{aiLoading === "bg-remove" ? "🪄" : "✨"}</div>
-                    <p className="text-white font-semibold text-sm">
-                      {aiLoading === "bg-remove" ? "AI Background Removal..." : "AI Enhancing image..."}
-                    </p>
-                    <div className="mt-3 flex gap-1 justify-center">
-                      {[0, 1, 2].map(i => (
-                        <div key={i} className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
