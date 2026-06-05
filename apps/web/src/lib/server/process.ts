@@ -8,7 +8,6 @@ import { repairPdf } from "./handlers/repair";
 import { pdfToPdfA } from "./handlers/pdfa";
 import { protectPdf, unlockPdf } from "../pdf/security";
 import { pdfToText, pdfToImage } from "./handlers/pdf-extract";
-import { processVideo } from "./handlers/video";
 import sharp from "sharp";
 
 export interface ServerProcessResult {
@@ -123,10 +122,6 @@ export async function processOnServer(
       const out = await pdfToImage(buffers[0], "png");
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
       return { buffer: out, mimeType: "image/png", fileName: `${baseName}.png` };
-    }
-    case "video-converter": {
-      const fileName = fileNames[0] ?? undefined;
-      return processVideo(buffers.length > 1 ? buffers : buffers[0], options as any, fileName);
     }
     default:
       throw new Error(`Server processing not available for: ${toolSlug}`);

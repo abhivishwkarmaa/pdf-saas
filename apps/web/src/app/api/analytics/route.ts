@@ -30,9 +30,9 @@ export async function GET() {
             queued: 0,
           },
           popularTools: {
-            "video-converter": 8,
-            "compress-pdf": 4,
-            "pdf-to-word": 3,
+            "compress-pdf": 8,
+            "pdf-to-word": 6,
+            "ocr-pdf": 3,
           },
         },
       });

@@ -3,7 +3,7 @@ import type { ToolCategory } from "@pdf-saas/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  FileText, Image, Video, Type, Code2, Calculator, Sparkles,
+  FileText, Image, Type, Code2, Calculator, Sparkles,
   Music, ArrowRight, CheckCircle2, Zap, Shield, Clock
 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -23,12 +23,6 @@ const CATEGORY_META: Record<string, {
     border: "border-sky-500/20", gradient: "from-sky-600 to-blue-600",
     heroDesc: "Convert, compress, resize, crop, and edit images with AI-powered tools.",
     features: ["AI Enhancement", "Background Removal", "Lossless compression", "40+ formats"],
-  },
-  video: {
-    icon: Video, color: "text-violet-400", bg: "bg-violet-500/10",
-    border: "border-violet-500/20", gradient: "from-violet-600 to-fuchsia-600",
-    heroDesc: "Convert, compress, trim, merge, and edit videos with AI captions and effects.",
-    features: ["AI Auto-Captions", "Timeline Editor", "Multi-track audio", "Cloud processing"],
   },
   text: {
     icon: Type, color: "text-emerald-400", bg: "bg-emerald-500/10",
@@ -53,7 +47,6 @@ const CATEGORY_META: Record<string, {
 const SLUG_TO_CATEGORY: Record<string, ToolCategory> = {
   "pdf-tools": "pdf",
   "image-tools": "image",
-  "video-tools": "video",
   "text-tools": "text",
   "developer-tools": "developer",
   "calculators": "calculator",

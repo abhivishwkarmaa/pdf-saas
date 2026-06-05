@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  FileText, Image, Video, Type, Calculator, Code2, Sparkles,
+  FileText, Image, Type, Calculator, Code2, Sparkles,
   Music, Zap, Search, Menu, X, ChevronDown, ArrowRight,
   Layers, Wand2, Shield, Globe,
 } from "lucide-react";
@@ -16,42 +16,35 @@ import { TOOLS, type ToolCategory } from "@pdf-saas/shared";
 const NAV_ITEMS = [
   {
     label: "PDF",
-    href: "/pdf-tools",
+    href: "/#pdf",
     icon: FileText,
     color: "text-rose-400",
     tools: TOOLS.filter(t => t.category === "pdf" && t.enabled).slice(0, 8),
   },
   {
     label: "Image",
-    href: "/image-tools",
+    href: "/#image",
     icon: Image,
     color: "text-sky-400",
     tools: TOOLS.filter(t => t.category === "image" && t.enabled).slice(0, 8),
   },
   {
-    label: "Video",
-    href: "/video-tools",
-    icon: Video,
-    color: "text-violet-400",
-    tools: TOOLS.filter(t => t.category === "video" && t.enabled).slice(0, 8),
-  },
-  {
     label: "Text",
-    href: "/text-tools",
+    href: "/#text",
     icon: Type,
     color: "text-emerald-400",
     tools: TOOLS.filter(t => t.category === "text" && t.enabled).slice(0, 8),
   },
   {
     label: "AI Tools",
-    href: "/ai-tools",
+    href: "/#all-tools",
     icon: Sparkles,
     color: "text-fuchsia-400",
     tools: TOOLS.filter(t => t.enabled).slice(0, 8),
   },
   {
     label: "Dev",
-    href: "/developer-tools",
+    href: "/#developer",
     icon: Code2,
     color: "text-cyan-400",
     tools: TOOLS.filter(t => t.category === "developer" && t.enabled).slice(0, 8),

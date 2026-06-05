@@ -1,7 +1,6 @@
 export type ToolCategory =
   | "pdf"
   | "image"
-  | "video"
   | "text"
   | "developer"
   | "calculator";

@@ -31,8 +31,26 @@ export async function ocrPdf(buffer: Buffer, lang: string): Promise<Buffer> {
         } catch {
           text = "";
         }
+        
+        // Map common Unicode characters to WinAnsi equivalents and filter others
+        const replacements: Record<string, string> = {
+          '\u2018': "'", '\u2019': "'",
+          '\u201c': '"', '\u201d': '"',
+          '\u2013': '-', '\u2014': '-',
+          '\u2022': '*', '\u2026': '...',
+          '\u2122': 'TM', '\u00ae': '(R)', '\u00a9': '(C)',
+          '\u20ac': 'EUR'
+        };
+        const sanitized = text.replace(/[\u2018\u2019\u201c\u201d\u2013\u2014\u2022\u2026\u2122\u00ae\u00a9\u20ac]/g, (m) => replacements[m] || '')
+          .split('')
+          .filter(char => {
+            const code = char.charCodeAt(0);
+            return (code >= 32 && code <= 126) || code === 10 || code === 13 || (code >= 160 && code <= 255);
+          })
+          .join('');
+
         const page = outDoc.addPage([612, 792]);
-        page.drawText(text.slice(0, 3000), {
+        page.drawText(sanitized.slice(0, 3000), {
           x: 40,
           y: 750,
           size: 9,

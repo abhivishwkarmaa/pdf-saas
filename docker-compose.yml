@@ -1,5 +1,6 @@
 services:
   web:
+    image: docker.io/library/pdf-saas-web:latest
     build:
       context: .
       dockerfile: Dockerfile

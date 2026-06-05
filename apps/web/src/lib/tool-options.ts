@@ -49,30 +49,6 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
   "compress-image": [
     { key: "quality", label: "Quality (1–100)", type: "number", placeholder: "80" },
   ],
-  "video-converter": [
-    {
-      key: "task",
-      label: "Action",
-      type: "select",
-      options: [
-        { value: "convert", label: "Convert video format" },
-        { value: "compress", label: "Compress video" },
-        { value: "extract-audio", label: "Extract MP3 audio" },
-      ],
-    },
-    {
-      key: "format",
-      label: "Output format",
-      type: "select",
-      options: [
-        { value: "mp4", label: "MP4" },
-        { value: "mov", label: "MOV" },
-        { value: "avi", label: "AVI" },
-        { value: "mkv", label: "MKV" },
-        { value: "webm", label: "WEBM" },
-      ],
-    },
-  ],
   "resize-image": [
     { key: "width", label: "Width (px)", type: "number", placeholder: "800" },
     { key: "height", label: "Height (px)", type: "number", placeholder: "600" },

@@ -10,7 +10,6 @@ import { htmlToPdf } from "./html.js";
 import { imageToWord } from "./image-word.js";
 import { repairPdf } from "./repair.js";
 import { pdfToPdfA } from "./pdfa.js";
-import { processVideo } from "./video.js";
 import { prisma } from "../lib/db.js";
 
 export interface HandlerResult {
@@ -117,6 +116,7 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
       return out;
     }
     case "svg-to-png": {
+      // @ts-ignore
       const sharp = (await import("sharp")).default;
       const out = await sharp(buffers[0]).png().toBuffer();
       const key = `outputs/${uuidv4()}/converted.png`;
@@ -135,83 +135,6 @@ export async function runHandler(payload: JobPayload): Promise<HandlerResult> {
         outputKey: key,
         mimeType: "application/pdf",
         fileName: "comparison-report.pdf",
-      };
-    }
-    case "video-converter": {
-      const fileNames = (opts._fileNames as string[]) || ["video.mp4"];
-      const result = await processVideo(
-        buffers.length > 1 ? buffers : buffers[0],
-        opts as any,
-        fileNames[0],
-        async (progress, speed, eta, logLine) => {
-          try {
-            await prisma.job.update({
-              where: { id: payload.jobId },
-              data: {
-                progress,
-                speed,
-                eta,
-                logs: {
-                  push: logLine,
-                },
-              },
-            });
-          } catch (e) {
-            // ignore database write errors
-          }
-        }
-      );
-
-      let outputKey = "";
-      let outputKeys: string[] = [];
-
-      if (result.splitOutputs && result.splitOutputs.length > 0) {
-        for (const out of result.splitOutputs) {
-          const key = `outputs/${uuidv4()}/${out.fileName}`;
-          await putObjectBuffer(key, out.buffer, out.mimeType);
-          outputKeys.push(key);
-        }
-        outputKey = outputKeys[0];
-      } else {
-        outputKey = `outputs/${uuidv4()}/${result.fileName}`;
-        await putObjectBuffer(outputKey, result.buffer, result.mimeType);
-        outputKeys = [outputKey];
-      }
-
-      // Update database outputs
-      try {
-        await prisma.job.update({
-          where: { id: payload.jobId },
-          data: {
-            outputKey,
-            outputKeys,
-            mimeType: result.mimeType,
-            fileName: result.fileName,
-          },
-        });
-      } catch (e) {}
-
-      // Append mock captions or scene analysis logs if generated
-      if (result.captions) {
-        const captionsKey = `${outputKey}.srt`;
-        await putObjectBuffer(captionsKey, Buffer.from(result.captions), "text/plain");
-        try {
-          await prisma.job.update({
-            where: { id: payload.jobId },
-            data: {
-              logs: {
-                push: `[AI Captions generated and saved to: ${captionsKey}]`,
-              },
-            },
-          });
-        } catch {}
-      }
-
-      return {
-        outputKey,
-        outputKeys,
-        mimeType: result.mimeType,
-        fileName: result.fileName,
       };
     }
     default:
