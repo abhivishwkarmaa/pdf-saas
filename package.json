@@ -3,13 +3,12 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "worker"
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev -w @pdf-saas/web",
     "dev:api": "npm run dev -w @pdf-saas/api",
-    "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web && npm run build -w @pdf-saas/worker && npm run build -w @pdf-saas/api",
+    "build": "npm run build -w @pdf-saas/shared && npm run build -w @pdf-saas/web && npm run build -w @pdf-saas/api",
     "build:api": "npm run build -w @pdf-saas/api",
     "start": "npm run start -w @pdf-saas/web",
     "start:api": "npm run start -w @pdf-saas/api",

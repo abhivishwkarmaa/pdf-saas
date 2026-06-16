@@ -18,7 +18,8 @@ export async function splitPdf(
   const buf = await file.arrayBuffer();
   const source = await PDFDocument.load(buf, { ignoreEncryption: true });
   const total = source.getPageCount();
-  const parts = ranges.split(",").map((r) => r.trim());
+  const normalized = ranges.replace(/\s*-\s*/g, "-");
+  const parts = normalized.split(/[\s,;]+/).filter(Boolean);
   const outputs: Blob[] = [];
 
   for (const part of parts) {
@@ -26,11 +27,16 @@ export async function splitPdf(
     let indices: number[] = [];
     if (part.includes("-")) {
       const [a, b] = part.split("-").map((n) => parseInt(n, 10));
-      for (let i = a; i <= b; i++) indices.push(i - 1);
+      if (isNaN(a) || isNaN(b)) continue;
+      const start = Math.min(a, b);
+      const end = Math.max(a, b);
+      for (let i = start; i <= end; i++) indices.push(i - 1);
     } else {
-      indices = [parseInt(part, 10) - 1];
+      const p = parseInt(part, 10);
+      if (!isNaN(p)) indices = [p - 1];
     }
     indices = indices.filter((i) => i >= 0 && i < total);
+    if (indices.length === 0) continue;
     const copied = await doc.copyPages(source, indices);
     copied.forEach((p) => doc.addPage(p));
     outputs.push(await blobFromPdf(doc));
@@ -65,24 +71,74 @@ export async function organizePdf(file: File, order: string): Promise<Blob> {
   const buf = await file.arrayBuffer();
   const source = await PDFDocument.load(buf, { ignoreEncryption: true });
   const total = source.getPageCount();
-  const indices = order
-    .split(",")
-    .map((p) => parseInt(p.trim(), 10) - 1)
-    .filter((i) => i >= 0 && i < total);
   const doc = await PDFDocument.create();
-  const copied = await doc.copyPages(source, indices);
-  copied.forEach((p) => doc.addPage(p));
+
+  const normalized = order.replace(/\s*-\s*/g, "-");
+  const parts = normalized.split(/[\s,;]+/).filter(Boolean);
+
+  for (const part of parts) {
+    const clean = part.toLowerCase().trim();
+    if (clean === "b" || clean === "blank") {
+      if (total > 0) {
+        const firstPage = source.getPages()[0];
+        const { width, height } = firstPage.getSize();
+        doc.addPage([width, height]);
+      } else {
+        doc.addPage([612, 792]);
+      }
+    } else {
+      const idx = parseInt(clean, 10) - 1;
+      if (!isNaN(idx) && idx >= 0 && idx < total) {
+        const [copied] = await doc.copyPages(source, [idx]);
+        doc.addPage(copied);
+      }
+    }
+  }
+
   return blobFromPdf(doc);
 }
 
 export async function rotatePdf(
   file: File,
-  angle: 90 | 180 | 270
+  angle: 90 | 180 | 270,
+  pages?: string
 ): Promise<Blob> {
   const buf = await file.arrayBuffer();
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-  const rot = degrees(angle);
-  doc.getPages().forEach((page) => page.setRotation(rot));
+  const defaultRot = degrees(angle);
+
+  const total = doc.getPageCount();
+
+  if (pages && pages.trim()) {
+    const normalized = pages.replace(/\s*-\s*/g, "-").replace(/\s*:\s*/g, ":");
+    const parts = normalized.split(/[\s,;]+/).filter(Boolean);
+
+    for (const part of parts) {
+      if (part.includes(":")) {
+        const [pagePart, anglePart] = part.split(":");
+        const pageAngle = parseInt(anglePart, 10);
+        if (pageAngle !== 90 && pageAngle !== 180 && pageAngle !== 270) continue;
+        const pageRot = degrees(pageAngle);
+
+        const targetPages = parsePages(pagePart, total);
+        doc.getPages().forEach((page, i) => {
+          if (targetPages.has(i)) {
+            page.setRotation(pageRot);
+          }
+        });
+      } else {
+        const targetPages = parsePages(part, total);
+        doc.getPages().forEach((page, i) => {
+          if (targetPages.has(i)) {
+            page.setRotation(defaultRot);
+          }
+        });
+      }
+    }
+  } else {
+    doc.getPages().forEach((page) => page.setRotation(defaultRot));
+  }
+
   return blobFromPdf(doc);
 }
 
@@ -223,13 +279,23 @@ export async function signPdf(files: File[]): Promise<Blob> {
 
 function parsePages(pages: string, total: number): Set<number> {
   const set = new Set<number>();
-  for (const part of pages.split(",").map((p) => p.trim())) {
+  const normalized = pages.replace(/\s*-\s*/g, "-");
+  const parts = normalized.split(/[\s,;]+/).filter(Boolean);
+
+  for (const part of parts) {
     if (part.includes("-")) {
       const [a, b] = part.split("-").map((n) => parseInt(n, 10));
-      for (let i = a; i <= b; i++) if (i >= 1 && i <= total) set.add(i - 1);
+      if (isNaN(a) || isNaN(b)) continue;
+      const start = Math.min(a, b);
+      const end = Math.max(a, b);
+      for (let i = start; i <= end; i++) {
+        if (i >= 1 && i <= total) set.add(i - 1);
+      }
     } else {
       const p = parseInt(part, 10);
-      if (p >= 1 && p <= total) set.add(p - 1);
+      if (!isNaN(p) && p >= 1 && p <= total) {
+        set.add(p - 1);
+      }
     }
   }
   return set;

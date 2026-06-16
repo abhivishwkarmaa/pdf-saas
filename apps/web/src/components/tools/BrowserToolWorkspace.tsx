@@ -48,6 +48,9 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           break;
         case "split-pdf": {
           const parts = await pdf.splitPdf(files[0], options.ranges || "1");
+          if (parts.length > 10) {
+            throw new Error("You can split into a maximum of 10 PDF files at a time to prevent browser download blocks.");
+          }
           parts.forEach((b, i) => downloadBlob(b, `part-${i + 1}.pdf`));
           toast.success(`Downloaded ${parts.length} file(s)`);
           return;
@@ -67,7 +70,8 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         case "rotate-pdf":
           blob = await pdf.rotatePdf(
             files[0],
-            (Number(options.angle) || 90) as 90 | 180 | 270
+            (Number(options.angle) || 90) as 90 | 180 | 270,
+            options.pages
           );
           downloadBlob(blob, "rotated.pdf");
           break;

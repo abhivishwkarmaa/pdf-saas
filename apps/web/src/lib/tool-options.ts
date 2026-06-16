@@ -17,7 +17,7 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
     { key: "pages", label: "Pages to extract", placeholder: "1, 3-5" },
   ],
   "organize-pdf": [
-    { key: "order", label: "Page order", placeholder: "3, 1, 2" },
+    { key: "order", label: "Page order & Blank pages", placeholder: "e.g. 1, b, 2, b, 3 (use 'b' or 'blank' for blank pages)" },
   ],
   "rotate-pdf": [
     {
@@ -30,6 +30,11 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
         { value: "270", label: "270° clockwise" },
       ],
     },
+    {
+      key: "pages",
+      label: "Pages to rotate (Optional)",
+      placeholder: "e.g. 1:90, 4:180, 2-3 (default is select angle)",
+    },
   ],
   "watermark-pdf": [
     { key: "text", label: "Watermark text", placeholder: "CONFIDENTIAL" },
@@ -38,7 +43,12 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
     {
       key: "quality",
       label: "Quality",
-      placeholder: "ebook (screen, ebook, printer, prepress)",
+      type: "select",
+      options: [
+        { value: "ebook", label: "Recommended (Good quality - 150 dpi)" },
+        { value: "screen", label: "Maximum Compression (Less quality - 72 dpi)" },
+        { value: "print", label: "High Quality (High quality - 300 dpi)" },
+      ],
     },
   ],
   "protect-pdf": [{ key: "password", label: "Password", type: "password" }],

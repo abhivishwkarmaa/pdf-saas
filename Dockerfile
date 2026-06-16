@@ -7,8 +7,6 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 COPY packages/storage/package.json packages/storage/
-COPY worker/package.json worker/
-COPY worker/prisma/schema.prisma worker/prisma/
 
 COPY scripts/docker-npm-native.sh /tmp/docker-npm-native.sh
 
@@ -19,7 +17,6 @@ RUN sed -i 's/\r$//' /tmp/docker-npm-native.sh \
 
 COPY packages/shared packages/shared
 COPY packages/storage packages/storage
-COPY worker worker
 COPY apps/web apps/web
 
 ENV PATH="/app/node_modules/.bin:${PATH}"
@@ -71,14 +68,11 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 COPY packages/storage/package.json packages/storage/
-COPY worker/package.json worker/
-COPY worker/prisma/schema.prisma worker/prisma/
-
-RUN npm ci --omit=dev
+COPY --from=builder /app/node_modules ./node_modules
+RUN npm prune --omit=dev
 
 COPY --from=builder /app/packages/shared packages/shared
 COPY --from=builder /app/packages/storage packages/storage
-COPY --from=builder /app/worker/prisma worker/prisma
 COPY --from=builder /app/apps/web/.next apps/web/.next
 COPY --from=builder /app/apps/web/public apps/web/public
 COPY apps/web/next.config.ts apps/web/
