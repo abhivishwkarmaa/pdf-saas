@@ -23,6 +23,10 @@ export function ToolOptionsForm({ slug, options, onChange }: ToolOptionsFormProp
         if ((slug === "pdf-to-jpg" || slug === "pdf-to-png") && field.key === "quality" && options.mode === "extract") {
           return null;
         }
+        const isImageToPdf = ["jpg-to-pdf", "png-to-pdf", "scan-to-pdf", "image-to-pdf"].includes(slug);
+        if (isImageToPdf && field.key === "orientation" && options.pageSize === "fit") {
+          return null;
+        }
         return (
           <OptionField
             key={field.key}

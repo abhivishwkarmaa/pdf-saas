@@ -24,12 +24,28 @@ interface BrowserToolWorkspaceProps {
 export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
   const theme = CATEGORY_THEME[tool.category];
   const [files, setFiles] = useState<File[]>([]);
+  const [rotations, setRotations] = useState<number[]>([]);
   const [processing, setProcessing] = useState(false);
   const [options, setOptions] = useState<Record<string, string>>(
     getToolOptionDefaults(tool.slug)
   );
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
+
+  const handleFilesChange = (newFiles: File[]) => {
+    if (newFiles.length < files.length) {
+      const deletedIndex = files.findIndex((f) => !newFiles.includes(f));
+      if (deletedIndex !== -1) {
+        setRotations((prev) => prev.filter((_, idx) => idx !== deletedIndex));
+      } else {
+        setRotations((prev) => prev.slice(0, newFiles.length));
+      }
+    } else if (newFiles.length > files.length) {
+      const diffCount = newFiles.length - files.length;
+      setRotations((prev) => [...prev, ...new Array(diffCount).fill(0)]);
+    }
+    setFiles(newFiles);
+  };
 
   const process = async () => {
     if (files.length === 0) {
@@ -78,10 +94,18 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         case "jpg-to-pdf":
         case "png-to-pdf":
         case "scan-to-pdf":
-        case "image-to-pdf":
-          blob = await pdf.imagesToPdf(files);
+        case "image-to-pdf": {
+          const processedFiles = [...files];
+          for (let i = 0; i < processedFiles.length; i++) {
+            const rot = rotations[i] || 0;
+            if (rot > 0) {
+              processedFiles[i] = await rotateImageFileByAngle(processedFiles[i], rot);
+            }
+          }
+          blob = await pdf.imagesToPdf(processedFiles, options);
           downloadBlob(blob, "document.pdf");
           break;
+        }
         case "watermark-pdf":
           blob = await pdf.watermarkPdf(files[0], options.text || "CONFIDENTIAL");
           downloadBlob(blob, "watermarked.pdf");
@@ -171,10 +195,13 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
             fileUrls={fileUrls}
             textSnippet={textSnippet}
             options={options}
+            onFilesChange={handleFilesChange}
+            rotations={rotations}
+            onRotationsChange={setRotations}
           />
         }
       >
-        <FileDropZone tool={tool} files={files} onFiles={setFiles} />
+        <FileDropZone tool={tool} files={files} onFiles={handleFilesChange} />
         <ToolOptionsForm slug={tool.slug} options={options} onChange={setOptions} />
         <PrimaryButton
           className={theme.button}
@@ -187,4 +214,46 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
       </ToolWorkspaceLayout>
     </>
   );
+}
+
+async function rotateImageFileByAngle(file: File, angle: number): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const rad = (angle * Math.PI) / 180;
+        const isSwapped = (angle / 90) % 2 !== 0;
+        canvas.width = isSwapped ? img.height : img.width;
+        canvas.height = isSwapped ? img.width : img.height;
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Canvas toBlob failed"));
+            return;
+          }
+          const rotatedFile = new File([blob], file.name, {
+            type: file.type || "image/jpeg",
+            lastModified: Date.now()
+          });
+          resolve(rotatedFile);
+        }, file.type || "image/jpeg");
+      };
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
 }

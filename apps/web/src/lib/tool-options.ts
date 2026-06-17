@@ -96,6 +96,130 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
   "ocr-pdf": [
     { key: "language", label: "Language code", placeholder: "eng" },
   ],
+  "jpg-to-pdf": [
+    {
+      key: "pageSize",
+      label: "Page Size",
+      type: "select",
+      options: [
+        { value: "a4", label: "A4 (210 x 297 mm)" },
+        { value: "letter", label: "US Letter (8.5 x 11 in)" },
+        { value: "fit", label: "Fit (same page size as image)" },
+      ],
+    },
+    {
+      key: "orientation",
+      label: "Orientation",
+      type: "select",
+      options: [
+        { value: "portrait", label: "Portrait" },
+        { value: "landscape", label: "Landscape" },
+      ],
+    },
+    {
+      key: "margin",
+      label: "Margin",
+      type: "select",
+      options: [
+        { value: "none", label: "No Margin" },
+        { value: "small", label: "Small Margin (20 pt)" },
+        { value: "big", label: "Big Margin (50 pt)" },
+      ],
+    },
+  ],
+  "png-to-pdf": [
+    {
+      key: "pageSize",
+      label: "Page Size",
+      type: "select",
+      options: [
+        { value: "a4", label: "A4 (210 x 297 mm)" },
+        { value: "letter", label: "US Letter (8.5 x 11 in)" },
+        { value: "fit", label: "Fit (same page size as image)" },
+      ],
+    },
+    {
+      key: "orientation",
+      label: "Orientation",
+      type: "select",
+      options: [
+        { value: "portrait", label: "Portrait" },
+        { value: "landscape", label: "Landscape" },
+      ],
+    },
+    {
+      key: "margin",
+      label: "Margin",
+      type: "select",
+      options: [
+        { value: "none", label: "No Margin" },
+        { value: "small", label: "Small Margin (20 pt)" },
+        { value: "big", label: "Big Margin (50 pt)" },
+      ],
+    },
+  ],
+  "scan-to-pdf": [
+    {
+      key: "pageSize",
+      label: "Page Size",
+      type: "select",
+      options: [
+        { value: "a4", label: "A4 (210 x 297 mm)" },
+        { value: "letter", label: "US Letter (8.5 x 11 in)" },
+        { value: "fit", label: "Fit (same page size as image)" },
+      ],
+    },
+    {
+      key: "orientation",
+      label: "Orientation",
+      type: "select",
+      options: [
+        { value: "portrait", label: "Portrait" },
+        { value: "landscape", label: "Landscape" },
+      ],
+    },
+    {
+      key: "margin",
+      label: "Margin",
+      type: "select",
+      options: [
+        { value: "none", label: "No Margin" },
+        { value: "small", label: "Small Margin (20 pt)" },
+        { value: "big", label: "Big Margin (50 pt)" },
+      ],
+    },
+  ],
+  "image-to-pdf": [
+    {
+      key: "pageSize",
+      label: "Page Size",
+      type: "select",
+      options: [
+        { value: "a4", label: "A4 (210 x 297 mm)" },
+        { value: "letter", label: "US Letter (8.5 x 11 in)" },
+        { value: "fit", label: "Fit (same page size as image)" },
+      ],
+    },
+    {
+      key: "orientation",
+      label: "Orientation",
+      type: "select",
+      options: [
+        { value: "portrait", label: "Portrait" },
+        { value: "landscape", label: "Landscape" },
+      ],
+    },
+    {
+      key: "margin",
+      label: "Margin",
+      type: "select",
+      options: [
+        { value: "none", label: "No Margin" },
+        { value: "small", label: "Small Margin (20 pt)" },
+        { value: "big", label: "Big Margin (50 pt)" },
+      ],
+    },
+  ],
   "compress-image": [
     { key: "quality", label: "Quality (1–100)", type: "number", placeholder: "80" },
   ],

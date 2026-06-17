@@ -7,7 +7,10 @@ import {
   Image as ImageIcon,
   Type,
   Code,
+  RotateCw,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { getToolOptionFields } from "@/lib/tool-options";
 import { cn } from "@/lib/utils";
@@ -24,6 +27,9 @@ interface SubmissionPreviewProps {
   textOutput?: string;
   summaryItems?: PreviewSummaryItem[];
   resultPreview?: { title: string; value: string; hint?: string };
+  onFilesChange?: (files: File[]) => void;
+  rotations?: number[];
+  onRotationsChange?: (rotations: number[]) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -42,7 +48,11 @@ export function SubmissionPreview({
   textOutput,
   summaryItems = [],
   resultPreview,
+  onFilesChange,
+  rotations = [],
+  onRotationsChange,
 }: SubmissionPreviewProps) {
+  const isImageToPdf = ["jpg-to-pdf", "png-to-pdf", "scan-to-pdf", "image-to-pdf"].includes(tool.slug);
   const theme = CATEGORY_THEME[tool.category];
   const optionFields = getToolOptionFields(tool.slug);
   const filledOptions = optionFields.filter((f) => (options[f.key] ?? "").trim() !== "");
@@ -89,12 +99,23 @@ export function SubmissionPreview({
             {hasSummary && <SummarySection items={summaryItems} theme={theme} />}
 
             {hasFiles && (
-              <FilePreviewSection
-                tool={tool}
-                files={files}
-                fileUrls={fileUrls}
-                textSnippet={textSnippet}
-              />
+              isImageToPdf ? (
+                <ImageToPdfPreview
+                  files={files}
+                  fileUrls={fileUrls}
+                  options={options}
+                  onFilesChange={onFilesChange}
+                  rotations={rotations}
+                  onRotationsChange={onRotationsChange}
+                />
+              ) : (
+                <FilePreviewSection
+                  tool={tool}
+                  files={files}
+                  fileUrls={fileUrls}
+                  textSnippet={textSnippet}
+                />
+              )
             )}
 
             {hasTextInput && (
@@ -361,6 +382,166 @@ function ResultPreviewBlock({
       {hint && (
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{hint}</p>
       )}
+    </div>
+  );
+}
+
+async function rotateImageFile(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.height;
+        canvas.height = img.width;
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((90 * Math.PI) / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Canvas toBlob failed"));
+            return;
+          }
+          const rotatedFile = new File([blob], file.name, {
+            type: file.type || "image/jpeg",
+            lastModified: Date.now()
+          });
+          resolve(rotatedFile);
+        }, file.type || "image/jpeg");
+      };
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageToPdfPreview({
+  files,
+  fileUrls,
+  options,
+  onFilesChange,
+  rotations = [],
+  onRotationsChange,
+}: {
+  files: File[];
+  fileUrls: string[];
+  options: Record<string, string>;
+  onFilesChange?: (files: File[]) => void;
+  rotations?: number[];
+  onRotationsChange?: (rotations: number[]) => void;
+}) {
+  const orientation = options.orientation || "portrait";
+  const pageSize = options.pageSize || "a4";
+  const margin = options.margin || "none";
+
+  let pageAspect = "aspect-[1/1.414]";
+  if (pageSize === "a4") {
+    pageAspect = orientation === "landscape" ? "aspect-[1.414/1]" : "aspect-[1/1.414]";
+  } else if (pageSize === "letter") {
+    pageAspect = orientation === "landscape" ? "aspect-[1.294/1]" : "aspect-[1/1.294]";
+  } else if (pageSize === "fit") {
+    pageAspect = ""; // dynamic
+  }
+
+  let marginPadding = "p-0";
+  if (margin === "small") {
+    marginPadding = "p-2.5 sm:p-4";
+  } else if (margin === "big") {
+    marginPadding = "p-5 sm:p-8";
+  }
+
+  const handleDelete = (index: number) => {
+    if (onFilesChange) {
+      const updated = files.filter((_, i) => i !== index);
+      onFilesChange(updated);
+    }
+  };
+
+  const handleRotate = (index: number) => {
+    if (onRotationsChange) {
+      const next = [...rotations];
+      next[index] = ((next[index] || 0) + 90) % 360;
+      onRotationsChange(next);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        Live Page Layout Preview
+      </p>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        {files.map((file, i) => {
+          const url = fileUrls[i];
+          const rotation = rotations[i] || 0;
+          return (
+            <div key={`${file.name}-${i}`} className="flex flex-col items-center group/page">
+              <span className="mb-1.5 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                Page {i + 1}
+              </span>
+              
+              <div
+                className={cn(
+                  "relative w-full overflow-hidden border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/20 shadow-sm rounded-xl flex items-center justify-center transition-all duration-300",
+                  pageAspect,
+                  marginPadding
+                )}
+                style={
+                  pageSize === "fit"
+                    ? { minHeight: "220px" }
+                    : {}
+                }
+              >
+                {url ? (
+                  <img
+                    src={url}
+                    alt={file.name}
+                    className={cn(
+                      "max-w-full max-h-full object-contain shadow-xs border border-zinc-100/50 dark:border-zinc-800/50 rounded-sm"
+                    )}
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      transition: "transform 0.2s ease-in-out",
+                    }}
+                  />
+                ) : null}
+
+                {onFilesChange && (
+                  <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover/page:opacity-100 focus-within:opacity-100 transition-opacity bg-white/95 dark:bg-zinc-900/95 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleRotate(i)}
+                      className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition"
+                      title="Rotate 90° Clockwise"
+                    >
+                      <RotateCw className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(i)}
+                      className="p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 transition"
+                      title="Delete Image"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -142,16 +142,61 @@ export async function rotatePdf(
   return blobFromPdf(doc);
 }
 
-export async function imagesToPdf(files: File[]): Promise<Blob> {
+export async function imagesToPdf(
+  files: File[],
+  options: Record<string, string> = {}
+): Promise<Blob> {
   const doc = await PDFDocument.create();
+  const pageSize = options.pageSize || "a4";
+  const orientation = options.orientation || "portrait";
+  const marginStr = options.margin || "none";
+
+  let margin = 0;
+  if (marginStr === "small") margin = 20;
+  else if (marginStr === "big") margin = 50;
+
   for (const file of files) {
     const buf = new Uint8Array(await file.arrayBuffer());
     const image =
       file.type === "image/png"
         ? await doc.embedPng(buf)
         : await doc.embedJpg(buf);
-    const page = doc.addPage([image.width, image.height]);
-    page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+
+    const imgWidth = image.width;
+    const imgHeight = image.height;
+
+    let pageWidth = imgWidth;
+    let pageHeight = imgHeight;
+
+    if (pageSize === "a4") {
+      pageWidth = orientation === "landscape" ? 841.89 : 595.28;
+      pageHeight = orientation === "landscape" ? 595.28 : 841.89;
+    } else if (pageSize === "letter") {
+      pageWidth = orientation === "landscape" ? 792 : 612;
+      pageHeight = orientation === "landscape" ? 612 : 792;
+    } else if (pageSize === "fit") {
+      pageWidth = imgWidth + 2 * margin;
+      pageHeight = imgHeight + 2 * margin;
+    }
+
+    const page = doc.addPage([pageWidth, pageHeight]);
+
+    const printableWidth = pageWidth - 2 * margin;
+    const printableHeight = pageHeight - 2 * margin;
+
+    const scale = Math.min(printableWidth / imgWidth, printableHeight / imgHeight);
+    const drawWidth = imgWidth * scale;
+    const drawHeight = imgHeight * scale;
+
+    const x = margin + (printableWidth - drawWidth) / 2;
+    const y = margin + (printableHeight - drawHeight) / 2;
+
+    page.drawImage(image, {
+      x,
+      y,
+      width: drawWidth,
+      height: drawHeight,
+    });
   }
   return blobFromPdf(doc);
 }
