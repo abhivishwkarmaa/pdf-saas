@@ -114,14 +114,14 @@ export async function processOnServer(
       return { buffer: out, mimeType: "text/plain", fileName: `${baseName}.txt` };
     }
     case "pdf-to-jpg": {
-      const out = await pdfToImage(buffers[0], "jpeg");
+      const { buffer: out, mimeType, ext } = await pdfToImage(buffers[0], "jpeg", options);
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
-      return { buffer: out, mimeType: "image/jpeg", fileName: `${baseName}.jpg` };
+      return { buffer: out, mimeType, fileName: `${baseName}.${ext}` };
     }
     case "pdf-to-png": {
-      const out = await pdfToImage(buffers[0], "png");
+      const { buffer: out, mimeType, ext } = await pdfToImage(buffers[0], "png", options);
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
-      return { buffer: out, mimeType: "image/png", fileName: `${baseName}.png` };
+      return { buffer: out, mimeType, fileName: `${baseName}.${ext}` };
     }
     default:
       throw new Error(`Server processing not available for: ${toolSlug}`);

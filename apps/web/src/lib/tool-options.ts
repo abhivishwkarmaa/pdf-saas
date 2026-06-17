@@ -39,6 +39,46 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
   "watermark-pdf": [
     { key: "text", label: "Watermark text", placeholder: "CONFIDENTIAL" },
   ],
+  "pdf-to-jpg": [
+    {
+      key: "mode",
+      label: "Conversion Mode",
+      type: "select",
+      options: [
+        { value: "pages", label: "Convert PDF pages to JPG" },
+        { value: "extract", label: "Extract embedded images" },
+      ],
+    },
+    {
+      key: "quality",
+      label: "Quality",
+      type: "select",
+      options: [
+        { value: "high", label: "High Quality (300 DPI)" },
+        { value: "low", label: "Standard Quality (150 DPI)" },
+      ],
+    },
+  ],
+  "pdf-to-png": [
+    {
+      key: "mode",
+      label: "Conversion Mode",
+      type: "select",
+      options: [
+        { value: "pages", label: "Convert PDF pages to PNG" },
+        { value: "extract", label: "Extract embedded images" },
+      ],
+    },
+    {
+      key: "quality",
+      label: "Quality",
+      type: "select",
+      options: [
+        { value: "high", label: "High Quality (300 DPI)" },
+        { value: "low", label: "Standard Quality (150 DPI)" },
+      ],
+    },
+  ],
   "compress-pdf": [
     {
       key: "quality",

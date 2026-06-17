@@ -19,15 +19,20 @@ export function ToolOptionsForm({ slug, options, onChange }: ToolOptionsFormProp
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
         Options
       </p>
-      {fields.map((field) => (
-        <OptionField
-          key={field.key}
-          slug={slug}
-          field={field}
-          value={options[field.key] ?? ""}
-          onChange={(value) => onChange({ ...options, [field.key]: value })}
-        />
-      ))}
+      {fields.map((field) => {
+        if ((slug === "pdf-to-jpg" || slug === "pdf-to-png") && field.key === "quality" && options.mode === "extract") {
+          return null;
+        }
+        return (
+          <OptionField
+            key={field.key}
+            slug={slug}
+            field={field}
+            value={options[field.key] ?? ""}
+            onChange={(value) => onChange({ ...options, [field.key]: value })}
+          />
+        );
+      })}
     </div>
   );
 }
