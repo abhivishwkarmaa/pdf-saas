@@ -314,9 +314,9 @@ function RotatePdfHelper({
           onChange={(e) => setAngleInput(e.target.value)}
           className="px-2 py-1.5 text-xs rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="90">90° CW</option>
-          <option value="180">180°</option>
-          <option value="270">270° CW</option>
+          <option value="90">Rotate Right (90°)</option>
+          <option value="180">Rotate 180°</option>
+          <option value="270">Rotate Left (90°)</option>
         </select>
 
         <button

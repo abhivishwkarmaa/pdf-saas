@@ -12,6 +12,12 @@ COPY scripts/docker-npm-native.sh /tmp/docker-npm-native.sh
 
 # Install inside Linux container so native modules match the image arch (not macOS lockfile)
 RUN sed -i 's/\r$//' /tmp/docker-npm-native.sh \
+  && npm config set registry http://registry.npmjs.org/ \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set audit false \
+  && npm config set fund false \
   && npm ci --include=optional \
   && bash /tmp/docker-npm-native.sh
 
@@ -48,7 +54,7 @@ RUN apt-get update \
     fonts-liberation \
     python3 \
     python3-pip \
-  && pip3 install --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
+  && pip3 install --default-timeout=1000 --retries 10 --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
   && rm -rf /var/lib/apt/lists/* \
   && command -v soffice \
   && command -v gs \

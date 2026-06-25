@@ -25,9 +25,9 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
       label: "Rotation",
       type: "select",
       options: [
-        { value: "90", label: "90° clockwise" },
-        { value: "180", label: "180°" },
-        { value: "270", label: "270° clockwise" },
+        { value: "90", label: "Rotate Right (90°)" },
+        { value: "180", label: "Rotate 180°" },
+        { value: "270", label: "Rotate Left (90°)" },
       ],
     },
     {

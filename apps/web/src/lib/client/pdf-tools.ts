@@ -264,15 +264,42 @@ export async function txtToPdf(file: File): Promise<Blob> {
   return blobFromPdf(doc);
 }
 
-export async function cropPdf(file: File): Promise<Blob> {
+export async function cropPdf(
+  file: File,
+  options?: {
+    xPercent: number;
+    yPercent: number;
+    widthPercent: number;
+    heightPercent: number;
+    pages?: Set<number>;
+    rotations?: Record<number, number>; // page index -> rotation angle (0, 90, 180, 270)
+  }
+): Promise<Blob> {
   const buf = await file.arrayBuffer();
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-  for (const page of doc.getPages()) {
-    const { width, height } = page.getSize();
-    const dx = width * 0.1;
-    const dy = height * 0.1;
-    page.setCropBox(dx, dy, width - 2 * dx, height - 2 * dy);
-  }
+  const total = doc.getPageCount();
+
+  const opt = options || {
+    xPercent: 10,
+    yPercent: 10,
+    widthPercent: 80,
+    heightPercent: 80,
+  };
+
+  doc.getPages().forEach((page, i) => {
+    if (!opt.pages || opt.pages.has(i)) {
+      const { width, height } = page.getSize();
+      const x = (opt.xPercent / 100) * width;
+      const w = (opt.widthPercent / 100) * width;
+      const h = (opt.heightPercent / 100) * height;
+      const y = (1 - (opt.yPercent + opt.heightPercent) / 100) * height;
+      page.setCropBox(x, y, w, h);
+    }
+    if (opt.rotations && opt.rotations[i] !== undefined) {
+      page.setRotation(degrees(opt.rotations[i]));
+    }
+  });
+
   return blobFromPdf(doc);
 }
 
