@@ -23,18 +23,18 @@ export async function POST(
 
   try {
     const formData = await req.formData();
-    const files = formData.getAll("files").filter((f): f is File => f instanceof File);
-    if (files.length === 0) {
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
-    }
-    if (files.length > tool.maxFiles) {
-      return NextResponse.json({ error: "Too many files" }, { status: 400 });
-    }
-
     let options: Record<string, unknown> = {};
     const optionsRaw = formData.get("options");
     if (typeof optionsRaw === "string" && optionsRaw) {
       options = JSON.parse(optionsRaw) as Record<string, unknown>;
+    }
+
+    const files = formData.getAll("files").filter((f): f is File => f instanceof File);
+    if (files.length === 0 && !options.url) {
+      return NextResponse.json({ error: "No files or URL provided" }, { status: 400 });
+    }
+    if (files.length > tool.maxFiles) {
+      return NextResponse.json({ error: "Too many files" }, { status: 400 });
     }
 
     const filenames = files.map((f) => f.name);

@@ -59,7 +59,17 @@ export async function processOnServer(
     case "excel-to-pdf":
       return convertOffice(buffers[0], "pdf", "excel-to-pdf", originalFileName);
     case "html-to-pdf": {
-      const out = await htmlToPdf(buffers[0].toString("utf-8"));
+      let out: Buffer;
+      const htmlOptions = {
+        pageSize: options.pageSize as "A4" | "Letter" | undefined,
+        orientation: options.orientation as "portrait" | "landscape" | undefined,
+        margin: options.margin as "default" | "none" | "minimum" | undefined,
+      };
+      if (options.url) {
+        out = await htmlToPdf("", String(options.url), htmlOptions);
+      } else {
+        out = await htmlToPdf(buffers[0].toString("utf-8"), undefined, htmlOptions);
+      }
       return { buffer: out, mimeType: "application/pdf", fileName: "page.pdf" };
     }
     case "image-to-word": {

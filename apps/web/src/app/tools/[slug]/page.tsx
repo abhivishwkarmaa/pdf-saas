@@ -6,6 +6,7 @@ import { ServerToolWorkspace } from "@/components/tools/ServerToolWorkspace";
 import { UtilityWorkspace } from "@/components/tools/UtilityWorkspace";
 import { ImageEditorWorkspace } from "@/components/tools/ImageEditorWorkspace";
 import { CropPdfWorkspace } from "@/components/tools/CropPdfWorkspace";
+import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -45,6 +46,10 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "crop-pdf") {
     return <CropPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "html-to-pdf") {
+    return <HtmlToPdfWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

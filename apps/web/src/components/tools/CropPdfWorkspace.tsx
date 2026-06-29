@@ -341,11 +341,11 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex h-full min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
+      <div className="flex lg:h-[750px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
         
         {/* LEFT SIDEBAR: Page Thumbnails */}
         {file && totalPages > 0 && (
-          <div className="w-full bg-zinc-950/80 border-b border-zinc-900 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-900 flex flex-col shrink-0">
+          <div className="w-full bg-zinc-950/80 border-b border-zinc-900 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-900 flex flex-col shrink-0 lg:h-full">
             <div className="p-4 border-b border-zinc-900 flex items-center gap-2">
               <Layers className="h-4 w-4 text-red-500" />
               <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
@@ -362,14 +362,14 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
 
                 return (
                   <button
-                    key={i}
-                    onClick={() => setPreviewPage(i + 1)}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200",
-                      isSelected
-                        ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
-                        : "bg-zinc-900/10 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/20"
-                    )}
+                     key={i}
+                     onClick={() => setPreviewPage(i + 1)}
+                     className={cn(
+                       "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200",
+                       isSelected
+                         ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
+                         : "bg-zinc-900/10 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/20"
+                     )}
                   >
                     <span className={cn(
                       "text-[10px] font-bold tracking-wider transition-colors",
@@ -399,7 +399,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
         )}
 
         {/* CENTER VIEWPORT: Large Preview & Rnd Crop Selector */}
-        <div className="flex flex-1 flex-col items-center justify-between bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] p-6 relative">
+        <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
           {/* Grid Backdrop */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
@@ -431,7 +431,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
           ) : (
             <>
               {/* Header */}
-              <div className="mb-4 flex w-full items-center justify-between border-b border-zinc-900 pb-3 z-10">
+              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20">
                     <FileText className="h-4 w-4 text-red-500" />
@@ -452,8 +452,8 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                 </button>
               </div>
 
-              {/* Viewport Frame */}
-              <div className="flex flex-1 items-center justify-center w-full min-h-[350px] relative z-10">
+              {/* Viewport Frame (Scrollable Body) */}
+              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-8">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-red-500" />
@@ -552,9 +552,9 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                 )}
               </div>
 
-              {/* Toolbar Zoom & Rotate Controls */}
-              {file && (
-                <div className="mt-4 flex items-center gap-4 bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-800 shadow-lg z-10">
+              {/* Toolbar Zoom & Rotate Controls (Fixed Footer) */}
+              <div className="w-full p-4 border-t border-zinc-900 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
+                <div className="flex items-center gap-4 bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-800 shadow-lg">
                   <div className="flex items-center gap-2 border-r border-zinc-900 pr-4">
                     <button
                       onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
@@ -584,14 +584,14 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                     <span>Rotate Page</span>
                   </button>
                 </div>
-              )}
+              </div>
             </>
           )}
         </div>
 
         {/* RIGHT SIDEBAR: Settings & Operations Panel */}
-        <div className="w-full bg-zinc-950 p-6 border-t border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-900 flex flex-col justify-between z-20">
-          <div className="space-y-6">
+        <div className="w-full bg-zinc-950 border-t border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
             
             {/* Header */}
             <div className="flex items-center gap-2 border-b border-zinc-900 pb-4">
@@ -718,7 +718,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
           </div>
 
           {/* Action Area */}
-          <div className="mt-6 border-t border-zinc-900 pt-6 space-y-3">
+          <div className="p-6 border-t border-zinc-900 space-y-3 shrink-0">
             {file && (
               <button
                 onClick={() => {

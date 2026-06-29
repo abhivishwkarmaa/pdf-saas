@@ -54,6 +54,7 @@ RUN apt-get update \
     fonts-liberation \
     python3 \
     python3-pip \
+    chromium \
   && pip3 install --default-timeout=1000 --retries 10 --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
   && rm -rf /var/lib/apt/lists/* \
   && command -v soffice \
