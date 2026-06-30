@@ -6,7 +6,9 @@ import { ServerToolWorkspace } from "@/components/tools/ServerToolWorkspace";
 import { UtilityWorkspace } from "@/components/tools/UtilityWorkspace";
 import { ImageEditorWorkspace } from "@/components/tools/ImageEditorWorkspace";
 import { CropPdfWorkspace } from "@/components/tools/CropPdfWorkspace";
+import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
+import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -48,8 +50,17 @@ export default async function ToolPage({ params }: PageProps) {
     return <CropPdfWorkspace tool={tool} />;
   }
 
+  if (slug === "redact-pdf") {
+    return <RedactPdfWorkspace tool={tool} />;
+  }
+
+
   if (slug === "html-to-pdf") {
     return <HtmlToPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "page-numbers") {
+    return <PageNumbersWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

@@ -341,7 +341,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex lg:h-[750px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
+      <div className="flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
         
         {/* LEFT SIDEBAR: Page Thumbnails */}
         {file && totalPages > 0 && (
@@ -488,7 +488,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                         src={pageImages[currentCacheKey]}
                         alt={`Preview Page ${previewPage}`}
                         onLoad={handleImageLoad}
-                        className="max-h-[440px] w-auto object-contain"
+                        className="max-h-[calc(100vh-320px)] lg:max-h-[calc(100vh-280px)] min-h-[300px] w-auto object-contain"
                         draggable={false}
                       />
 

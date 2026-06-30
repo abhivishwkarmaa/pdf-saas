@@ -220,20 +220,121 @@ export async function watermarkPdf(file: File, text: string): Promise<Blob> {
   return blobFromPdf(doc);
 }
 
-export async function addPageNumbers(file: File): Promise<Blob> {
+export interface PageNumberOptions {
+  position?: "top-left" | "top-center" | "top-right" | "middle-left" | "middle-center" | "middle-right" | "bottom-left" | "bottom-center" | "bottom-right";
+  margin?: number;
+  style?: "1,2,3" | "i,ii,iii" | "I,II,III" | "a,b,c" | "A,B,C";
+  startNumber?: number;
+  prefix?: string;
+  suffix?: string;
+  fontFamily?: "Helvetica" | "TimesRoman" | "Courier";
+  fontSize?: number;
+}
+
+export async function addPageNumbers(file: File, options: PageNumberOptions = {}): Promise<Blob> {
   const buf = await file.arrayBuffer();
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-  const font = await doc.embedFont(StandardFonts.Helvetica);
+  
+  const fontRef = 
+    options.fontFamily === "TimesRoman" ? StandardFonts.TimesRoman :
+    options.fontFamily === "Courier" ? StandardFonts.Courier :
+    StandardFonts.Helvetica;
+  const font = await doc.embedFont(fontRef);
+
   doc.getPages().forEach((page, i) => {
-    const { width } = page.getSize();
-    page.drawText(String(i + 1), {
-      x: width / 2 - 6,
-      y: 20,
-      size: 12,
+    const { width, height } = page.getSize();
+    const text = formatPageNumber(
+      i,
+      options.startNumber || 1,
+      options.style || "1,2,3",
+      options.prefix || "",
+      options.suffix || ""
+    );
+    const textWidth = font.widthOfTextAtSize(text, options.fontSize || 12);
+    const textHeight = (options.fontSize || 12) * 0.8; // approximate cap height
+
+    const m = options.margin !== undefined ? options.margin : 30;
+    let x = width / 2 - textWidth / 2;
+    let y = m;
+
+    const pos = options.position || "bottom-center";
+    
+    // Y-coordinate calculation (PDF-lib origin is bottom-left)
+    if (pos.startsWith("top")) {
+      y = height - m - textHeight;
+    } else if (pos.startsWith("middle")) {
+      y = height / 2 - textHeight / 2;
+    } else { // bottom
+      y = m;
+    }
+
+    // X-coordinate calculation
+    if (pos.endsWith("left")) {
+      x = m;
+    } else if (pos.endsWith("center")) {
+      x = width / 2 - textWidth / 2;
+    } else { // right
+      x = width - m - textWidth;
+    }
+
+    page.drawText(text, {
+      x,
+      y,
+      size: options.fontSize || 12,
       font,
     });
   });
+
   return blobFromPdf(doc);
+}
+
+function formatPageNumber(pageIndex: number, startNumber: number, style: string, prefix: string, suffix: string): string {
+  const num = pageIndex + startNumber;
+  let formatted = "";
+
+  if (style === "1,2,3") {
+    formatted = String(num);
+  } else if (style === "i,ii,iii") {
+    formatted = toRoman(num).toLowerCase();
+  } else if (style === "I,II,III") {
+    formatted = toRoman(num);
+  } else if (style === "a,b,c") {
+    formatted = toAlpha(num).toLowerCase();
+  } else if (style === "A,B,C") {
+    formatted = toAlpha(num);
+  } else {
+    formatted = String(num);
+  }
+
+  return `${prefix}${formatted}${suffix}`;
+}
+
+function toRoman(num: number): string {
+  const lookup: Record<string, number> = {
+    M: 1000, CM: 900, D: 500, CD: 400,
+    C: 100, XC: 90, L: 50, XL: 40,
+    X: 10, IX: 9, V: 5, IV: 4, I: 1
+  };
+  let roman = "";
+  let n = num;
+  for (const i in lookup) {
+    while (n >= lookup[i]) {
+      roman += i;
+      n -= lookup[i];
+    }
+  }
+  return roman || "0";
+}
+
+function toAlpha(num: number): string {
+  let temp = num;
+  let alpha = "";
+  while (temp > 0) {
+    const m = (temp - 1) % 26;
+    alpha = String.fromCharCode(65 + m) + alpha;
+    temp = Math.floor((temp - m) / 26);
+  }
+  return alpha || "A";
 }
 
 export async function txtToPdf(file: File): Promise<Blob> {
@@ -303,21 +404,44 @@ export async function cropPdf(
   return blobFromPdf(doc);
 }
 
-export async function redactPdf(file: File): Promise<Blob> {
+export interface RedactRegion {
+  pageIndex: number; // 0-based
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+}
+
+export async function redactPdf(
+  file: File,
+  regions: RedactRegion[]
+): Promise<Blob> {
   const buf = await file.arrayBuffer();
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-  for (const page of doc.getPages()) {
+  const total = doc.getPageCount();
+
+  for (const region of regions) {
+    if (region.pageIndex < 0 || region.pageIndex >= total) continue;
+    const page = doc.getPage(region.pageIndex);
     const { width, height } = page.getSize();
+
+    const x = (region.xPercent / 100) * width;
+    const w = (region.widthPercent / 100) * width;
+    const h = (region.heightPercent / 100) * height;
+    const y = (1 - (region.yPercent + region.heightPercent) / 100) * height;
+
     page.drawRectangle({
-      x: 50,
-      y: height - 100,
-      width: width - 100,
-      height: 60,
+      x,
+      y,
+      width: w,
+      height: h,
       color: rgb(0, 0, 0),
     });
   }
+
   return blobFromPdf(doc);
 }
+
 
 export async function signPdf(files: File[]): Promise<Blob> {
   if (files.length < 2) {

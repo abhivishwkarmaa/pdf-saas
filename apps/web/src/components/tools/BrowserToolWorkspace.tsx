@@ -123,7 +123,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           downloadBlob(blob, "cropped.pdf");
           break;
         case "redact-pdf":
-          blob = await pdf.redactPdf(files[0]);
+          blob = await pdf.redactPdf(files[0], []);
           downloadBlob(blob, "redacted.pdf");
           break;
         case "sign-pdf":
