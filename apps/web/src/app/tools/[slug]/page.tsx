@@ -9,6 +9,7 @@ import { CropPdfWorkspace } from "@/components/tools/CropPdfWorkspace";
 import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
 import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
+import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -61,6 +62,10 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "page-numbers") {
     return <PageNumbersWorkspace tool={tool} />;
+  }
+
+  if (slug === "watermark-pdf") {
+    return <WatermarkPdfWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

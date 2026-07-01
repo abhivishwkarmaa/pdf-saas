@@ -1,4 +1,4 @@
-import { PDFDocument, degrees, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, degrees, rgb, StandardFonts, PDFName, PDFArray } from "pdf-lib";
 
 export async function mergePdfs(files: File[]): Promise<Blob> {
   const merged = await PDFDocument.create();
@@ -201,22 +201,191 @@ export async function imagesToPdf(
   return blobFromPdf(doc);
 }
 
-export async function watermarkPdf(file: File, text: string): Promise<Blob> {
+export interface WatermarkOptions {
+  watermarkType: "text" | "image";
+  text: string;
+  fontFamily: "Helvetica" | "HelveticaBold" | "TimesRoman" | "TimesRomanBold" | "Courier" | "CourierBold";
+  fontSize: number;
+  opacity: number;
+  rotation: number;
+  color: string;
+  position:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "middle-left"
+    | "middle-center"
+    | "middle-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right";
+  layer: "over" | "under";
+  pageRangeType: "all" | "odd" | "even" | "custom";
+  customRange?: string;
+  imageFile?: File;
+  imageScale?: number;
+}
+
+export async function watermarkPdf(
+  file: File,
+  text: string,
+  options?: Partial<WatermarkOptions>
+): Promise<Blob> {
+  const opt: WatermarkOptions = {
+    watermarkType: options?.watermarkType || "text",
+    text: text || "CONFIDENTIAL",
+    fontFamily: (options?.fontFamily || "HelveticaBold") as any,
+    fontSize: options?.fontSize !== undefined ? options.fontSize : 36,
+    opacity: options?.opacity !== undefined ? options.opacity : 0.35,
+    rotation: options?.rotation !== undefined ? options.rotation : -45,
+    color: options?.color || "#cccccc",
+    position: options?.position || "middle-center",
+    layer: options?.layer || "over",
+    pageRangeType: options?.pageRangeType || "all",
+    customRange: options?.customRange || "",
+    imageFile: options?.imageFile,
+    imageScale: options?.imageScale !== undefined ? options.imageScale : 100,
+  };
+
   const buf = await file.arrayBuffer();
   const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-  const font = await doc.embedFont(StandardFonts.HelveticaBold);
-  for (const page of doc.getPages()) {
-    const { width, height } = page.getSize();
-    page.drawText(text, {
-      x: width / 4,
-      y: height / 2,
-      size: 36,
-      font,
-      color: rgb(0.8, 0.8, 0.8),
-      opacity: 0.35,
-      rotate: degrees(-45),
-    });
+
+  let embeddedImage: any = null;
+  if (opt.watermarkType === "image" && opt.imageFile) {
+    const imgBuf = await opt.imageFile.arrayBuffer();
+    embeddedImage =
+      opt.imageFile.type === "image/png"
+        ? await doc.embedPng(imgBuf)
+        : await doc.embedJpg(imgBuf);
   }
+
+  let fontRef = StandardFonts.HelveticaBold;
+  if (opt.fontFamily === "Helvetica") fontRef = StandardFonts.Helvetica;
+  else if (opt.fontFamily === "TimesRoman") fontRef = StandardFonts.TimesRoman;
+  else if (opt.fontFamily === "TimesRomanBold") fontRef = StandardFonts.TimesRomanBold;
+  else if (opt.fontFamily === "Courier") fontRef = StandardFonts.Courier;
+  else if (opt.fontFamily === "CourierBold") fontRef = StandardFonts.CourierBold;
+
+  const font = await doc.embedFont(fontRef);
+
+  const hex = opt.color.replace("#", "");
+  const r = (parseInt(hex.substring(0, 2), 16) || 0) / 255;
+  const g = (parseInt(hex.substring(2, 4), 16) || 0) / 255;
+  const b = (parseInt(hex.substring(4, 6), 16) || 0) / 255;
+  const color = rgb(r, g, b);
+
+  const total = doc.getPageCount();
+  let targetPages = new Set<number>();
+  if (opt.pageRangeType === "all") {
+    for (let i = 0; i < total; i++) targetPages.add(i);
+  } else if (opt.pageRangeType === "odd") {
+    for (let i = 0; i < total; i++) {
+      if ((i + 1) % 2 !== 0) targetPages.add(i);
+    }
+  } else if (opt.pageRangeType === "even") {
+    for (let i = 0; i < total; i++) {
+      if ((i + 1) % 2 === 0) targetPages.add(i);
+    }
+  } else if (opt.pageRangeType === "custom" && opt.customRange) {
+    targetPages = parsePages(opt.customRange, total);
+  }
+
+  doc.getPages().forEach((page, i) => {
+    if (!targetPages.has(i)) return;
+
+    const { width, height } = page.getSize();
+
+    let cx = width / 2;
+    let cy = height / 2;
+    const margin = 40;
+
+    if (opt.position.startsWith("top")) {
+      cy = height - margin;
+    } else if (opt.position.startsWith("middle")) {
+      cy = height / 2;
+    } else if (opt.position.startsWith("bottom")) {
+      cy = margin;
+    }
+
+    if (opt.position.endsWith("left")) {
+      cx = margin;
+    } else if (opt.position.endsWith("center")) {
+      cx = width / 2;
+    } else if (opt.position.endsWith("right")) {
+      cx = width - margin;
+    }
+
+    const pdfRotation = -opt.rotation;
+    const rad = (pdfRotation * Math.PI) / 180;
+
+    if (opt.watermarkType === "image" && embeddedImage) {
+      const basePdfWidth = width * 0.28;
+      const imgWidth = basePdfWidth * (opt.imageScale! / 100);
+      const aspect = embeddedImage.height / embeddedImage.width;
+      const imgHeight = imgWidth * aspect;
+
+      const x = cx - (imgWidth / 2) * Math.cos(rad) + (imgHeight / 2) * Math.sin(rad);
+      const y = cy - (imgWidth / 2) * Math.sin(rad) - (imgHeight / 2) * Math.cos(rad);
+
+      const drawOptions = {
+        x,
+        y,
+        width: imgWidth,
+        height: imgHeight,
+        opacity: opt.opacity,
+        rotate: degrees(pdfRotation),
+      };
+
+      if (opt.layer === "under") {
+        (page as any).getContentStream(false);
+        page.drawImage(embeddedImage, drawOptions);
+        const contents = page.node.get(PDFName.of("Contents"));
+        if (contents instanceof PDFArray) {
+          const lastIndex = contents.size() - 1;
+          const lastStreamRef = contents.get(lastIndex);
+          contents.remove(lastIndex);
+          if (lastStreamRef) {
+            contents.insert(0, lastStreamRef);
+          }
+        }
+      } else {
+        page.drawImage(embeddedImage, drawOptions);
+      }
+    } else {
+      const textWidth = font.widthOfTextAtSize(opt.text, opt.fontSize);
+      const textHeight = opt.fontSize * 0.8;
+
+      const x = cx - (textWidth / 2) * Math.cos(rad) + (textHeight / 2) * Math.sin(rad);
+      const y = cy - (textWidth / 2) * Math.sin(rad) - (textHeight / 2) * Math.cos(rad);
+
+      const drawOptions = {
+        x,
+        y,
+        size: opt.fontSize,
+        font,
+        color,
+        opacity: opt.opacity,
+        rotate: degrees(pdfRotation),
+      };
+
+      if (opt.layer === "under") {
+        (page as any).getContentStream(false);
+        page.drawText(opt.text, drawOptions);
+        const contents = page.node.get(PDFName.of("Contents"));
+        if (contents instanceof PDFArray) {
+          const lastIndex = contents.size() - 1;
+          const lastStreamRef = contents.get(lastIndex);
+          contents.remove(lastIndex);
+          if (lastStreamRef) {
+            contents.insert(0, lastStreamRef);
+          }
+        }
+      } else {
+        page.drawText(opt.text, drawOptions);
+      }
+    }
+  });
+
   return blobFromPdf(doc);
 }
 
