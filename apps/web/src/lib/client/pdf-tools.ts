@@ -642,6 +642,57 @@ export async function signPdf(files: File[]): Promise<Blob> {
   return blobFromPdf(doc);
 }
 
+export interface PlacedSignature {
+  pageIndex: number;
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+  signatureDataUrl: string;
+}
+
+export async function signPdfAdvanced(
+  file: File,
+  signatures: PlacedSignature[]
+): Promise<Blob> {
+  const buf = await file.arrayBuffer();
+  const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
+  const total = doc.getPageCount();
+
+  for (const sig of signatures) {
+    if (sig.pageIndex < 0 || sig.pageIndex >= total) continue;
+
+    const isJpg = sig.signatureDataUrl.startsWith("data:image/jpeg") || sig.signatureDataUrl.startsWith("data:image/jpg");
+    const base64Data = sig.signatureDataUrl.split(",")[1];
+    const binary = window.atob(base64Data);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const embeddedImg = isJpg
+      ? await doc.embedJpg(bytes)
+      : await doc.embedPng(bytes);
+    const page = doc.getPage(sig.pageIndex);
+    const { width, height } = page.getSize();
+
+    const x = (sig.xPercent / 100) * width;
+    const w = (sig.widthPercent / 100) * width;
+    const h = (sig.heightPercent / 100) * height;
+    const y = (1 - (sig.yPercent + sig.heightPercent) / 100) * height;
+
+    page.drawImage(embeddedImg, {
+      x,
+      y,
+      width: w,
+      height: h,
+    });
+  }
+
+  return blobFromPdf(doc);
+}
+
 function parsePages(pages: string, total: number): Set<number> {
   const set = new Set<number>();
   const normalized = pages.replace(/\s*-\s*/g, "-");

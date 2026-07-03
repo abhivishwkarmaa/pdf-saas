@@ -44,6 +44,10 @@ export async function POST(
 
     const result = await processOnServer(slug, buffers, options, filenames);
 
+    if (result.mimeType === "application/json") {
+      return NextResponse.json(JSON.parse(result.buffer.toString()));
+    }
+
     const fileName =
       tool.category === "image" && files[0]?.name
         ? files[0].name

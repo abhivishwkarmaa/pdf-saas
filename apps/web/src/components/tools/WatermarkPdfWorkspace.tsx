@@ -302,7 +302,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
+      <div className="pdf-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
         
         {/* CENTER PANEL: LIVE PREVIEW */}
         <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
@@ -310,12 +310,12 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
 
           {!file ? (
             <div className="flex w-full max-w-xl flex-col items-center justify-center p-12 my-auto z-10">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-zinc-750">
-                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
                 </span>
                 <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors">
+                  <p className="text-sm font-bold text-zinc-300 group-hover:text-red-400 transition-colors">
                     Upload PDF file to watermark
                   </p>
                   <p className="mt-1.5 text-xs text-zinc-500">
@@ -369,12 +369,10 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                 ) : (
                   previewUrl && (
                     <div
-                      className="relative shadow-2xl rounded-lg border border-zinc-900 overflow-hidden bg-white select-none transition-transform duration-200"
+                      className="relative shadow-2xl rounded-lg border border-zinc-900 overflow-hidden bg-white select-none"
                       style={{
-                        width: "360px",
-                        height: "480px",
-                        transform: `scale(${zoom})`,
-                        transformOrigin: "center center",
+                        width: `${360 * zoom}px`,
+                        height: `${480 * zoom}px`,
                       }}
                     >
                       {/* PDF Preview background */}

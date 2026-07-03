@@ -407,7 +407,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
+      <div className="pdf-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
         
         {/* LEFT SIDEBAR: Page Thumbnails */}
         {file && totalPages > 0 && (

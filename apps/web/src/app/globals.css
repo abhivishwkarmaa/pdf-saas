@@ -36,3 +36,93 @@ body {
 .input {
   @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
 }
+
+/* Light Theme Overrides for PDF Workspaces */
+html:not(.dark) .pdf-workspace-theme-wrapper {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/80,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/60,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/90 {
+  background-color: #f4f4f5 !important; /* bg-zinc-100 */
+  color: #18181b !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.backdrop-blur-sm,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.backdrop-blur-md {
+  background-color: rgba(244, 244, 245, 0.8) !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/60,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/40,
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/10 {
+  background-color: #e4e4e7 !important; /* bg-zinc-200 */
+  color: #18181b !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950.border-t {
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-900,
+html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-800,
+html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-850 {
+  border-color: #e4e4e7 !important; /* border-zinc-200 */
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-\[radial-gradient\(ellipse_at_top\,rgba\(20\,20\,25\,0\.7\)\,rgba\(9\,9\,11\,1\)\)\] {
+  background: #f4f4f5 !important; /* light grey viewport background */
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950.shrink-0 {
+  background-color: #f4f4f5 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-100,
+html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-200,
+html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-300,
+html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-400 {
+  color: #27272a !important; /* text-zinc-800 */
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-500 {
+  color: #71717a !important; /* text-zinc-500 */
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper input,
+html:not(.dark) .pdf-workspace-theme-wrapper select,
+html:not(.dark) .pdf-workspace-theme-wrapper textarea {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border-color: #ccc !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900.rounded {
+  background-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.rounded-2xl {
+  background-color: rgba(228, 228, 230, 0.4) !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900.border-zinc-800 {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper button:not([style*="background"]):not([style*="color"]):not(.bg-red-600):not(.bg-blue-600):not(.bg-violet-600):not(.bg-amber-600):not(.bg-teal-600) {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .pdf-workspace-theme-wrapper button:not([style*="background"]):not([style*="color"]):not(.bg-red-600):not(.bg-blue-600):not(.bg-violet-600):not(.bg-amber-600):not(.bg-teal-600):hover {
+  background-color: #f4f4f5 !important;
+}
+

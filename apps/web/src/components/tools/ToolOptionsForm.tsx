@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, RotateCw, FilePlus } from "lucide-react";
+import { Plus, Trash2, RotateCw, FilePlus, Eye, EyeOff } from "lucide-react";
 import { getToolOptionFields, type ToolOptionField } from "@/lib/tool-options";
 
 interface ToolOptionsFormProps {
@@ -52,6 +52,7 @@ function OptionField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
   let errorMsg = "";
   if (value) {
     if (field.key === "ranges" || field.key === "pages") {
@@ -72,6 +73,9 @@ function OptionField({
     }
   }
 
+  const isPassword = field.type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : (field.type === "number" ? "number" : "text");
+
   return (
     <div className="block text-sm">
       <span className="font-medium text-zinc-700 dark:text-zinc-300">
@@ -90,19 +94,28 @@ function OptionField({
           ))}
         </select>
       ) : (
-        <input
-          type={
-            field.type === "password"
-              ? "password"
-              : field.type === "number"
-                ? "number"
-                : "text"
-          }
-          className={`input mt-1.5 ${errorMsg ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div className="relative mt-1.5">
+          <input
+            type={inputType}
+            className={`input pr-10 ${errorMsg ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
+            placeholder={field.placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 focus:outline-none transition cursor-pointer"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4.5 w-4.5" />
+              ) : (
+                <Eye className="h-4.5 w-4.5" />
+              )}
+            </button>
+          )}
+        </div>
       )}
       {errorMsg && (
         <p className="mt-1 text-xs text-red-500 font-medium">

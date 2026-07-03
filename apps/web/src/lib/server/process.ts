@@ -107,8 +107,8 @@ export async function processOnServer(
       return { buffer: out, mimeType: "image/jpeg", fileName: `${baseName}.jpg` };
     }
     case "compare-pdf": {
-      const { report } = await comparePdfs(buffers[0], buffers[1]);
-      return { buffer: report, mimeType: "application/pdf", fileName: "comparison.pdf" };
+      const { report, mimeType } = await comparePdfs(buffers[0], buffers[1], options);
+      return { buffer: report, mimeType: mimeType || "application/pdf", fileName: "comparison.pdf" };
     }
     case "protect-pdf": {
       const out = await protectPdf(buffers[0], String(options.password ?? ""));

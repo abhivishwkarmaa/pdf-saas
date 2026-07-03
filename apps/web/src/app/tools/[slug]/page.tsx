@@ -10,6 +10,8 @@ import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
 import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
 import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace";
+import { SignPdfWorkspace } from "@/components/tools/SignPdfWorkspace";
+import { ComparePdfWorkspace } from "@/components/tools/ComparePdfWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -66,6 +68,14 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "watermark-pdf") {
     return <WatermarkPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "sign-pdf") {
+    return <SignPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "compare-pdf") {
+    return <ComparePdfWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

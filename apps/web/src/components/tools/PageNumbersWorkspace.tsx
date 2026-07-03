@@ -150,7 +150,7 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex h-full min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
+      <div className="pdf-workspace-theme-wrapper flex h-full min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
         
         {/* LEFT PANEL: CONFIGURATION PANEL */}
         <div className="flex-1 flex flex-col justify-between relative lg:h-full overflow-hidden bg-zinc-950">
@@ -159,12 +159,12 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
             {/* Header / Upload Zone */}
             {!file ? (
               <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto min-h-[400px]">
-                <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/30">
-                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-zinc-750">
-                    <Upload className="h-7 w-7 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+                <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                    <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
                   </span>
                   <span className="text-center">
-                    <p className="text-sm font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors">
+                    <p className="text-sm font-bold text-zinc-300 group-hover:text-red-400 transition-colors">
                       Upload PDF file to add page numbers
                     </p>
                     <p className="mt-1.5 text-xs text-zinc-500">
@@ -184,8 +184,8 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
                 {/* File Detail Header */}
                 <div className="flex w-full items-center justify-between border-b border-zinc-900 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 border border-white/10">
-                      <FileText className="h-4 w-4 text-zinc-400" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20">
+                      <FileText className="h-4 w-4 text-red-500" />
                     </div>
                     <span className="max-w-[200px] truncate text-sm font-bold text-zinc-200">
                       {file.name}

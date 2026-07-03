@@ -91,7 +91,10 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
       ],
     },
   ],
-  "protect-pdf": [{ key: "password", label: "Password", type: "password" }],
+  "protect-pdf": [
+    { key: "password", label: "Password", type: "password", placeholder: "Enter password" },
+    { key: "repeatPassword", label: "Repeat Password", type: "password", placeholder: "Repeat password" }
+  ],
   "unlock-pdf": [{ key: "password", label: "Password", type: "password" }],
   "ocr-pdf": [
     { key: "language", label: "Language code", placeholder: "eng" },

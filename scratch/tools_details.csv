@@ -1,0 +1,65 @@
+Slug,Name,Category,Type,Tier,Max Files,Max Size (MB),Enabled,Phase,Working Status,Tested Status,Known Issues / Notes
+merge-pdf,Merge PDF,PDF,Browser (Client),SYNC,20,50,Yes,2,Working,Tested,Fully client-side (no server request).
+split-pdf,Split PDF,PDF,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).
+remove-pages,Remove Pages,PDF,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).
+extract-pages,Extract Pages,PDF,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).
+organize-pdf,Organize PDF,PDF,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).
+rotate-pdf,Rotate PDF,PDF,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).
+pdf-to-jpg,PDF to JPG,PDF,Server (Heavy),SYNC,1,50,Yes,2,Working,Tested (with docker),Requires system binaries: Poppler (pdftoppm). Runs inside docker.
+pdf-to-png,PDF to PNG,PDF,Server (Heavy),SYNC,1,50,Yes,2,Working,Tested (with docker),Requires system binaries: Poppler (pdftoppm). Runs inside docker.
+jpg-to-pdf,JPG to PDF,PDF,Browser (Client),SYNC,20,50,Yes,2,Working,Tested,Fully client-side (no server request).
+png-to-pdf,PNG to PDF,PDF,Browser (Client),SYNC,20,50,Yes,2,Working,Tested,Fully client-side (no server request).
+compress-pdf,Compress PDF,PDF,Server (Heavy),ASYNC,1,100,Yes,4,Working,Tested (with docker),Requires system binaries: Ghostscript (gs). Runs inside docker.
+pdf-to-pdfa,PDF to PDF/A,PDF,Server (Heavy),ASYNC,1,50,Yes,4,Working,Tested (with docker),Requires system binaries: Ghostscript (gs). Runs inside docker.
+repair-pdf,Repair PDF,PDF,Server (Heavy),ASYNC,1,50,Yes,4,Working,Tested (with docker),Requires system binaries: Ghostscript (gs). Runs inside docker.
+pdf-to-word,PDF to Word,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+pdf-to-powerpoint,PDF to PowerPoint,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+pdf-to-excel,PDF to Excel,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+word-to-pdf,Word to PDF,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+powerpoint-to-pdf,PowerPoint to PDF,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+excel-to-pdf,Excel to PDF,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+html-to-pdf,HTML to PDF,PDF,Server (Heavy),ASYNC,1,5,Yes,5,Working,Tested (with docker),Requires server runtime environment.
+pdf-to-text,PDF to Text,PDF,Server (Heavy),SYNC,1,50,Yes,2,Working,Tested (with docker),Requires server runtime environment.
+watermark-pdf,Watermark PDF,PDF,Browser (Client),SYNC,1,50,Yes,6,Working,Tested,Fully client-side (no server request).
+page-numbers,Add Page Numbers,PDF,Browser (Client),SYNC,1,50,Yes,6,Working,Tested,Fully client-side (no server request).
+crop-pdf,Crop PDF,PDF,Browser (Client),SYNC,1,50,Yes,6,Working,Tested,Fully client-side (no server request).
+redact-pdf,Redact PDF,PDF,Browser (Client),SYNC,1,50,Yes,6,Working,Tested,Allows basic redaction by drawing black rectangles.
+sign-pdf,Sign PDF,PDF,Browser (Client),SYNC,2,50,Yes,6,Working,Tested,Browser-based canvas signature placement.
+protect-pdf,Protect PDF,PDF,Server (Heavy),SYNC,1,50,Yes,6,Working,Tested (with docker),Requires server runtime environment.
+unlock-pdf,Unlock PDF,PDF,Server (Heavy),SYNC,1,50,Yes,6,Working,Tested (with docker),Requires server runtime environment.
+ocr-pdf,OCR PDF,PDF,Server (Heavy),ASYNC,1,50,Yes,7,Working,Tested (with docker),Requires system binaries: Tesseract OCR (tesseract). Runs inside docker.
+compare-pdf,Compare PDF,PDF,Server (Heavy),ASYNC,2,50,Yes,7,Working,Tested (with docker),Requires server runtime environment.
+image-to-word,Image to Word,PDF,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: Tesseract OCR (tesseract). Runs inside docker.
+scan-to-pdf,Scan to PDF,PDF,Browser (Client),SYNC,20,50,Yes,2,Working,Tested,Fully client-side (no server request).
+compress-image,Compress Image,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+resize-image,Resize Image,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+crop-image,Crop Image,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+rotate-image,Rotate Image,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+jpg-to-png,JPG to PNG,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+png-to-jpg,PNG to JPG,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+webp-to-jpg,WebP to JPG,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+jpg-to-webp,JPG to WebP,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+heic-to-jpg,HEIC to JPG,IMAGE,Server (Heavy),SYNC,10,25,Yes,2,Working,Tested (with docker),Requires server runtime environment.
+gif-to-png,GIF to PNG,IMAGE,Browser (Client),SYNC,1,25,Yes,2,Working,Tested,Fully client-side (no server request).
+bmp-to-jpg,BMP to JPG,IMAGE,Browser (Client),SYNC,10,25,Yes,2,Working,Tested,Fully client-side (no server request).
+svg-to-png,SVG to PNG,IMAGE,Server (Heavy),ASYNC,1,10,Yes,2,Working,Tested (with docker),Requires server runtime environment.
+avif-to-jpg,AVIF to JPG,IMAGE,Server (Heavy),SYNC,10,25,Yes,2,Working,Tested (with docker),Requires server runtime environment.
+image-to-pdf,Image to PDF,IMAGE,Browser (Client),SYNC,20,50,Yes,2,Working,Tested,Fully client-side (no server request).
+txt-to-pdf,Text to PDF,TEXT,Browser (Client),SYNC,1,5,Yes,5,Working,Tested,Fully client-side (no server request).
+markdown-to-pdf,Markdown to PDF,TEXT,Server (Heavy),ASYNC,1,5,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+markdown-to-word,Markdown to Word,TEXT,Server (Heavy),ASYNC,1,5,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+rtf-to-pdf,RTF to PDF,TEXT,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+tex-to-word,LaTeX to Word,TEXT,Server (Heavy),ASYNC,1,10,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+pages-to-word,Pages to Word,TEXT,Server (Heavy),ASYNC,1,25,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+epub-to-pdf,EPUB to PDF,TEXT,Server (Heavy),ASYNC,1,50,Yes,5,Working,Tested (with docker),Requires system binaries: LibreOffice (soffice). Runs inside docker.
+json-formatter,JSON Formatter,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+base64-encode,Base64 Encode,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+base64-decode,Base64 Decode,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+url-encode,URL Encode,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+url-decode,URL Decode,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+hash-generator,Hash Generator,DEVELOPER,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+percentage-calculator,Percentage Calculator,CALCULATOR,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+age-calculator,Age Calculator,CALCULATOR,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+bmi-calculator,BMI Calculator,CALCULATOR,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+unit-converter,Unit Converter,CALCULATOR,Utility (Client),SYNC,0,1,Yes,8,Working,Tested,Pure local browser calculations / utilities.
+image-editor,Image Editor,IMAGE,Browser (Client),SYNC,1,50,Yes,2,Working,Tested,Fully client-side (no server request).

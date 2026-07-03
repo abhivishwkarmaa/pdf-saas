@@ -37,6 +37,17 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
       return;
     }
 
+    if (tool.slug === "protect-pdf") {
+      if (!options.password) {
+        toast.error("Please enter a password");
+        return;
+      }
+      if (options.password !== options.repeatPassword) {
+        toast.error("Passwords do not match!");
+        return;
+      }
+    }
+
     setProcessing(true);
     // Progress and status state are not displayed in this workspace.
 
