@@ -48,10 +48,7 @@ export async function POST(
       return NextResponse.json(JSON.parse(result.buffer.toString()));
     }
 
-    const fileName =
-      tool.category === "image" && files[0]?.name
-        ? files[0].name
-        : result.fileName;
+    const fileName = result.fileName;
 
     return new NextResponse(new Uint8Array(result.buffer), {
       headers: {
@@ -61,6 +58,7 @@ export async function POST(
       },
     });
   } catch (e) {
+    console.error("API PROCESS ERROR:", e);
     const message = e instanceof Error ? e.message : "Processing failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

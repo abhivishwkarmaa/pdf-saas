@@ -224,7 +224,16 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
     },
   ],
   "compress-image": [
-    { key: "quality", label: "Quality (1–100)", type: "number", placeholder: "80" },
+    {
+      key: "quality",
+      label: "Quality",
+      type: "select",
+      options: [
+        { value: "recommended", label: "Recommended (Good quality)" },
+        { value: "extreme", label: "Maximum Compression (Less quality)" },
+        { value: "high", label: "High Quality (Best quality)" },
+      ],
+    },
   ],
   "resize-image": [
     { key: "width", label: "Width (px)", type: "number", placeholder: "800" },
@@ -236,6 +245,17 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
       label: "Rotation (degrees)",
       type: "number",
       placeholder: "90",
+    },
+  ],
+  "image-to-word": [
+    {
+      key: "mode",
+      label: "OCR Output Mode",
+      type: "select",
+      options: [
+        { value: "merge", label: "Merge all into one Docx" },
+        { value: "separate", label: "Separate Docx files (ZIP)" },
+      ],
     },
   ],
 };

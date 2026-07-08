@@ -132,25 +132,36 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           break;
         case "jpg-to-png":
           blob = await img.convertImageFormat(files[0], "image/png");
-          downloadBlob(blob, imageDownloadName(files[0]));
+          downloadBlob(blob, changeExtension(files[0].name, "png"));
           break;
         case "png-to-jpg":
         case "bmp-to-jpg":
           blob = await img.convertImageFormat(files[0], "image/jpeg");
-          downloadBlob(blob, imageDownloadName(files[0]));
+          downloadBlob(blob, changeExtension(files[0].name, "jpg"));
           break;
         case "webp-to-jpg":
           blob = await img.convertImageFormat(files[0], "image/jpeg");
-          downloadBlob(blob, imageDownloadName(files[0]));
+          downloadBlob(blob, changeExtension(files[0].name, "jpg"));
           break;
         case "jpg-to-webp":
           blob = await img.convertImageFormat(files[0], "image/webp");
+          downloadBlob(blob, changeExtension(files[0].name, "webp"));
+          break;
+        case "compress-image": {
+          let qualityVal = 75;
+          if (options.quality === "extreme") {
+            qualityVal = 40;
+          } else if (options.quality === "high") {
+            qualityVal = 92;
+          } else if (options.quality === "recommended") {
+            qualityVal = 75;
+          } else {
+            qualityVal = Number(options.quality) || 75;
+          }
+          blob = await img.compressImage(files[0], qualityVal);
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
-        case "compress-image":
-          blob = await img.compressImage(files[0], Number(options.quality) || 80);
-          downloadBlob(blob, imageDownloadName(files[0]));
-          break;
+        }
         case "resize-image":
           blob = await img.resizeImage(
             files[0],
@@ -159,17 +170,13 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           );
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
-        case "crop-image":
-          blob = await img.cropImage(files[0]);
-          downloadBlob(blob, imageDownloadName(files[0]));
-          break;
         case "rotate-image":
           blob = await img.rotateImage(files[0], Number(options.angle) || 90);
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
         case "gif-to-png":
           blob = await img.convertImageFormat(files[0], "image/png");
-          downloadBlob(blob, imageDownloadName(files[0]));
+          downloadBlob(blob, changeExtension(files[0].name, "png"));
           break;
         default:
           toast.error("This tool is not available yet.");
@@ -256,4 +263,8 @@ async function rotateImageFileByAngle(file: File, angle: number): Promise<File> 
     reader.onerror = () => reject(new Error("File read failed"));
     reader.readAsDataURL(file);
   });
+}
+
+function changeExtension(fileName: string, newExt: string): string {
+  return fileName.replace(/\.[^/.]+$/, "") + "." + newExt;
 }

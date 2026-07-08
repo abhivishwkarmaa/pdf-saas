@@ -78,18 +78,55 @@ export async function rotateImage(file: File, angle: number): Promise<Blob> {
   });
 }
 
-export async function cropImage(file: File): Promise<Blob> {
+export async function cropImage(
+  file: File,
+  options?: {
+    xPercent: number;
+    yPercent: number;
+    widthPercent: number;
+    heightPercent: number;
+    rotation?: number;
+  }
+): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement("canvas");
-  const dx = bitmap.width * 0.1;
-  const dy = bitmap.height * 0.1;
-  const w = bitmap.width - 2 * dx;
-  const h = bitmap.height - 2 * dy;
+  
+  let sourceWidth = bitmap.width;
+  let sourceHeight = bitmap.height;
+  const rotation = options?.rotation || 0;
+  
+  const rotatedCanvas = document.createElement("canvas");
+  const rCtx = rotatedCanvas.getContext("2d")!;
+  if (rotation !== 0) {
+    const rad = (rotation * Math.PI) / 180;
+    const sin = Math.abs(Math.sin(rad));
+    const cos = Math.abs(Math.cos(rad));
+    const rw = bitmap.width * cos + bitmap.height * sin;
+    const rh = bitmap.width * sin + bitmap.height * cos;
+    rotatedCanvas.width = rw;
+    rotatedCanvas.height = rh;
+    rCtx.translate(rw / 2, rh / 2);
+    rCtx.rotate(rad);
+    rCtx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+    sourceWidth = rw;
+    sourceHeight = rh;
+  } else {
+    rotatedCanvas.width = bitmap.width;
+    rotatedCanvas.height = bitmap.height;
+    rCtx.drawImage(bitmap, 0, 0);
+  }
+  bitmap.close();
+
+  const x = options ? (options.xPercent / 100) * sourceWidth : sourceWidth * 0.1;
+  const y = options ? (options.yPercent / 100) * sourceHeight : sourceHeight * 0.1;
+  const w = options ? (options.widthPercent / 100) * sourceWidth : sourceWidth * 0.8;
+  const h = options ? (options.heightPercent / 100) * sourceHeight : sourceHeight * 0.8;
+
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bitmap, dx, dy, w, h, 0, 0, w, h);
-  bitmap.close();
+  ctx.drawImage(rotatedCanvas, x, y, w, h, 0, 0, w, h);
+
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("Crop failed"))),

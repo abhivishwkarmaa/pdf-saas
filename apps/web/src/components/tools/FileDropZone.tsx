@@ -2,11 +2,41 @@
 
 import { Upload, X } from "lucide-react";
 import type { ToolDefinition } from "@pdf-saas/shared";
+import { toast } from "sonner";
 
 interface FileDropZoneProps {
   tool: ToolDefinition;
   files: File[];
   onFiles: (files: File[]) => void;
+}
+
+function isFileTypeAccepted(file: File, acceptList: string[]): boolean {
+  if (!acceptList || acceptList.length === 0) return true;
+  const fileName = file.name.toLowerCase();
+  const fileType = file.type.toLowerCase();
+  
+  return acceptList.some((pattern) => {
+    const cleanPattern = pattern.trim().toLowerCase();
+    if (cleanPattern.startsWith(".")) {
+      return fileName.endsWith(cleanPattern);
+    } else if (cleanPattern.endsWith("/*")) {
+      const group = cleanPattern.slice(0, -2);
+      return fileType.startsWith(group);
+    } else {
+      if (fileType === cleanPattern) return true;
+      
+      const parts = cleanPattern.split("/");
+      if (parts.length === 2) {
+        const ext = parts[1];
+        if (fileName.endsWith("." + ext)) return true;
+        if (ext === "jpeg" && fileName.endsWith(".jpg")) return true;
+        if (ext === "jpg" && fileName.endsWith(".jpeg")) return true;
+        if (ext === "heic" && fileName.endsWith(".heif")) return true;
+        if (ext === "heif" && fileName.endsWith(".heic")) return true;
+      }
+      return false;
+    }
+  });
 }
 
 function formatBytes(bytes: number): string {
@@ -41,10 +71,31 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
         multiple={tool.maxFiles > 1}
         onChange={(e) => {
           const picked = Array.from(e.target.files ?? []);
-          if (tool.maxFiles > 1 && files.length > 0) {
-            onFiles([...files, ...picked].slice(0, tool.maxFiles));
+          const invalidFiles = picked.filter(f => !isFileTypeAccepted(f, tool.accept));
+          
+          if (invalidFiles.length > 0) {
+            const acceptedDisplay = tool.accept
+              .map(a => a.startsWith(".") ? a.toUpperCase() : a.replace("image/", "").replace("application/", "").toUpperCase())
+              .join(", ");
+            toast.error(`Invalid file format. This tool only accepts: ${acceptedDisplay}`);
+            
+            const validPicked = picked.filter(f => isFileTypeAccepted(f, tool.accept));
+            if (validPicked.length === 0) {
+              e.target.value = "";
+              return;
+            }
+            
+            if (tool.maxFiles > 1 && files.length > 0) {
+              onFiles([...files, ...validPicked].slice(0, tool.maxFiles));
+            } else {
+              onFiles(validPicked.slice(0, tool.maxFiles));
+            }
           } else {
-            onFiles(picked.slice(0, tool.maxFiles));
+            if (tool.maxFiles > 1 && files.length > 0) {
+              onFiles([...files, ...picked].slice(0, tool.maxFiles));
+            } else {
+              onFiles(picked.slice(0, tool.maxFiles));
+            }
           }
           e.target.value = "";
         }}

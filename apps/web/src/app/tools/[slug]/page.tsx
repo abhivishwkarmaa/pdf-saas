@@ -6,6 +6,7 @@ import { ServerToolWorkspace } from "@/components/tools/ServerToolWorkspace";
 import { UtilityWorkspace } from "@/components/tools/UtilityWorkspace";
 import { ImageEditorWorkspace } from "@/components/tools/ImageEditorWorkspace";
 import { CropPdfWorkspace } from "@/components/tools/CropPdfWorkspace";
+import { CropImageWorkspace } from "@/components/tools/CropImageWorkspace";
 import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
 import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
@@ -51,6 +52,10 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "crop-pdf") {
     return <CropPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "crop-image") {
+    return <CropImageWorkspace tool={tool} />;
   }
 
   if (slug === "redact-pdf") {

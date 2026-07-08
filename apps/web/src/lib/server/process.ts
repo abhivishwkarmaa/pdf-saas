@@ -1,3 +1,6 @@
+import heicConvert from "heic-convert";
+
+// Import handlers after dependencies to avoid cyclic errors
 import { compressPdf } from "./handlers/compress";
 import { convertOffice } from "./handlers/office";
 import { ocrPdf } from "./handlers/ocr";
@@ -73,14 +76,7 @@ export async function processOnServer(
       return { buffer: out, mimeType: "application/pdf", fileName: "page.pdf" };
     }
     case "image-to-word": {
-      const out = await imageToWord(buffers[0]);
-      const baseName = originalFileName ? getBaseName(originalFileName) : "document";
-      return {
-        buffer: out,
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        fileName: `${baseName}.docx`,
-      };
+      return imageToWord(buffers, fileNames, options);
     }
     case "ocr-pdf": {
       const out = await ocrPdf(buffers[0], String(options.language ?? "eng"));
@@ -100,7 +96,22 @@ export async function processOnServer(
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
       return { buffer: out, mimeType: "image/png", fileName: `${baseName}.png` };
     }
-    case "heic-to-jpg":
+    case "heic-to-jpg": {
+      let activeBuffer = buffers[0];
+      try {
+        const jpegBuffer = await heicConvert({
+          buffer: buffers[0],
+          format: "JPEG",
+          quality: 0.9,
+        });
+        activeBuffer = Buffer.from(jpegBuffer);
+      } catch (heicErr) {
+        console.error("HEIC conversion failed, falling back to sharp:", heicErr);
+      }
+      const out = await sharp(activeBuffer).jpeg({ quality: 90 }).toBuffer();
+      const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+      return { buffer: out, mimeType: "image/jpeg", fileName: `${baseName}.jpg` };
+    }
     case "avif-to-jpg": {
       const out = await sharp(buffers[0]).jpeg({ quality: 90 }).toBuffer();
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
