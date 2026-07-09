@@ -131,7 +131,21 @@ export async function htmlToPdf(
       const input = join(dir, "input.html");
       try {
         await writeFile(input, html);
-        await run("soffice", ["--headless", "--convert-to", "pdf", "--outdir", dir, input], dir);
+        await run(
+          "soffice",
+          [
+            "--headless",
+            "--norestore",
+            "--nofirststartwizard",
+            `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            dir,
+            input,
+          ],
+          dir
+        );
         return await readFile(join(dir, "input.pdf"));
       } finally {
         await rm(dir, { recursive: true, force: true });

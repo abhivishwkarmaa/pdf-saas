@@ -1,7 +1,8 @@
 import { mkdtemp, writeFile, readFile, readdir, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { run, exists } from "../exec";
+import { run, exists, runWithOutput } from "../exec";
+import { ocrPdf } from "./ocr";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import pptxgen from "pptxgenjs";
 
@@ -12,6 +13,55 @@ const extMap: Record<string, string> = {
   pdf: ".pdf",
 };
 
+async function optimizeDocxWithPython(pythonBin: string, docxPath: string): Promise<void> {
+  const pyScript = `
+import zipfile
+import os
+import io
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
+docx_path = r"${docxPath.replace(/\\/g, "/")}"
+if os.path.exists(docx_path):
+    temp_zip = docx_path + ".temp"
+    try:
+        with zipfile.ZipFile(docx_path, 'r') as zin:
+            with zipfile.ZipFile(temp_zip, 'w', zipfile.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    data = zin.read(item.filename)
+                    if Image and item.filename.startswith("word/media/") and any(item.filename.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".tiff"]):
+                        try:
+                            # Optimize image
+                            img = Image.open(io.BytesIO(data))
+                            out_bytes = io.BytesIO()
+                            
+                            # Keep format identical to avoid violating [Content_Types].xml
+                            if img.format == "JPEG" or img.mode == "RGB" and not item.filename.lower().endswith(".png"):
+                                img.save(out_bytes, format="JPEG", quality=75)
+                                data = out_bytes.getvalue()
+                            elif img.format == "PNG" or item.filename.lower().endswith(".png"):
+                                # Shrink RGB PNGs by converting to 8-bit palette
+                                if img.mode == "RGB":
+                                    img = img.convert("P", palette=Image.Palette.ADAPTIVE, colors=256)
+                                img.save(out_bytes, format="PNG", optimize=True)
+                                data = out_bytes.getvalue()
+                        except Exception as e:
+                            pass
+                    zout.writestr(item, data)
+        os.replace(temp_zip, docx_path)
+    except Exception as e:
+        if os.path.exists(temp_zip):
+            os.remove(temp_zip)
+`;
+  try {
+    await run(pythonBin, ["-c", pyScript]);
+  } catch (err) {
+    console.error("Error optimizing DOCX images:", err);
+  }
+}
+
 export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
   const dir = (await mkdtemp(join(tmpdir(), "pdf-word-"))).replace(/\\/g, "/");
   const input = join(dir, "input.pdf").replace(/\\/g, "/");
@@ -20,7 +70,7 @@ export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
   try {
     await writeFile(input, buffer);
 
-    // ── Strategy 1: Python PyMuPDF & pdf2docx ─────────────────────────────
+    // ── Strategy 1: Python PyMuPDF & pdf2docx (Primary) ───────────────────
     const hasPython = (await exists("python3")) || (await exists("python"));
     if (hasPython) {
       const pythonBin = (await exists("python3")) ? "python3" : "python";
@@ -38,6 +88,9 @@ export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
 import fitz
 import sys
 import os
+import zipfile
+import subprocess
+import concurrent.futures
 
 input_path = r"${input}"
 output_path = r"${outputDocx}"
@@ -47,35 +100,91 @@ def analyzePdf(doc):
     total_chars = 0
     total_images = 0
     total_drawings = 0
+    total_links = 0
+    total_tables = 0
+    unique_fonts = set()
+    total_blocks = 0
+    
     pages_count = len(doc)
     is_scanned = True
+    has_large_image_or_ocr = False
     
     for page in doc:
-        text = page.get_text().strip()
+        # 1. Text & Paragraph Blocks
+        text = page.get_text("text").strip()
         total_chars += len(text)
-        if len(text) > 0:
+        if len(text) > 50:
             is_scanned = False
             
+        blocks = page.get_text("blocks")
+        total_blocks += len(blocks)
+        
+        # 2. Fonts
+        try:
+            fonts = page.get_fonts()
+            for f in fonts:
+                if len(f) > 3 and f[3]:
+                    unique_fonts.add(f[3])
+        except Exception:
+            pass
+            
+        # 3. Images & Large Image Check
+        page_area = page.rect.width * page.rect.height
         imgs = page.get_images(full=True)
         total_images += len(imgs)
-        
+        for img_info in imgs:
+            xref = img_info[0]
+            try:
+                rects = page.get_image_rects(xref)
+                for r in rects:
+                    img_area = r.width * r.height
+                    if img_area > 0.85 * page_area:
+                        has_large_image_or_ocr = True
+            except Exception:
+                pass
+                
+        # 4. Vector Graphics
         drawings = page.get_drawings()
         total_drawings += len(drawings)
         
+        # 5. Hyperlinks
+        links = page.get_links()
+        total_links += len(links)
+        
+        # 6. Tables
+        try:
+            tables = page.find_tables()
+            total_tables += len(tables.tables)
+        except Exception:
+            pass
+            
     avg_chars = total_chars / pages_count if pages_count > 0 else 0
     
-    # Intelligently classify PDF type
+    # Classify PDF type
     if pages_count == 0:
         pdf_type = "scanned"
-    elif is_scanned or (total_chars < 50 and total_images > 0):
+    elif is_scanned or has_large_image_or_ocr or (total_chars < 100 and total_images > 0):
         pdf_type = "scanned"
-    elif total_images == 0 and total_drawings < pages_count * 10 and avg_chars > 300:
+    elif total_images == 0 and total_drawings < pages_count * 15 and avg_chars > 300:
         pdf_type = "text_heavy"
-    elif total_images > pages_count * 2 or total_drawings > pages_count * 50:
+    elif total_images > pages_count * 2 or total_drawings > pages_count * 40 or total_tables > 0:
         pdf_type = "graphic_heavy"
     else:
         pdf_type = "mixed"
         
+    print("--- Layout & Structure Analysis ---")
+    print(f"Total Pages: {pages_count}")
+    print(f"Selectable Characters: {total_chars}")
+    print(f"Blocks/Paragraphs Detected: {total_blocks}")
+    print(f"Images Detected: {total_images}")
+    print(f"Vector Graphics (Drawings): {total_drawings}")
+    print(f"Tables Detected: {total_tables}")
+    print(f"Hyperlinks Detected: {total_links}")
+    print(f"Fonts Detected: {list(unique_fonts)}")
+    print(f"Classification Strategy: {pdf_type}")
+    print("----------------------------------")
+    sys.stdout.flush()
+    
     return {
         "pdf_type": pdf_type,
         "text_count": total_chars,
@@ -84,45 +193,78 @@ def analyzePdf(doc):
         "avg_chars": avg_chars
     }
 
-def validateOutput(docx_path, expect_images):
-    if not os.path.exists(docx_path):
+def validateOutput(docx_path):
+    if not os.path.exists(docx_path) or os.path.getsize(docx_path) < 1000:
         return False
-    if not expect_images:
-        return True
     try:
-        import zipfile
-        with zipfile.ZipFile(docx_path, 'r') as z:
-            for name in z.namelist():
-                if name.startswith('word/media/'):
-                    return True
-        return False
-    except Exception as e:
-        print(f"Validation error: {e}")
+        with zipfile.ZipFile(docx_path) as zf:
+            if "word/document.xml" not in zf.namelist():
+                return False
+        return True
+    except Exception:
         return False
 
 def convertTextPdf(input_path, output_path):
     from pdf2docx import Converter
     cv = Converter(input_path)
-    cv.convert(output_path)
+    cv.convert(
+        output_path,
+        shape_min_dimension=0.1,
+        min_svg_w=0.1,
+        min_svg_h=0.1,
+        float_image_ignorable_gap=0.1
+    )
     cv.close()
 
-def convertGraphicPdf(doc, output_path, temp_dir):
+def generateSearchablePdf(doc, temp_dir, input_path):
+    ocr_doc = fitz.open()
+    ocr_pdf_path = os.path.join(temp_dir, "ocr_temp.pdf")
+    
+    for i in range(len(doc)):
+        page = doc[i]
+        pix = page.get_pixmap(dpi=150)
+        if pix.alpha:
+            pix = fitz.Pixmap(fitz.csRGB, pix)
+        img_path = os.path.join(temp_dir, f"ocr_page_{i}.png")
+        pix.save(img_path, "png")
+        
+        pdf_page_base = os.path.join(temp_dir, f"ocr_page_{i}_pdf")
+        pdf_page_file = pdf_page_base + ".pdf"
+        
+        try:
+            subprocess.run(["tesseract", img_path, pdf_page_base, "-l", "eng", "pdf"], check=True)
+            if os.path.exists(pdf_page_file):
+                with fitz.open(pdf_page_file) as page_doc:
+                    ocr_doc.insert_pdf(page_doc)
+            else:
+                img_doc = fitz.open()
+                img_page = img_doc.new_page(width=page.rect.width, height=page.rect.height)
+                img_page.insert_image(page.rect, filename=img_path)
+                ocr_doc.insert_pdf(img_doc)
+                img_doc.close()
+        except Exception as e:
+            print(f"OCR failed for page {i}: {e}")
+            img_doc = fitz.open()
+            img_page = img_doc.new_page(width=page.rect.width, height=page.rect.height)
+            img_page.insert_image(page.rect, filename=img_path)
+            ocr_doc.insert_pdf(img_doc)
+            img_doc.close()
+            
+    ocr_doc.save(ocr_pdf_path)
+    ocr_doc.close()
+    return ocr_pdf_path
+
+def convertGraphicPdf(doc, output_path, temp_dir, input_path):
     from docx import Document
-    from docx.shared import Pt, Inches
+    from docx.shared import Pt
     from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
     word_doc = Document()
     for i in range(len(doc)):
         page = doc[i]
-        w = page.rect.width / 72.0
-        h = page.rect.height / 72.0
+        w = page.rect.width
+        h = page.rect.height
         
-        max_dim = 22.0
-        if w > max_dim or h > max_dim:
-            scale = max_dim / max(w, h)
-            w = w * scale
-            h = h * scale
-            
         if i > 0:
             section = word_doc.add_section()
         else:
@@ -132,12 +274,18 @@ def convertGraphicPdf(doc, output_path, temp_dir):
         section.bottom_margin = Pt(0)
         section.left_margin = Pt(0)
         section.right_margin = Pt(0)
-        section.page_width = Inches(w)
-        section.page_height = Inches(h)
+        section.page_width = Pt(w)
+        section.page_height = Pt(h)
         
-        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-        img_path = f"{temp_dir}/page_{i}.jpg"
-        pix.save(img_path)
+        # Optimized 150 DPI render for smaller file size and faster processing
+        pix = page.get_pixmap(dpi=150)
+        
+        # JPEG doesn't support alpha channel. Convert if present.
+        if pix.alpha:
+            pix = fitz.Pixmap(fitz.csRGB, pix)
+            
+        img_path = os.path.join(temp_dir, f"page_{i}.jpg")
+        pix.save(img_path, "jpg", jpg_quality=75)
         
         p = word_doc.add_paragraph()
         p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
@@ -146,12 +294,25 @@ def convertGraphicPdf(doc, output_path, temp_dir):
         p.paragraph_format.line_spacing = Pt(0)
         r = p.add_run()
         r.font.size = Pt(1)
-        r.add_picture(img_path, width=Inches(w * 0.99), height=Inches(h * 0.99))
+        r.add_picture(img_path, width=Pt(w * 0.92))
+        
+        # Extract page text
+        text = page.get_text("text").strip()
+        if text:
+            p_text = word_doc.add_paragraph()
+            p_text.paragraph_format.space_before = Pt(4)
+            p_text.paragraph_format.space_after = Pt(4)
+            p_text.paragraph_format.line_spacing = Pt(0)
+            for line in text.split("\\n"):
+                if line.strip():
+                    r_text = p_text.add_run(line + "\\n")
+                    r_text.font.name = "Arial"
+                    r_text.font.size = Pt(10)
         
     word_doc.save(output_path)
 
-def convertScannedPdf(doc, output_path, temp_dir):
-    convertGraphicPdf(doc, output_path, temp_dir)
+def convertScannedPdf(doc, output_path, temp_dir, input_path):
+    convertGraphicPdf(doc, output_path, temp_dir, input_path)
 
 try:
     doc = fitz.open(input_path)
@@ -164,36 +325,31 @@ try:
     strategy = analysis["pdf_type"]
     converted = False
     
-    if strategy == "text_heavy":
+    if strategy == "scanned":
         try:
-            print("Selected conversion strategy: pdf2docx (Text Heavy)")
-            convertTextPdf(input_path, output_path)
-            if validateOutput(output_path, expect_images=False):
+            print("Generating searchable PDF via OCR...")
+            ocr_pdf_path = generateSearchablePdf(doc, temp_dir, input_path)
+            print("Converting OCR-ed PDF to DOCX...")
+            convertTextPdf(ocr_pdf_path, output_path)
+            if validateOutput(output_path):
                 converted = True
+                print("OCR conversion successful.")
+        except Exception as e:
+            print(f"OCR + pdf2docx failed: {e}. Falling back to default conversion.")
+            
+    if not converted:
+        try:
+            print(f"Selected conversion strategy: pdf2docx ({strategy})")
+            convertTextPdf(input_path, output_path)
+            if validateOutput(output_path):
+                converted = True
+                print("Validation successful.")
         except Exception as e:
             print(f"pdf2docx failed: {e}. Falling back to graphic mode.")
             
-    elif strategy == "mixed":
-        try:
-            print("Selected conversion strategy: pdf2docx (Mixed)")
-            convertTextPdf(input_path, output_path)
-            # Expect images if PDF has raster images OR significant vector drawings (logos, QR codes)
-            expect_img = (analysis["image_count"] > 0) or (analysis["drawing_count"] > 5)
-            if validateOutput(output_path, expect_images=expect_img):
-                converted = True
-                print("Validation successful for Mixed PDF.")
-            else:
-                print("Validation failed: images disappeared. Falling back to graphic mode.")
-        except Exception as e:
-            print(f"pdf2docx Mixed failed: {e}. Falling back to graphic mode.")
-            
     if not converted:
-        if strategy == "scanned":
-            print("Selected conversion strategy: Scanned PDF")
-            convertScannedPdf(doc, output_path, temp_dir)
-        else:
-            print("Selected conversion strategy: Graphic Heavy / Fallback")
-            convertGraphicPdf(doc, output_path, temp_dir)
+        print("Falling back to graphic mode.")
+        convertScannedPdf(doc, output_path, temp_dir, input_path)
             
     doc.close()
     
@@ -208,6 +364,7 @@ except Exception as e:
     sys.exit(1)
 `;
           await run(pythonBin, ["-c", pyScript]);
+          await optimizeDocxWithPython(pythonBin, outputDocx);
           return await readFile(outputDocx);
         } catch (err) {
           console.error("Python DOCX conversion error, falling back:", err);
@@ -215,7 +372,47 @@ except Exception as e:
       }
     }
 
-    // ── Strategy 2: Original Text/OCR fallback ──────────────────────────
+    // ── Strategy 2: LibreOffice PDF to DOCX (Fallback) ───────────────────
+    if (await exists("soffice")) {
+      try {
+        console.log("Attempting LibreOffice PDF to DOCX conversion...");
+        await run(
+          "soffice",
+          [
+            "--headless",
+            "--norestore",
+            "--nofirststartwizard",
+            `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
+            "--infilter=writer_pdf_import",
+            "--convert-to",
+            "docx",
+            "--outdir",
+            dir,
+            input,
+          ],
+          dir
+        );
+        const files = await readdir(dir);
+        const libreOfficeOut = files.find((f) => f.endsWith(".docx"));
+        if (libreOfficeOut) {
+          const outPath = join(dir, libreOfficeOut);
+          const hasPython = (await exists("python3")) || (await exists("python"));
+          if (hasPython) {
+            const pythonBin = (await exists("python3")) ? "python3" : "python";
+            await optimizeDocxWithPython(pythonBin, outPath);
+          }
+          const docxBuffer = await readFile(outPath);
+          if (docxBuffer.length > 2000) {
+            console.log("LibreOffice PDF to DOCX conversion successful.");
+            return docxBuffer;
+          }
+        }
+      } catch (err) {
+        console.error("LibreOffice PDF to DOCX conversion error:", err);
+      }
+    }
+
+    // ── Strategy 3: Original Text/OCR fallback ──────────────────────────
     let text = "";
     if (await exists("pdftotext")) {
       try {
@@ -308,6 +505,8 @@ export async function pdfToExcel(buffer: Buffer): Promise<Buffer> {
         [
           "--headless",
           "--norestore",
+          "--nofirststartwizard",
+          `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
           "--convert-to",
           "xlsx",
           "--outdir",
@@ -409,7 +608,7 @@ export async function convertOffice(
   toolSlug: string,
   originalFileName?: string
 ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
-  const inputExt = guessInputExt(toolSlug, buffer);
+  const inputExt = guessInputExt(toolSlug, buffer, originalFileName);
   const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
   const outFileName = `${baseName}.${targetFormat}`;
 
@@ -443,6 +642,8 @@ export async function convertOffice(
       [
         "--headless",
         "--norestore",
+        "--nofirststartwizard",
+        `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
         "--convert-to",
         targetFormat,
         "--outdir",
@@ -461,15 +662,52 @@ export async function convertOffice(
     const chosen = outFile ?? files.find((f) => f !== `input${inputExt}`);
     if (!chosen) throw new Error("Conversion produced no output");
 
-    const out = await readFile(join(dir, chosen));
+    let out = await readFile(join(dir, chosen));
     const mime = mimeFor(targetFormat);
+
+    // If we converted to PDF, check if it's scanned (no selectable text but has images)
+    // and run OCR if so.
+    if (targetFormat === "pdf") {
+      const hasPython = (await exists("python3")) || (await exists("python"));
+      if (hasPython) {
+        const pythonBin = (await exists("python3")) ? "python3" : "python";
+        const pdfPath = join(dir, chosen);
+        const pyCheckScript = `
+import fitz
+import sys
+try:
+    doc = fitz.open(r"${pdfPath.replace(/\\/g, "/")}")
+    total_chars = sum(len(page.get_text().strip()) for page in doc)
+    has_images = any(len(page.get_images()) > 0 for page in doc)
+    print("true" if (total_chars < 150 and has_images) else "false")
+except Exception:
+    print("false")
+`;
+        try {
+          const stdout = await runWithOutput(pythonBin, ["-c", pyCheckScript]);
+          if (stdout.trim() === "true") {
+            console.log("Converted PDF contains scanned images/photos with no selectable text. Running OCR to make it searchable...");
+            out = await ocrPdf(out as any, "eng") as any;
+          }
+        } catch (err) {
+          console.error("Error checking/OCR-ing converted PDF:", err);
+        }
+      }
+    }
+
     return { buffer: out, mimeType: mime, fileName: outFileName };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 }
 
-function guessInputExt(toolSlug: string, buffer: Buffer): string {
+function guessInputExt(toolSlug: string, buffer: Buffer, originalFileName?: string): string {
+  if (originalFileName) {
+    const ext = originalFileName.slice(originalFileName.lastIndexOf(".")).toLowerCase();
+    if (ext && ext.startsWith(".") && ext.length > 1) {
+      return ext;
+    }
+  }
   if (toolSlug.startsWith("pdf-to")) return ".pdf";
   if (buffer.slice(0, 4).toString() === "%PDF") return ".pdf";
   if (toolSlug === "word-to-pdf") return ".docx";

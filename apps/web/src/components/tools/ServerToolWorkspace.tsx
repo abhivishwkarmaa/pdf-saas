@@ -24,6 +24,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
   const [options, setOptions] = useState<Record<string, string>>(
     getToolOptionDefaults(tool.slug)
   );
+  const [statusMessage, setStatusMessage] = useState("");
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
@@ -49,30 +50,57 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
     }
 
     setProcessing(true);
-    // Progress and status state are not displayed in this workspace.
+    setStatusMessage("Uploading... 0%");
 
     try {
       const formData = new FormData();
       files.forEach((f) => formData.append("files", f));
       formData.append("options", JSON.stringify(options));
 
-      const res = await fetch(`/api/process/${tool.slug}`, {
-        method: "POST",
-        body: formData,
+      const xhr = new XMLHttpRequest();
+      
+      const responsePromise = new Promise<{ blob: Blob; fileName: string }>((resolve, reject) => {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setStatusMessage(`Uploading... ${percent}%`);
+          }
+        });
+
+        xhr.upload.addEventListener("load", () => {
+          setStatusMessage("Processing on server...");
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const blob = xhr.response as Blob;
+            const disposition = xhr.getResponseHeader("Content-Disposition");
+            const match = disposition?.match(/filename="([^\"]+)"/);
+            const fileName = match?.[1] ?? "result";
+            resolve({ blob, fileName });
+          } else {
+            const responseText = xhr.responseText;
+            try {
+              const err = JSON.parse(responseText);
+              reject(new Error(err.error ?? "Processing failed"));
+            } catch {
+              reject(new Error("Processing failed"));
+            }
+          }
+        });
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error occurred"));
+        });
+
+        xhr.responseType = "blob";
+        xhr.open("POST", `/api/process/${tool.slug}`);
+        xhr.send(formData);
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          (err as { error?: string }).error ?? "Processing failed"
-        );
-      }
-
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition");
-      const match = disposition?.match(/filename="([^\"]+)"/);
-      const fileName = match?.[1] ?? "result";
-
+      const { blob, fileName } = await responsePromise;
+      
+      setStatusMessage("Downloading...");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -85,6 +113,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setProcessing(false);
+      setStatusMessage("");
     }
   };
 
@@ -109,7 +138,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
           className={theme.button}
           label={`Process ${tool.name}`}
           loading={processing}
-          loadingLabel="Processing..."
+          loadingLabel={statusMessage || "Processing..."}
           disabled={files.length === 0}
           onClick={() => void process()}
         />
