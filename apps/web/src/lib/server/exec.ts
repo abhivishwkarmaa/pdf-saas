@@ -63,13 +63,14 @@ export async function exists(cmd: string): Promise<boolean> {
 export async function runWithOutput(
   cmd: string,
   args: string[],
-  cwd?: string
+  cwd?: string,
+  timeout = 300_000
 ): Promise<string> {
   const localBinary = await resolveLocalBinary(cmd);
   const executable = localBinary ?? cmd;
   const { stdout } = await execFileAsync(executable, args, {
     cwd,
-    timeout: 300_000,
+    timeout,
     maxBuffer: 100 * 1024 * 1024,
   });
   return stdout;
