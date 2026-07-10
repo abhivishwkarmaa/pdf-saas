@@ -270,6 +270,42 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
       ],
     },
   ],
+  "word-to-pdf": [
+    {
+      key: "engine",
+      label: "Conversion Strategy",
+      type: "select",
+      options: [
+        { value: "auto", label: "Auto Detect (Recommended)" },
+        { value: "local", label: "Local Converter (Fast/Text Only)" },
+        { value: "adobe", label: "Adobe Premium (Best for Images/Tables)" },
+      ],
+    },
+  ],
+  "powerpoint-to-pdf": [
+    {
+      key: "engine",
+      label: "Conversion Strategy",
+      type: "select",
+      options: [
+        { value: "auto", label: "Auto Detect (Recommended)" },
+        { value: "local", label: "Local Converter (Fast/Text Only)" },
+        { value: "adobe", label: "Adobe Premium (Best for Images/Tables)" },
+      ],
+    },
+  ],
+  "excel-to-pdf": [
+    {
+      key: "engine",
+      label: "Conversion Strategy",
+      type: "select",
+      options: [
+        { value: "auto", label: "Auto Detect (Recommended)" },
+        { value: "local", label: "Local Converter (Fast/Text Only)" },
+        { value: "adobe", label: "Adobe Premium (Best for Images/Tables)" },
+      ],
+    },
+  ],
 };
 
 export function getToolOptionFields(slug: string): ToolOptionField[] {

@@ -56,11 +56,11 @@ export async function processOnServer(
     case "pdf-to-excel":
       return convertOffice(buffers[0], "xlsx", "pdf-to-excel", originalFileName);
     case "word-to-pdf":
-      return convertOffice(buffers[0], "pdf", "word-to-pdf", originalFileName);
+      return convertOffice(buffers[0], "pdf", "word-to-pdf", originalFileName, options);
     case "powerpoint-to-pdf":
-      return convertOffice(buffers[0], "pdf", "powerpoint-to-pdf", originalFileName);
+      return convertOffice(buffers[0], "pdf", "powerpoint-to-pdf", originalFileName, options);
     case "excel-to-pdf":
-      return convertOffice(buffers[0], "pdf", "excel-to-pdf", originalFileName);
+      return convertOffice(buffers[0], "pdf", "excel-to-pdf", originalFileName, options);
     case "html-to-pdf": {
       let out: Buffer;
       const htmlOptions = {

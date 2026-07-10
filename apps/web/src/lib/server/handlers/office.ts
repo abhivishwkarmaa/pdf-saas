@@ -263,6 +263,189 @@ async function convertPdfToWordViaAdobe(buffer: Buffer): Promise<Buffer> {
   return Buffer.from(outArrayBuffer);
 }
 
+async function detectOfficeType(buffer: Buffer, ext: string): Promise<string> {
+  const pythonBin = (await exists("python3")) ? "python3" : "python";
+  const tempFile = join(tmpdir(), `detect-office-${Date.now()}${ext}`).replace(/\\/g, "/");
+  try {
+    await writeFile(tempFile, buffer);
+    const pyScript = `
+import zipfile
+import sys
+import os
+
+filePath = r"${tempFile}"
+ext = os.path.splitext(filePath)[1].lower()
+
+try:
+    with zipfile.ZipFile(filePath, 'r') as zip_ref:
+        names = zip_ref.namelist()
+        has_media = False
+        if ext in ['.docx', '.doc']:
+            has_media = any(name.startswith('word/media/') for name in names)
+        elif ext in ['.pptx', '.ppt']:
+            has_media = any(name.startswith('ppt/media/') for name in names)
+        elif ext in ['.xlsx', '.xls']:
+            has_media = any(name.startswith('xl/media/') for name in names)
+        
+        if has_media:
+            print("graphic_heavy")
+        else:
+            print("text_heavy")
+except Exception as e:
+    print("graphic_heavy")
+`;
+    const output = await runWithOutput(pythonBin, ["-c", pyScript]);
+    return output.trim();
+  } catch (err) {
+    console.error("Error detecting Office type:", err);
+    return "graphic_heavy";
+  } finally {
+    try {
+      await rm(tempFile, { force: true });
+    } catch {}
+  }
+}
+
+async function convertOfficeToPdfViaAdobe(buffer: Buffer, ext: string): Promise<Buffer> {
+  const clientId = process.env.ADOBE_CLIENT_ID;
+  const clientSecret = process.env.ADOBE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Adobe Client ID or Client Secret is not configured.");
+  }
+
+  // 1. Get Access Token
+  const tokenRes = await fetch("https://ims-na1.adobelogin.com/ims/token/v3", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "client_credentials",
+      scope: "openid,AdobeID,pdf_services",
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text();
+    throw new Error(`Failed to get Adobe access token: ${errText}`);
+  }
+
+  const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+  // Get Mime type
+  let mimeType = "application/octet-stream";
+  if (ext === ".docx" || ext === ".doc") {
+    mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  } else if (ext === ".pptx" || ext === ".ppt") {
+    mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  } else if (ext === ".xlsx" || ext === ".xls") {
+    mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
+
+  // 2. Create Upload Asset
+  const assetRes = await fetch("https://pdf-services.adobe.io/assets", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "x-api-key": clientId,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mediaType: mimeType }),
+  });
+
+  if (!assetRes.ok) {
+    const errText = await assetRes.text();
+    throw new Error(`Failed to create Adobe upload asset: ${errText}`);
+  }
+
+  const { uploadUri, assetID } = (await assetRes.json()) as {
+    uploadUri: string;
+    assetID: string;
+  };
+
+  // 3. Upload the file
+  const uploadRes = await fetch(uploadUri, {
+    method: "PUT",
+    headers: { "Content-Type": mimeType },
+    body: buffer as any,
+  });
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text();
+    throw new Error(`Failed to upload file to Adobe: ${errText}`);
+  }
+
+  // 4. Create Create PDF Job
+  const jobRes = await fetch("https://pdf-services.adobe.io/operation/createpdf", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "x-api-key": clientId,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      assetID,
+    }),
+  });
+
+  if (!jobRes.ok) {
+    const errText = await jobRes.text();
+    throw new Error(`Failed to create Create PDF job in Adobe: ${errText}`);
+  }
+
+  const statusUrl = jobRes.headers.get("location");
+  if (!statusUrl) {
+    throw new Error("Adobe createpdf job response did not return a status location header.");
+  }
+
+  // 5. Poll Job Status
+  let downloadUri = "";
+  const maxAttempts = 90; // 90s max poll time
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const pollRes = await fetch(statusUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "x-api-key": clientId,
+      },
+    });
+
+    if (!pollRes.ok) {
+      const errText = await pollRes.text();
+      throw new Error(`Adobe job polling failed: ${errText}`);
+    }
+
+    const jobStatus = (await pollRes.json()) as {
+      status: string;
+      asset?: { downloadUri: string };
+      error?: unknown;
+    };
+
+    if (jobStatus.status === "done" || jobStatus.status === "completed" || jobStatus.status === "success") {
+      downloadUri = jobStatus.asset?.downloadUri || "";
+      break;
+    } else if (jobStatus.status === "failed") {
+      throw new Error(`Adobe createpdf job failed: ${JSON.stringify(jobStatus.error)}`);
+    }
+  }
+
+  if (!downloadUri) {
+    throw new Error("Adobe createpdf job timed out or returned no download URI.");
+  }
+
+  // 6. Download the PDF file
+  const downloadRes = await fetch(downloadUri);
+  if (!downloadRes.ok) {
+    throw new Error(`Failed to download converted PDF from Adobe: ${downloadRes.statusText}`);
+  }
+
+  const outArrayBuffer = await downloadRes.arrayBuffer();
+  return Buffer.from(outArrayBuffer);
+}
+
 export async function pdfToWord(buffer: Buffer, options?: Record<string, unknown>): Promise<Buffer> {
   const dir = (await mkdtemp(join(tmpdir(), "pdf-word-"))).replace(/\\/g, "/");
   const input = join(dir, "input.pdf").replace(/\\/g, "/");
@@ -865,6 +1048,33 @@ export async function convertOffice(
     if (targetFormat === "xlsx") {
       const out = await pdfToExcel(buffer);
       return { buffer: out, mimeType: mimeFor("xlsx"), fileName: outFileName };
+    }
+  }
+
+  if (targetFormat === "pdf" && (inputExt === ".docx" || inputExt === ".doc" || inputExt === ".pptx" || inputExt === ".ppt" || inputExt === ".xlsx" || inputExt === ".xls")) {
+    const selectedEngine = options?.engine ? String(options.engine) : "auto";
+    let useAdobe = false;
+    if (selectedEngine === "adobe") {
+      useAdobe = true;
+      console.log("Forced Adobe Premium for Office to PDF conversion.");
+    } else if (selectedEngine === "local") {
+      useAdobe = false;
+      console.log("Forced Local LibreOffice for Office to PDF conversion.");
+    } else {
+      const officeType = await detectOfficeType(buffer, inputExt);
+      useAdobe = (officeType === "graphic_heavy");
+      console.log(`Auto-detected Office type: ${officeType}. Routing to Adobe: ${useAdobe}`);
+    }
+
+    if (useAdobe) {
+      try {
+        console.log("Attempting Office to PDF conversion via Adobe PDF Services API...");
+        const out = await convertOfficeToPdfViaAdobe(buffer, inputExt);
+        console.log("Adobe PDF Services API Office to PDF conversion successful!");
+        return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
+      } catch (err) {
+        console.error("Adobe Office to PDF conversion failed, falling back to local LibreOffice:", err);
+      }
     }
   }
 
