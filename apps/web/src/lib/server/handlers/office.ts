@@ -473,6 +473,7 @@ export async function pdfToWord(buffer: Buffer, options?: Record<string, unknown
     if (pdfType !== "text_heavy") {
       const clientId = process.env.ADOBE_CLIENT_ID;
       const clientSecret = process.env.ADOBE_CLIENT_SECRET;
+      console.log(`[Adobe Creds Check] Client ID present: ${!!clientId} (${clientId ? clientId.substring(0, 5) + "..." : "N/A"}), Client Secret present: ${!!clientSecret} (length: ${clientSecret ? clientSecret.length : 0})`);
       if (clientId && clientSecret) {
         try {
           console.log("Attempting PDF to Word conversion via Adobe PDF Services API...");
@@ -1067,13 +1068,20 @@ export async function convertOffice(
     }
 
     if (useAdobe) {
-      try {
-        console.log("Attempting Office to PDF conversion via Adobe PDF Services API...");
-        const out = await convertOfficeToPdfViaAdobe(buffer, inputExt);
-        console.log("Adobe PDF Services API Office to PDF conversion successful!");
-        return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
-      } catch (err) {
-        console.error("Adobe Office to PDF conversion failed, falling back to local LibreOffice:", err);
+      const clientId = process.env.ADOBE_CLIENT_ID;
+      const clientSecret = process.env.ADOBE_CLIENT_SECRET;
+      console.log(`[Adobe Creds Check] Client ID present: ${!!clientId} (${clientId ? clientId.substring(0, 5) + "..." : "N/A"}), Client Secret present: ${!!clientSecret} (length: ${clientSecret ? clientSecret.length : 0})`);
+      if (clientId && clientSecret) {
+        try {
+          console.log("Attempting Office to PDF conversion via Adobe PDF Services API...");
+          const out = await convertOfficeToPdfViaAdobe(buffer, inputExt);
+          console.log("Adobe PDF Services API Office to PDF conversion successful!");
+          return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
+        } catch (err) {
+          console.error("Adobe Office to PDF conversion failed, falling back to local LibreOffice:", err);
+        }
+      } else {
+        console.log("Adobe credentials not set. Using local conversion fallback.");
       }
     }
   }
