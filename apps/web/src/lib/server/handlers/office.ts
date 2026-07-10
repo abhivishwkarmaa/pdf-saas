@@ -124,10 +124,10 @@ except Exception as e:
     print("scanned")
 `;
   try {
-    const output = await runWithOutput(pythonBin, ["-c", pyScript], undefined, 5000);
+    const output = await runWithOutput(pythonBin, ["-c", pyScript]);
     return output.trim();
   } catch (err) {
-    console.error("Error detecting PDF type (defaulting to scanned):", err);
+    console.error("Error detecting PDF type:", err);
     return "scanned";
   }
 }
@@ -294,10 +294,10 @@ try:
 except Exception as e:
     print("graphic_heavy")
 `;
-    const output = await runWithOutput(pythonBin, ["-c", pyScript], undefined, 5000);
+    const output = await runWithOutput(pythonBin, ["-c", pyScript]);
     return output.trim();
   } catch (err) {
-    console.error("Error detecting Office type (defaulting to graphic_heavy):", err);
+    console.error("Error detecting Office type:", err);
     return "graphic_heavy";
   } finally {
     try {
