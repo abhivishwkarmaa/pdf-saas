@@ -12,6 +12,8 @@ services:
         NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: QfreXudQtBtP/IXtmYsnzY9sovXvhPN1krI9VQHr4dI=
     ports:
       - "3000:3000"
+    env_file:
+      - apps/web/.env
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: http://localhost:3000

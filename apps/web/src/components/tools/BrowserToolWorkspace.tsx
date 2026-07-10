@@ -26,6 +26,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [rotations, setRotations] = useState<number[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const [options, setOptions] = useState<Record<string, string>>(
     getToolOptionDefaults(tool.slug)
   );
@@ -53,42 +54,53 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
       return;
     }
     setProcessing(true);
+    setStatusMessage("Reading file... 10%");
     try {
       let blob: Blob;
       const slug = tool.slug;
 
       switch (slug) {
         case "merge-pdf":
-          blob = await pdf.mergePdfs(files);
+          blob = await pdf.mergePdfs(files, (pct) => setStatusMessage(`Merging PDFs... ${pct}%`));
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "merged.pdf");
           break;
         case "split-pdf": {
-          const parts = await pdf.splitPdf(files[0], options.ranges || "1");
+          const parts = await pdf.splitPdf(files[0], options.ranges || "1", (pct) => setStatusMessage(`Splitting PDF... ${pct}%`));
           if (parts.length > 10) {
             throw new Error("You can split into a maximum of 10 PDF files at a time to prevent browser download blocks.");
           }
+          setStatusMessage("Downloading... 100%");
           parts.forEach((b, i) => downloadBlob(b, `part-${i + 1}.pdf`));
           toast.success(`Downloaded ${parts.length} file(s)`);
           return;
         }
         case "remove-pages":
+          setStatusMessage("Processing layout... 40%");
           blob = await pdf.removePages(files[0], options.pages || "1");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "removed.pdf");
           break;
         case "extract-pages":
+          setStatusMessage("Processing layout... 40%");
           blob = await pdf.extractPages(files[0], options.pages || "1");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "extracted.pdf");
           break;
         case "organize-pdf":
+          setStatusMessage("Re-ordering pages... 40%");
           blob = await pdf.organizePdf(files[0], options.order || "1");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "organized.pdf");
           break;
         case "rotate-pdf":
+          setStatusMessage("Rotating document... 40%");
           blob = await pdf.rotatePdf(
             files[0],
             (Number(options.angle) || 90) as 90 | 180 | 270,
             options.pages
           );
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "rotated.pdf");
           break;
         case "jpg-to-pdf":
@@ -97,54 +109,77 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         case "image-to-pdf": {
           const processedFiles = [...files];
           for (let i = 0; i < processedFiles.length; i++) {
+            setStatusMessage(`Rotating images... ${Math.round((i / processedFiles.length) * 100)}%`);
             const rot = rotations[i] || 0;
             if (rot > 0) {
               processedFiles[i] = await rotateImageFileByAngle(processedFiles[i], rot);
             }
           }
-          blob = await pdf.imagesToPdf(processedFiles, options);
+          setStatusMessage("Assembling PDF... 0%");
+          blob = await pdf.imagesToPdf(processedFiles, options, (pct) => setStatusMessage(`Assembling PDF... ${pct}%`));
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "document.pdf");
           break;
         }
         case "watermark-pdf":
+          setStatusMessage("Applying watermark... 50%");
           blob = await pdf.watermarkPdf(files[0], options.text || "CONFIDENTIAL");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "watermarked.pdf");
           break;
         case "page-numbers":
+          setStatusMessage("Adding page numbers... 50%");
           blob = await pdf.addPageNumbers(files[0]);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "numbered.pdf");
           break;
         case "txt-to-pdf":
+          setStatusMessage("Generating layout... 50%");
           blob = await pdf.txtToPdf(files[0]);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "document.pdf");
           break;
         case "crop-pdf":
+          setStatusMessage("Cropping pages... 50%");
           blob = await pdf.cropPdf(files[0]);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "cropped.pdf");
           break;
         case "redact-pdf":
+          setStatusMessage("Redacting text... 50%");
           blob = await pdf.redactPdf(files[0], []);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "redacted.pdf");
           break;
         case "sign-pdf":
+          setStatusMessage("Signing document... 50%");
           blob = await pdf.signPdf(files);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "signed.pdf");
           break;
         case "jpg-to-png":
+          setStatusMessage("Converting format... 50%");
           blob = await img.convertImageFormat(files[0], "image/png");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, changeExtension(files[0].name, "png"));
           break;
         case "png-to-jpg":
         case "bmp-to-jpg":
+          setStatusMessage("Converting format... 50%");
           blob = await img.convertImageFormat(files[0], "image/jpeg");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, changeExtension(files[0].name, "jpg"));
           break;
         case "webp-to-jpg":
+          setStatusMessage("Converting format... 50%");
           blob = await img.convertImageFormat(files[0], "image/jpeg");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, changeExtension(files[0].name, "jpg"));
           break;
         case "jpg-to-webp":
+          setStatusMessage("Converting format... 50%");
           blob = await img.convertImageFormat(files[0], "image/webp");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, changeExtension(files[0].name, "webp"));
           break;
         case "compress-image": {
@@ -158,24 +193,32 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           } else {
             qualityVal = Number(options.quality) || 75;
           }
+          setStatusMessage("Compressing image... 50%");
           blob = await img.compressImage(files[0], qualityVal);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
         }
         case "resize-image":
+          setStatusMessage("Resizing image... 50%");
           blob = await img.resizeImage(
             files[0],
             Number(options.width) || 800,
             Number(options.height) || 600
           );
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
         case "rotate-image":
+          setStatusMessage("Rotating image... 50%");
           blob = await img.rotateImage(files[0], Number(options.angle) || 90);
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, imageDownloadName(files[0]));
           break;
         case "gif-to-png":
+          setStatusMessage("Converting format... 50%");
           blob = await img.convertImageFormat(files[0], "image/png");
+          setStatusMessage("Downloading... 100%");
           downloadBlob(blob, changeExtension(files[0].name, "png"));
           break;
         default:
@@ -187,6 +230,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
       toast.error(e instanceof Error ? e.message : "Processing failed");
     } finally {
       setProcessing(false);
+      setStatusMessage("");
     }
   };
 
@@ -214,7 +258,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           className={theme.button}
           label={`Process ${tool.name}`}
           loading={processing}
-          loadingLabel="Processing..."
+          loadingLabel={statusMessage || "Processing..."}
           disabled={files.length === 0}
           onClick={() => void process()}
         />

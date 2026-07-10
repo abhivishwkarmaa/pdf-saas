@@ -62,13 +62,253 @@ if os.path.exists(docx_path):
   }
 }
 
-export async function pdfToWord(buffer: Buffer): Promise<Buffer> {
+async function detectPdfType(pdfPath: string): Promise<string> {
+  const hasPython = (await exists("python3")) || (await exists("python"));
+  if (!hasPython) return "scanned";
+  const pythonBin = (await exists("python3")) ? "python3" : "python";
+
+  const pyScript = `
+import fitz
+import sys
+try:
+    doc = fitz.open(r"${pdfPath.replace(/\\/g, "/")}")
+    pages_count = len(doc)
+    if pages_count == 0:
+        print("scanned")
+        sys.exit(0)
+    
+    total_chars = 0
+    total_images = 0
+    total_drawings = 0
+    total_tables = 0
+    is_scanned = True
+    has_large_image_or_ocr = False
+    
+    pages_to_scan = min(pages_count, 5)
+    for i in range(pages_to_scan):
+        page = doc[i]
+        text = page.get_text("text").strip()
+        total_chars += len(text)
+        if len(text) > 50:
+            is_scanned = False
+            
+        page_area = page.rect.width * page.rect.height
+        imgs = page.get_images(full=True)
+        total_images += len(imgs)
+        for img_info in imgs:
+            xref = img_info[0]
+            try:
+                rects = page.get_image_rects(xref)
+                for r in rects:
+                    if r.width * r.height > 0.85 * page_area:
+                        has_large_image_or_ocr = True
+            except:
+                pass
+                
+        total_drawings += len(page.get_drawings())
+        try:
+            total_tables += len(page.find_tables().tables)
+        except:
+            pass
+            
+    avg_chars = total_chars / pages_to_scan if pages_to_scan > 0 else 0
+    if is_scanned or has_large_image_or_ocr or (total_chars < 100 and total_images > 0):
+        print("scanned")
+    elif total_images == 0 and total_drawings < pages_to_scan * 15 and avg_chars > 300:
+        print("text_heavy")
+    elif total_images > pages_to_scan * 2 or total_drawings > pages_to_scan * 40 or total_tables > 0:
+        print("graphic_heavy")
+    else:
+        print("mixed")
+except Exception as e:
+    print("scanned")
+`;
+  try {
+    const output = await runWithOutput(pythonBin, ["-c", pyScript]);
+    return output.trim();
+  } catch (err) {
+    console.error("Error detecting PDF type:", err);
+    return "scanned";
+  }
+}
+
+async function convertPdfToWordViaAdobe(buffer: Buffer): Promise<Buffer> {
+  const clientId = process.env.ADOBE_CLIENT_ID;
+  const clientSecret = process.env.ADOBE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Adobe Client ID or Client Secret is not configured.");
+  }
+
+  // 1. Get Access Token
+  const tokenRes = await fetch("https://ims-na1.adobelogin.com/ims/token/v3", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "client_credentials",
+      scope: "openid,AdobeID,pdf_services",
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text();
+    throw new Error(`Failed to get Adobe access token: ${errText}`);
+  }
+
+  const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+  // 2. Create Upload Asset
+  const assetRes = await fetch("https://pdf-services.adobe.io/assets", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "x-api-key": clientId,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mediaType: "application/pdf" }),
+  });
+
+  if (!assetRes.ok) {
+    const errText = await assetRes.text();
+    throw new Error(`Failed to create Adobe upload asset: ${errText}`);
+  }
+
+  const { uploadUri, assetID } = (await assetRes.json()) as {
+    uploadUri: string;
+    assetID: string;
+  };
+
+  // 3. Upload the PDF
+  const uploadRes = await fetch(uploadUri, {
+    method: "PUT",
+    headers: { "Content-Type": "application/pdf" },
+    body: buffer as any,
+  });
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text();
+    throw new Error(`Failed to upload PDF to Adobe: ${errText}`);
+  }
+
+  // 4. Create Export Job
+  const jobRes = await fetch("https://pdf-services.adobe.io/operation/exportpdf", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "x-api-key": clientId,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      assetID,
+      targetFormat: "docx",
+    }),
+  });
+
+  if (!jobRes.ok) {
+    const errText = await jobRes.text();
+    throw new Error(`Failed to create export job in Adobe: ${errText}`);
+  }
+
+  const statusUrl = jobRes.headers.get("location");
+  if (!statusUrl) {
+    throw new Error("Adobe export job response did not return a status location header.");
+  }
+
+  // 5. Poll Job Status
+  let downloadUri = "";
+  const maxAttempts = 90; // 90 attempts * 1.0s = 90s max poll time
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const pollRes = await fetch(statusUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "x-api-key": clientId,
+      },
+    });
+
+    if (!pollRes.ok) {
+      const errText = await pollRes.text();
+      throw new Error(`Adobe job polling failed: ${errText}`);
+    }
+
+    const jobStatus = (await pollRes.json()) as {
+      status: string;
+      asset?: { downloadUri: string };
+      error?: unknown;
+    };
+
+    if (jobStatus.status === "done" || jobStatus.status === "completed" || jobStatus.status === "success") {
+      downloadUri = jobStatus.asset?.downloadUri || "";
+      break;
+    } else if (jobStatus.status === "failed") {
+      throw new Error(`Adobe export job failed: ${JSON.stringify(jobStatus.error)}`);
+    }
+  }
+
+  if (!downloadUri) {
+    throw new Error("Adobe export job timed out or returned no download URI.");
+  }
+
+  // 6. Download the DOCX file
+  const downloadRes = await fetch(downloadUri);
+  if (!downloadRes.ok) {
+    throw new Error(`Failed to download converted DOCX from Adobe: ${downloadRes.statusText}`);
+  }
+
+  const outArrayBuffer = await downloadRes.arrayBuffer();
+  return Buffer.from(outArrayBuffer);
+}
+
+export async function pdfToWord(buffer: Buffer, options?: Record<string, unknown>): Promise<Buffer> {
   const dir = (await mkdtemp(join(tmpdir(), "pdf-word-"))).replace(/\\/g, "/");
   const input = join(dir, "input.pdf").replace(/\\/g, "/");
   const outputDocx = join(dir, "output.docx").replace(/\\/g, "/");
   const outputTxt = join(dir, "text.txt").replace(/\\/g, "/");
   try {
     await writeFile(input, buffer);
+
+    const selectedEngine = options?.engine ? String(options.engine) : "auto";
+    let pdfType = "scanned";
+    if (selectedEngine === "auto") {
+      pdfType = await detectPdfType(input);
+      console.log(`Detected PDF type: ${pdfType}`);
+    } else if (selectedEngine === "local") {
+      pdfType = "text_heavy";
+      console.log("Forced Local Converter via option.");
+    } else {
+      pdfType = "scanned";
+      console.log("Forced Adobe Premium Converter via option.");
+    }
+
+    let adobeConverted = false;
+    let outDocx: Buffer | null = null;
+
+    if (pdfType !== "text_heavy") {
+      const clientId = process.env.ADOBE_CLIENT_ID;
+      const clientSecret = process.env.ADOBE_CLIENT_SECRET;
+      if (clientId && clientSecret) {
+        try {
+          console.log("Attempting PDF to Word conversion via Adobe PDF Services API...");
+          outDocx = await convertPdfToWordViaAdobe(buffer);
+          adobeConverted = true;
+          console.log("Adobe PDF Services API conversion successful!");
+        } catch (err) {
+          console.error("Adobe PDF Services API conversion failed, falling back to local:", err);
+        }
+      } else {
+        console.log("Adobe credentials not set. Using local conversion fallback.");
+      }
+    } else {
+      console.log("PDF is text-heavy. Using fast local conversion.");
+    }
+
+    if (adobeConverted && outDocx) {
+      return outDocx;
+    }
 
     // ── Strategy 1: Python PyMuPDF & pdf2docx (Primary) ───────────────────
     const hasPython = (await exists("python3")) || (await exists("python"));
@@ -606,7 +846,8 @@ export async function convertOffice(
   buffer: Buffer,
   targetFormat: string,
   toolSlug: string,
-  originalFileName?: string
+  originalFileName?: string,
+  options?: Record<string, unknown>
 ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
   const inputExt = guessInputExt(toolSlug, buffer, originalFileName);
   const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
@@ -614,7 +855,7 @@ export async function convertOffice(
 
   if (inputExt === ".pdf") {
     if (targetFormat === "docx") {
-      const out = await pdfToWord(buffer);
+      const out = await pdfToWord(buffer, options);
       return { buffer: out, mimeType: mimeFor("docx"), fileName: outFileName };
     }
     if (targetFormat === "pptx") {

@@ -1,19 +1,22 @@
 import { PDFDocument, degrees, rgb, StandardFonts, PDFName, PDFArray } from "pdf-lib";
 
-export async function mergePdfs(files: File[]): Promise<Blob> {
+export async function mergePdfs(files: File[], onProgress?: (percent: number) => void): Promise<Blob> {
   const merged = await PDFDocument.create();
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const buf = await file.arrayBuffer();
     const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
     const pages = await merged.copyPages(doc, doc.getPageIndices());
     pages.forEach((p) => merged.addPage(p));
+    if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 100));
   }
   return blobFromPdf(merged);
 }
 
 export async function splitPdf(
   file: File,
-  ranges: string
+  ranges: string,
+  onProgress?: (percent: number) => void
 ): Promise<Blob[]> {
   const buf = await file.arrayBuffer();
   const source = await PDFDocument.load(buf, { ignoreEncryption: true });
@@ -22,7 +25,8 @@ export async function splitPdf(
   const parts = normalized.split(/[\s,;]+/).filter(Boolean);
   const outputs: Blob[] = [];
 
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     const doc = await PDFDocument.create();
     let indices: number[] = [];
     if (part.includes("-")) {
@@ -30,16 +34,17 @@ export async function splitPdf(
       if (isNaN(a) || isNaN(b)) continue;
       const start = Math.min(a, b);
       const end = Math.max(a, b);
-      for (let i = start; i <= end; i++) indices.push(i - 1);
+      for (let j = start; j <= end; j++) indices.push(j - 1);
     } else {
       const p = parseInt(part, 10);
       if (!isNaN(p)) indices = [p - 1];
     }
-    indices = indices.filter((i) => i >= 0 && i < total);
+    indices = indices.filter((idx) => idx >= 0 && idx < total);
     if (indices.length === 0) continue;
     const copied = await doc.copyPages(source, indices);
     copied.forEach((p) => doc.addPage(p));
     outputs.push(await blobFromPdf(doc));
+    if (onProgress) onProgress(Math.round(((i + 1) / parts.length) * 100));
   }
   return outputs;
 }
@@ -144,7 +149,8 @@ export async function rotatePdf(
 
 export async function imagesToPdf(
   files: File[],
-  options: Record<string, string> = {}
+  options: Record<string, string> = {},
+  onProgress?: (percent: number) => void
 ): Promise<Blob> {
   const doc = await PDFDocument.create();
   const pageSize = options.pageSize || "a4";
@@ -155,7 +161,8 @@ export async function imagesToPdf(
   if (marginStr === "small") margin = 20;
   else if (marginStr === "big") margin = 50;
 
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const buf = new Uint8Array(await file.arrayBuffer());
     const image =
       file.type === "image/png"
@@ -197,6 +204,7 @@ export async function imagesToPdf(
       width: drawWidth,
       height: drawHeight,
     });
+    if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 100));
   }
   return blobFromPdf(doc);
 }

@@ -59,6 +59,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
 
       const xhr = new XMLHttpRequest();
       
+      let progressInterval: NodeJS.Timeout | null = null;
       const responsePromise = new Promise<{ blob: Blob; fileName: string }>((resolve, reject) => {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
@@ -68,10 +69,32 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
         });
 
         xhr.upload.addEventListener("load", () => {
-          setStatusMessage("Processing on server...");
+          setStatusMessage("Analyzing document... 0%");
+          let percent = 0;
+          progressInterval = setInterval(() => {
+            if (percent < 95) {
+              percent += Math.floor(Math.random() * 3) + 1; // Increment by 1-3%
+              if (percent > 95) percent = 95;
+              
+              if (percent < 25) {
+                setStatusMessage(`Analyzing document... ${percent}%`);
+              } else if (percent < 80) {
+                setStatusMessage(`Converting layout & assets... ${percent}%`);
+              } else {
+                setStatusMessage(`Finalizing output... ${percent}%`);
+              }
+            }
+          }, 350);
         });
 
+        const cleanup = () => {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
+        };
+
         xhr.addEventListener("load", () => {
+          cleanup();
           if (xhr.status >= 200 && xhr.status < 300) {
             const blob = xhr.response as Blob;
             const disposition = xhr.getResponseHeader("Content-Disposition");
@@ -90,7 +113,13 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
         });
 
         xhr.addEventListener("error", () => {
+          cleanup();
           reject(new Error("Network error occurred"));
+        });
+
+        xhr.addEventListener("abort", () => {
+          cleanup();
+          reject(new Error("Processing aborted"));
         });
 
         xhr.responseType = "blob";

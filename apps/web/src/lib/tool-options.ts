@@ -39,6 +39,18 @@ export const TOOL_OPTION_FIELDS: Record<string, ToolOptionField[]> = {
   "watermark-pdf": [
     { key: "text", label: "Watermark text", placeholder: "CONFIDENTIAL" },
   ],
+  "pdf-to-word": [
+    {
+      key: "engine",
+      label: "Conversion Strategy",
+      type: "select",
+      options: [
+        { value: "auto", label: "Auto Detect (Recommended)" },
+        { value: "local", label: "Local Converter (Fast/Text Only)" },
+        { value: "adobe", label: "Adobe Premium (Best for Images/Tables)" },
+      ],
+    },
+  ],
   "pdf-to-jpg": [
     {
       key: "mode",

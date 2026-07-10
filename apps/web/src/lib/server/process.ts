@@ -50,7 +50,7 @@ export async function processOnServer(
       return { buffer: out, mimeType: "application/pdf", fileName: `${baseName}_repaired.pdf` };
     }
     case "pdf-to-word":
-      return convertOffice(buffers[0], "docx", "pdf-to-word", originalFileName);
+      return convertOffice(buffers[0], "docx", "pdf-to-word", originalFileName, options);
     case "pdf-to-powerpoint":
       return convertOffice(buffers[0], "pptx", "pdf-to-powerpoint", originalFileName);
     case "pdf-to-excel":
