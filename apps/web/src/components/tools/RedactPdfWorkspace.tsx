@@ -22,7 +22,9 @@ import {
   Phone,
   Trash2,
   Plus,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
@@ -404,22 +406,83 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
     }
   };
 
+  const Icon = theme.icon;
+
   return (
-    <>
+    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
       <Toaster position="top-center" richColors />
-      <div className="pdf-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
-        
-        {/* LEFT SIDEBAR: Page Thumbnails */}
-        {file && totalPages > 0 && (
-          <div className="w-full bg-zinc-950/80 border-b border-zinc-900 lg:w-44 lg:border-b-0 lg:border-r lg:border-zinc-900 flex flex-col shrink-0 lg:h-full">
-            <div className="p-4 border-b border-zinc-900 flex items-center gap-2">
-              <Layers className="h-4 w-4 text-red-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Pages ({totalPages})
+      {!file && (
+        <div className="mb-8 text-center">
+          <span
+            className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            PDF Tools
+          </span>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            {tool.name}
+          </h1>
+          <p className="mx-auto mt-2 max-w-lg text-zinc-600 dark:text-zinc-400">
+            {tool.description}
+          </p>
+        </div>
+      )}
+
+      {/* Back Navigation Bar */}
+      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+      </div>
+
+      <div className={cn(
+        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white lg:flex-row",
+        !file
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
+      )}>
+        {!file ? (
+          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
+            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
               </span>
-            </div>
-            
-            <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
+              <span className="text-center">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                  Upload PDF file to redact
+                </p>
+                <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+                  Max size {tool.maxMb} MB · Local document processing
+                </p>
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="application/pdf"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files[0]) setFile(files[0]);
+                }}
+              />
+            </label>
+          </div>
+        ) : (
+          <>
+            {/* LEFT SIDEBAR: Page Thumbnails */}
+            {totalPages > 0 && (
+              <div className="w-full bg-zinc-50 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-900 lg:w-44 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
+                <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-red-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                    Pages ({totalPages})
+                  </span>
+                </div>
+                
+                <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
               {Array.from({ length: totalPages }, (_, i) => {
                 const pageRot = rotations[i] || 0;
                 const thumbKey = `${i + 1}-${pageRot}`;
@@ -435,7 +498,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
                       "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200 relative",
                       isSelected
                         ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
-                        : "bg-zinc-900/10 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/20"
+                        : "bg-white dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/20"
                     )}
                   >
                     <span className={cn(
@@ -471,22 +534,22 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
           </div>
         )}
 
-        {/* CENTER VIEWPORT: Page Render & Custom Redaction Region Drawer */}
-        <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
+        {/* CENTER VIEWPORT PANEL */}
+        <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
           {!file ? (
-            <div className="flex w-full max-w-xl flex-col items-center justify-center p-12 my-auto z-10">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
+            <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto min-h-[400px]">
+              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                  <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
                 </span>
                 <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors">
-                    Upload a PDF document to start redacting
+                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                    Upload PDF file to redact
                   </p>
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Max size {tool.maxMb} MB · Fully private in-browser editing
+                  <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+                    Max size {tool.maxMb} MB · Local document processing
                   </p>
                 </span>
                 <input
@@ -503,18 +566,18 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
           ) : (
             <>
               {/* Header */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
+              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900 z-10 bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20">
                     <FileText className="h-4 w-4 text-red-500" />
                   </div>
-                  <span className="max-w-[200px] truncate text-sm font-bold text-zinc-200">
+                  <span className="max-w-[200px] truncate text-sm font-bold text-zinc-800 dark:text-zinc-200">
                     {file.name}
                   </span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-400 font-bold bg-zinc-900 border border-zinc-800 px-2 py-1 rounded">
+                  <span className="text-[10px] text-zinc-650 dark:text-zinc-400 font-bold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2 py-1 rounded">
                     Drag mouse to select redaction region
                   </span>
                   <button
@@ -523,7 +586,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
                       setRotations({});
                       setRegions([]);
                     }}
-                    className="flex items-center gap-2 rounded-lg bg-zinc-900 border border-zinc-850 px-3.5 py-1.5 text-xs font-bold text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
+                    className="flex items-center gap-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 px-3.5 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
                   >
                     <X className="h-4 w-4" /> Clear File
                   </button>
@@ -663,22 +726,22 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
               </div>
 
               {/* Zoom & Rotate Toolbar */}
-              <div className="w-full p-4 border-t border-zinc-900 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-800 shadow-lg">
-                  <div className="flex items-center gap-2 border-r border-zinc-900 pr-4">
+              <div className="w-full p-4 border-t border-zinc-200 dark:border-zinc-900 flex items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
+                <div className="flex items-center gap-4 bg-white dark:bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-lg">
+                  <div className="flex items-center gap-2 border-r border-zinc-200 dark:border-zinc-900 pr-4">
                     <button
                       onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
                       title="Zoom Out"
                     >
                       <ZoomOut className="h-4.5 w-4.5" />
                     </button>
-                    <span className="text-[10px] font-bold font-mono text-zinc-400 w-10 text-center">
+                    <span className="text-[10px] font-bold font-mono text-zinc-650 dark:text-zinc-400 w-10 text-center">
                       {Math.round(zoom * 100)}%
                     </span>
                     <button
                       onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
                       title="Zoom In"
                     >
                       <ZoomIn className="h-4.5 w-4.5" />
@@ -687,7 +750,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
 
                   <button
                     onClick={rotateCurrentPage}
-                    className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
                     title="Rotate Page"
                   >
                     <RotateCw className="h-4 w-4 text-red-500" />
@@ -700,12 +763,12 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
         </div>
 
         {/* RIGHT SIDEBAR: Manual Regions List & Auto Redact Search */}
-        <div className="w-full bg-zinc-950 border-t border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden">
+        <div className="w-full bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
             
             {/* Action 1: Search & Auto Redact */}
-            <div className="space-y-3.5 rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+            <div className="space-y-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
                 <Search className="h-3.5 w-3.5 text-red-500" />
                 <span>Search & Auto Redact</span>
               </span>
@@ -725,8 +788,8 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
                     className={cn(
                       "py-1.5 rounded-lg text-[9px] font-bold border flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer",
                       searchMode === item.mode
-                        ? "bg-red-500/10 border-red-500/30 text-red-400"
-                        : "bg-zinc-950 border-zinc-900 text-zinc-500 hover:border-zinc-800 hover:text-zinc-300"
+                        ? "bg-zinc-900 dark:bg-red-500/10 border-zinc-900 dark:border-red-500/30 text-white dark:text-red-400 shadow-sm"
+                        : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
                     )}
                   >
                     <item.icon className="h-3 w-3" />
@@ -743,87 +806,66 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
                     placeholder="Enter query text..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-red-500 focus:outline-none transition"
+                    className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-red-500 focus:outline-none transition"
                   />
                 </div>
               )}
 
-              {/* Search Scope Option */}
-              <div className="space-y-1.5">
-                <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Apply Scope</label>
-                <select
-                  value={searchScope}
-                  onChange={(e) => setSearchScope(e.target.value as any)}
-                  className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-1.5 text-xs text-zinc-300 font-bold focus:border-red-500 focus:outline-none transition cursor-pointer"
-                >
-                  <option value="all">All Pages</option>
-                  <option value="current">Current Page Only</option>
-                </select>
-              </div>
-
               {/* Search Trigger */}
               <button
                 onClick={performSearch}
-                disabled={!file || searching || (searchMode === "text" && !searchQuery.trim())}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-zinc-855 bg-red-650 hover:bg-red-600 py-2.5 text-xs font-bold text-white transition-all cursor-pointer disabled:opacity-40 shadow-lg shadow-red-500/10"
+                disabled={!file || (searchMode === "text" && !searchQuery.trim()) || searching}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border border-zinc-900 dark:border-white py-2 text-xs font-bold shadow-md hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               >
                 {searching ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Searching & Redacting...
+                    Searching content...
                   </>
                 ) : (
                   <>
                     <Search className="h-3.5 w-3.5" />
-                    Search & Redact
+                    Find & Overlay Redactions
                   </>
                 )}
               </button>
             </div>
 
-            {/* Action 2: Redaction regions list */}
-            <div className="space-y-3.5 rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Settings className="h-3.5 w-3.5 text-red-500" />
-                <span>Active Redactions ({regions.length})</span>
+            {/* Action 2: Regions List */}
+            <div className="space-y-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 flex-1 flex flex-col min-h-[220px]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5 shrink-0">
+                <Layers className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-555" />
+                <span>Selected Regions ({regions.length})</span>
               </span>
 
               {regions.length === 0 ? (
-                <div className="text-center py-4 text-xs text-zinc-600">
-                  No active redaction areas.
-                  <br />
-                  Drag on the PDF page or search above to add.
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                  <Search className="h-5 w-5 text-zinc-350 dark:text-zinc-650 mb-1.5" />
+                  <p className="text-[9px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">No Regions</p>
+                  <p className="text-[8px] text-zinc-400 dark:text-zinc-600 mt-1 max-w-[150px]">
+                    Drag box on preview or use search above.
+                  </p>
                 </div>
               ) : (
-                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin text-[10px]">
-                  {regions.map((reg) => (
+                <div className="flex-1 overflow-y-auto space-y-2 max-h-60 pr-1 scrollbar-thin">
+                  {regions.map((region, idx) => (
                     <div
-                      key={reg.id}
-                      className={cn(
-                        "flex items-center justify-between bg-zinc-950 rounded-lg p-2 border transition-colors",
-                        reg.pageIndex === previewPage - 1
-                          ? "border-red-500/20 bg-red-950/5"
-                          : "border-zinc-900 hover:border-zinc-800"
-                      )}
+                      key={region.id}
+                      className="flex items-center justify-between p-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl hover:border-red-500/25 transition-all text-[9px] group"
                     >
-                      <button
-                        onClick={() => setPreviewPage(reg.pageIndex + 1)}
-                        className="flex flex-col text-left gap-0.5 truncate max-w-[80%] cursor-pointer"
-                      >
-                        <span className="text-[8px] font-mono text-zinc-500 font-bold uppercase">
-                          PAGE {reg.pageIndex + 1}
+                      <div className="flex flex-col gap-0.5 max-w-[140px] truncate">
+                        <span className="font-bold text-zinc-850 dark:text-zinc-300 capitalize">
+                          {idx + 1}. Page {region.pageIndex + 1}
                         </span>
-                        <span className="truncate text-zinc-300 font-semibold">
-                          {reg.type === "custom"
-                            ? `Custom Box (${Math.round(reg.xPercent)}%, ${Math.round(reg.yPercent)}%)`
-                            : reg.text}
+                        <span className="text-zinc-400 dark:text-zinc-500 font-mono">
+                          Type: {region.type} ({Math.round(region.widthPercent)}% w)
                         </span>
-                      </button>
+                      </div>
 
                       <button
-                        onClick={() => setRegions((prev) => prev.filter((r) => r.id !== reg.id))}
-                        className="text-zinc-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
-                        title="Remove Redaction"
+                        onClick={() => setRegions((prev) => prev.filter((r) => r.id !== region.id))}
+                        className="text-zinc-400 dark:text-zinc-650 hover:text-red-500 p-1 rounded-lg hover:bg-red-500/5 transition cursor-pointer"
+                        title="Remove Region"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -835,13 +877,13 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
           </div>
 
           {/* Action Area */}
-          <div className="p-5 border-t border-zinc-900 space-y-3 shrink-0">
+          <div className="p-5 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 space-y-3 shrink-0">
             {file && regions.length > 0 && (
               <button
                 onClick={() => setRegions([])}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-900 py-3 text-xs font-bold text-zinc-350 hover:bg-zinc-900 hover:text-white transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-900 py-3 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
               >
-                <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
+                <RefreshCw className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                 Clear All Regions
               </button>
             )}
@@ -868,7 +910,9 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
             </button>
           </div>
         </div>
+      </>
+    )}
       </div>
-    </>
+    </div>
   );
 }

@@ -57,7 +57,7 @@ export const TOOLS: ToolDefinition[] = [
     category: "pdf",
     tier: "sync",
     kind: "file",
-    maxFiles: 20,
+    maxFiles: 50,
     maxMb: 50,
     accept: pdfAccept,
     enabled: true,

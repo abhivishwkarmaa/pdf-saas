@@ -19,7 +19,9 @@ import {
   Palette,
   RotateCw,
   Image as ImageIcon,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
@@ -299,39 +301,73 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
     return styleObj;
   };
 
-  return (
-    <>
-      <Toaster position="top-center" richColors />
-      <div className="pdf-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
-        
-        {/* CENTER PANEL: LIVE PREVIEW */}
-        <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+  const Icon = theme.icon;
 
-          {!file ? (
-            <div className="flex w-full max-w-xl flex-col items-center justify-center p-12 my-auto z-10">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
-                </span>
-                <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-300 group-hover:text-red-400 transition-colors">
-                    Upload PDF file to watermark
-                  </p>
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Max size {tool.maxMb} MB · Fully private in-browser editing
-                  </p>
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="application/pdf"
-                  onChange={handleFileChange}
-                />
-              </label>
-            </div>
-          ) : (
-            <>
+  return (
+    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
+      <Toaster position="top-center" richColors />
+      {!file && (
+        <div className="mb-8 text-center">
+          <span
+            className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            PDF Tools
+          </span>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            {tool.name}
+          </h1>
+          <p className="mx-auto mt-2 max-w-lg text-zinc-600 dark:text-zinc-400">
+            {tool.description}
+          </p>
+        </div>
+      )}
+
+      {/* Back Navigation Bar */}
+      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+      </div>
+
+      <div className={cn(
+        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white lg:flex-row",
+        !file
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
+      )}>
+        {!file ? (
+          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
+            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
+              </span>
+              <span className="text-center">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                  Upload PDF file to watermark
+                </p>
+                <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+                  Max size {tool.maxMb} MB · Local document processing
+                </p>
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="application/pdf"
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
+        ) : (
+          <>
+            {/* CENTER PANEL: LIVE PREVIEW */}
+            <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+
               {/* Preview Header / File info */}
               <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
@@ -442,31 +478,28 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   </button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
 
         {/* RIGHT PANEL: SETTINGS & TRIGGER ACTIONS (FIXED TO HEIGHT) */}
-        <div className="w-full bg-zinc-950 border-t border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
+        <div className="w-full bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 lg:w-80 flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
           
-          {file ? (
-            <>
+
               {/* Header & Tabs */}
-              <div className="p-4 border-b border-zinc-900 space-y-3 shrink-0 bg-zinc-950">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                  <Settings className="h-3.5 w-3.5 text-zinc-500" />
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-3 shrink-0 bg-zinc-50 dark:bg-zinc-950">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                   <span>Watermark Settings</span>
                 </span>
 
                 {/* Placing Text vs Placing Image toggle */}
-                <div className="flex rounded-xl bg-zinc-900 p-1 border border-zinc-800">
+                <div className="flex rounded-xl bg-zinc-200/60 dark:bg-zinc-900 p-1 border border-zinc-300/40 dark:border-zinc-800">
                   <button
                     onClick={() => setWatermarkType("text")}
                     className={cn(
                       "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                       watermarkType === "text"
-                        ? "bg-white text-zinc-950 shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200"
+                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                     )}
                   >
                     Place Text
@@ -476,8 +509,8 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                     className={cn(
                       "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                       watermarkType === "image"
-                        ? "bg-white text-zinc-950 shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200"
+                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                     )}
                   >
                     Place Image
@@ -491,29 +524,29 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                 {/* Conditional Type Configs */}
                 {watermarkType === "text" ? (
                   /* TEXT CONFIGURATIONS */
-                  <div className="rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4 space-y-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                      <Type className="h-3.5 w-3.5 text-zinc-500" />
+                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                      <Type className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                       <span>Text & Font</span>
                     </span>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Watermark Text</label>
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Watermark Text</label>
                       <input
                         type="text"
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-white focus:outline-none transition"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                         placeholder="CONFIDENTIAL"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Font Family</label>
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Font Family</label>
                       <select
                         value={fontFamily}
                         onChange={(e) => setFontFamily(e.target.value as any)}
-                        className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-white focus:outline-none transition cursor-pointer"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition cursor-pointer"
                       >
                         <option value="Helvetica">Helvetica</option>
                         <option value="HelveticaBold">Helvetica Bold</option>
@@ -524,8 +557,8 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-900">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Font Size</label>
+                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Font Size</label>
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
@@ -533,7 +566,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                           max={120}
                           value={fontSize}
                           onChange={(e) => setFontSize(Number(e.target.value))}
-                          className="flex-1 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-white"
+                          className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
                         />
                         <input
                           type="number"
@@ -541,14 +574,14 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                           max={120}
                           value={fontSize}
                           onChange={(e) => setFontSize(Math.max(10, Math.min(120, Number(e.target.value) || 36)))}
-                          className="w-14 bg-zinc-950 border border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-300 focus:border-white focus:outline-none transition"
+                          className="w-14 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                         />
                       </div>
                     </div>
 
                     {/* Preset Color Swatches */}
-                    <div className="space-y-2 pt-2 border-t border-zinc-900">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Text Color</label>
+                    <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-900">
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Text Color</label>
                       <div className="flex flex-wrap items-center gap-2">
                         {swatches.map((s) => (
                           <button
@@ -556,14 +589,14 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                             onClick={() => setColor(s)}
                             className={cn(
                               "h-5 w-5 rounded-full border transition-all cursor-pointer relative",
-                              color === s ? "border-white scale-110 ring-2 ring-white/10" : "border-zinc-800 hover:scale-105"
+                              color === s ? "border-zinc-950 dark:border-white scale-110 ring-2 ring-zinc-950/10 dark:ring-white/10" : "border-zinc-300 dark:border-zinc-800 hover:scale-105"
                             )}
                             style={{ backgroundColor: s }}
                           />
                         ))}
                         
                         {/* Custom color selector */}
-                        <label className="h-5 w-5 rounded-full border border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 transition-all">
+                        <label className="h-5 w-5 rounded-full border border-zinc-300 dark:border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 transition-all">
                           <input
                             type="color"
                             value={color}
@@ -576,19 +609,19 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   </div>
                 ) : (
                   /* IMAGE CONFIGURATIONS */
-                  <div className="rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4 space-y-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                      <ImageIcon className="h-3.5 w-3.5 text-zinc-500" />
+                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                      <ImageIcon className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                       <span>Image settings</span>
                     </span>
 
                     {/* Image Dropzone */}
                     <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Watermark Image</label>
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Watermark Image</label>
                       {!imageFile ? (
-                        <label className="flex flex-col items-center justify-center border border-dashed border-zinc-800 bg-zinc-950/40 rounded-xl p-6 cursor-pointer hover:border-zinc-700 transition">
+                        <label className="flex flex-col items-center justify-center border border-dashed border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/40 rounded-xl p-6 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-700 transition">
                           <Upload className="h-5 w-5 text-zinc-500 mb-1.5" />
-                          <span className="text-[9px] font-bold text-zinc-400">Upload PNG/JPG</span>
+                          <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400">Upload PNG/JPG</span>
                           <input
                             type="file"
                             className="hidden"
@@ -597,16 +630,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                           />
                         </label>
                       ) : (
-                        <div className="flex items-center justify-between bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                        <div className="flex items-center justify-between bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl p-3">
                           <div className="flex items-center gap-2">
-                            <ImageIcon className="h-4 w-4 text-zinc-400" />
-                            <span className="text-xs font-bold text-zinc-200 truncate max-w-[120px]">
+                            <ImageIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[120px]">
                               {imageFile.name}
                             </span>
                           </div>
                           <button
                             onClick={() => setImageFile(null)}
-                            className="p-1 hover:bg-zinc-900 rounded border border-zinc-850 hover:text-red-400 transition"
+                            className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-850 hover:text-red-500 transition"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -615,10 +648,10 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                     </div>
 
                     {/* Scale Slider */}
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-900">
+                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
                       <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
                         <span>Image Scale</span>
-                        <span className="font-mono text-zinc-350">{imageScale}%</span>
+                        <span className="font-mono text-zinc-650">{imageScale}%</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <input
@@ -628,7 +661,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                           step={5}
                           value={imageScale}
                           onChange={(e) => setImageScale(Number(e.target.value))}
-                          className="flex-1 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-white"
+                          className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
                         />
                         <input
                           type="number"
@@ -636,7 +669,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                           max={300}
                           value={imageScale}
                           onChange={(e) => setImageScale(Math.max(10, Math.min(300, Number(e.target.value) || 100)))}
-                          className="w-14 bg-zinc-950 border border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-300 focus:border-white focus:outline-none transition"
+                          className="w-14 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                         />
                       </div>
                     </div>
@@ -644,17 +677,17 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                 )}
 
                 {/* Position & Layer */}
-                <div className="rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                    <Layout className="h-3.5 w-3.5 text-zinc-500" />
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Layout className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                     <span>Alignment & Layer</span>
                   </span>
 
                   {/* 3x3 grid selector */}
                   <div className="space-y-2">
-                    <label className="text-[9px] text-zinc-500 font-bold uppercase block">Position Placement</label>
+                    <label className="text-[9px] text-zinc-500 dark:text-zinc-550 font-bold uppercase block">Position Placement</label>
                     <div className="flex justify-center py-1">
-                      <div className="grid grid-cols-3 gap-2.5 p-2.5 bg-zinc-950 border border-zinc-900 rounded-xl">
+                      <div className="grid grid-cols-3 gap-2.5 p-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl">
                         {(
                           [
                             "top-left", "top-center", "top-right",
@@ -670,16 +703,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                               className={cn(
                                 "h-7 w-7 rounded-md flex items-center justify-center border transition-all cursor-pointer relative group",
                                 isSelected
-                                  ? "bg-white border-white text-zinc-950 shadow-md"
-                                  : "bg-zinc-900 border-zinc-850 text-zinc-650 hover:border-zinc-700 hover:text-zinc-400"
+                                  ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
+                                  : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850 text-zinc-400 dark:text-zinc-650 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-600 dark:hover:text-zinc-400"
                               )}
                               title={pos.replace("-", " ")}
                             >
                               <span className={cn(
                                 "h-1.5 w-1.5 rounded-full transition-all",
                                 isSelected 
-                                  ? "bg-zinc-950 scale-110" 
-                                  : "bg-zinc-700 group-hover:bg-zinc-500"
+                                  ? "bg-white dark:bg-zinc-950 scale-110" 
+                                  : "bg-zinc-400 dark:bg-zinc-700 group-hover:bg-zinc-600 dark:group-hover:bg-zinc-500"
                               )} />
                             </button>
                           );
@@ -689,16 +722,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   </div>
 
                   {/* Over/Under Layer Toggle */}
-                  <div className="space-y-2 pt-3 border-t border-zinc-900">
-                    <label className="text-[9px] text-zinc-500 font-bold uppercase block">Watermark Layer</label>
-                    <div className="flex rounded-xl bg-zinc-950 p-1 border border-zinc-900">
+                  <div className="space-y-2 pt-3 border-t border-zinc-200 dark:border-zinc-900">
+                    <label className="text-[9px] text-zinc-500 dark:text-zinc-550 font-bold uppercase block">Watermark Layer</label>
+                    <div className="flex rounded-xl bg-zinc-200/60 dark:bg-zinc-950 p-1 border border-zinc-300/40 dark:border-zinc-900">
                       <button
                         onClick={() => setLayer("over")}
                         className={cn(
                           "flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
                           layer === "over"
-                            ? "bg-white text-zinc-950 shadow-sm"
-                            : "text-zinc-455 hover:text-zinc-200"
+                            ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                         )}
                       >
                         Over Content
@@ -708,8 +741,8 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                         className={cn(
                           "flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
                           layer === "under"
-                        ? "bg-white text-zinc-950 shadow-sm"
-                        : "text-zinc-455 hover:text-zinc-200"
+                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                         )}
                       >
                         Under Content
@@ -719,9 +752,9 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                 </div>
 
                 {/* Universal Effects: Opacity, Rotation */}
-                <div className="rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                    <Palette className="h-3.5 w-3.5 text-zinc-500" />
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Palette className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                     <span>Opacity & Rotation</span>
                   </span>
 
@@ -729,7 +762,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
                       <span>Opacity</span>
-                      <span className="font-mono text-zinc-350">{Math.round(opacity * 100)}%</span>
+                      <span className="font-mono text-zinc-650">{Math.round(opacity * 100)}%</span>
                     </div>
                     <input
                       type="range"
@@ -738,15 +771,15 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                       step={0.05}
                       value={opacity}
                       onChange={(e) => setOpacity(Number(e.target.value))}
-                      className="w-full h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-white"
+                      className="w-full h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
                     />
                   </div>
 
                   {/* Rotation */}
-                  <div className="space-y-1.5 pt-2 border-t border-zinc-900">
+                  <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
                     <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
                       <span>Rotation Angle</span>
-                      <span className="font-mono text-zinc-350">{rotation}°</span>
+                      <span className="font-mono text-zinc-650">{rotation}°</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <input
@@ -756,11 +789,11 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                         step={5}
                         value={rotation}
                         onChange={(e) => setRotation(Number(e.target.value))}
-                        className="flex-1 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-white"
+                        className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
                       />
                       <button
                         onClick={() => setRotation(0)}
-                        className="p-1 text-xs hover:bg-zinc-900 rounded border border-zinc-800 text-zinc-455"
+                        className="p-1 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-pointer"
                         title="Reset to 0"
                       >
                         <RotateCw className="h-2.5 w-2.5" />
@@ -770,9 +803,9 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                 </div>
 
                 {/* Page Range Targeting */}
-                <div className="rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                    <Sliders className="h-3.5 w-3.5 text-zinc-500" />
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Sliders className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                     <span>Page Range</span>
                   </span>
 
@@ -789,8 +822,8 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                         className={cn(
                           "py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
                           pageRangeType === btn.key
-                            ? "bg-white border-white text-zinc-950"
-                            : "bg-zinc-950 border-zinc-900 text-zinc-500 hover:border-zinc-800 hover:text-zinc-300"
+                            ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
+                            : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
                         )}
                       >
                         {btn.label}
@@ -799,14 +832,14 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   </div>
 
                   {pageRangeType === "custom" && (
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-900 animate-fadeIn">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Pages range string</label>
+                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900 animate-fadeIn">
+                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Pages range string</label>
                       <input
                         type="text"
                         placeholder="e.g. 1-3, 5, 7-10"
                         value={customRange}
                         onChange={(e) => setCustomRange(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-white focus:outline-none transition"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                   )}
@@ -815,7 +848,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
               </div>
 
               {/* Action trigger button - FIXED/LOCKED at the bottom of sidebar to fit view screen height */}
-              <div className="p-5 border-t border-zinc-900 bg-zinc-950 shrink-0">
+              <div className="p-5 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 shrink-0">
                 <button
                   onClick={handleProcess}
                   disabled={!file || processing || loading}
@@ -834,18 +867,10 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
                   )}
                 </button>
               </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-zinc-500">
-              <HelpCircle className="h-8 w-8 text-zinc-700 mb-3" />
-              <p className="text-xs font-bold uppercase tracking-wider">No PDF Uploaded</p>
-              <p className="text-[10px] mt-1.5 text-zinc-650 leading-relaxed">
-                Please upload a PDF document first. Once uploaded, you will be able to place text or upload a custom watermark image.
-              </p>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }

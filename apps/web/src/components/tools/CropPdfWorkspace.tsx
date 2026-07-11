@@ -22,7 +22,9 @@ import {
   RefreshCw,
   Layers,
   FileCheck,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
@@ -338,29 +340,90 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
   const pixelBox = getPixelBox();
   const currentSize = pageSizes[currentCacheKey];
 
-  return (
-    <>
-      <Toaster position="top-center" richColors />
-      <div className="pdf-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl lg:flex-row">
-        
-        {/* LEFT SIDEBAR: Page Thumbnails */}
-        {file && totalPages > 0 && (
-          <div className="w-full bg-zinc-950/80 border-b border-zinc-900 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-900 flex flex-col shrink-0 lg:h-full">
-            <div className="p-4 border-b border-zinc-900 flex items-center gap-2">
-              <Layers className="h-4 w-4 text-red-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                Pages ({totalPages})
-              </span>
-            </div>
-            
-            <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
-              {Array.from({ length: totalPages }, (_, i) => {
-                const pageRot = rotations[i] || 0;
-                const thumbKey = `${i + 1}-${pageRot}`;
-                const thumbUrl = pageImages[thumbKey];
-                const isSelected = previewPage === i + 1;
+  const Icon = theme.icon;
 
-                return (
+  return (
+    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
+      <Toaster position="top-center" richColors />
+      {!file && (
+        <div className="mb-8 text-center">
+          <span
+            className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            PDF Tools
+          </span>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            {tool.name}
+          </h1>
+          <p className="mx-auto mt-2 max-w-lg text-zinc-600 dark:text-zinc-400">
+            {tool.description}
+          </p>
+        </div>
+      )}
+
+      {/* Back Navigation Bar */}
+      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+      </div>
+
+      <div className={cn(
+        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white lg:flex-row",
+        !file
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
+      )}>
+        {!file ? (
+          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
+            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
+                <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
+              </span>
+              <span className="text-center">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                  Upload PDF file to crop
+                </p>
+                <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
+                  Max size {tool.maxMb} MB · Local document processing
+                </p>
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="application/pdf"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files[0]) setFile(files[0]);
+                }}
+              />
+            </label>
+          </div>
+        ) : (
+          <>
+            {/* LEFT SIDEBAR: Page Thumbnails */}
+            {totalPages > 0 && (
+              <div className="w-full bg-zinc-50 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-900 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
+                <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-red-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                    Pages ({totalPages})
+                  </span>
+                </div>
+                
+                <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    const pageRot = rotations[i] || 0;
+                    const thumbKey = `${i + 1}-${pageRot}`;
+                    const thumbUrl = pageImages[thumbKey];
+                    const isSelected = previewPage === i + 1;
+ 
+                    return (
                   <button
                      key={i}
                      onClick={() => setPreviewPage(i + 1)}
@@ -368,7 +431,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                        "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200",
                        isSelected
                          ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
-                         : "bg-zinc-900/10 border-zinc-900 hover:border-zinc-800 hover:bg-zinc-900/20"
+                         : "bg-white dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/20"
                      )}
                   >
                     <span className={cn(
@@ -380,7 +443,6 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                     
                     <div className="w-20 h-28 bg-zinc-900 rounded border border-zinc-800 flex items-center justify-center overflow-hidden relative">
                       {thumbUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={thumbUrl}
                           alt={`Thumb ${i + 1}`}
@@ -398,57 +460,34 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
           </div>
         )}
 
-        {/* CENTER VIEWPORT: Large Preview & Rnd Crop Selector */}
-        <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
-          {/* Grid Backdrop */}
+        {/* CENTER PANEL: LIVE PREVIEW & CROP VIEWPORT */}
+        <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
-          {!file ? (
-            <div className="flex w-full max-w-xl flex-col items-center justify-center p-12 my-auto z-10">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-800 bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-red-500 transition-colors" />
-                </span>
-                <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors">
-                    Upload a PDF document to begin cropping
-                  </p>
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Max size {tool.maxMb} MB · Pure client-side canvas rendering
-                  </p>
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files[0]) setFile(files[0]);
-                  }}
-                />
-              </label>
-            </div>
-          ) : (
-            <>
-              {/* Header */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
+              {/* Top status bar: File detail, Clear, reset options */}
+              <div className="w-full p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center justify-between z-10 bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20">
-                    <FileText className="h-4 w-4 text-red-500" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <FileText className="h-4 w-4 text-zinc-700 dark:text-zinc-300" />
                   </div>
-                  <span className="max-w-[200px] truncate text-sm font-bold text-zinc-200">
-                    {file.name}
-                  </span>
+                  <div>
+                    <span className="max-w-[180px] block truncate text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                      {file.name}
+                    </span>
+                    <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-mono block">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB • Page {previewPage} of {totalPages}
+                    </span>
+                  </div>
                 </div>
-                
+
                 <button
                   onClick={() => {
                     setFile(null);
                     setRotations({});
                   }}
-                  className="flex items-center gap-2 rounded-lg bg-zinc-900 border border-zinc-850 px-3.5 py-1.5 text-xs font-bold text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
                 >
-                  <X className="h-4 w-4" /> Clear File
+                  <X className="h-3.5 w-3.5" /> Clear File
                 </button>
               </div>
 
@@ -473,7 +512,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                   pageImages[currentCacheKey] && (
                     <div
                       ref={containerRef}
-                      className="relative select-none shadow-2xl rounded-lg overflow-hidden border border-zinc-900"
+                      className="relative select-none shadow-2xl rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-900"
                       style={{
                         width: imageSize.width || "auto",
                         height: imageSize.height || "auto",
@@ -482,7 +521,6 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                       }}
                     >
                       {/* Base Image */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         ref={imageRef}
                         src={pageImages[currentCacheKey]}
@@ -552,209 +590,236 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                 )}
               </div>
 
-              {/* Toolbar Zoom & Rotate Controls (Fixed Footer) */}
-              <div className="w-full p-4 border-t border-zinc-900 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-800 shadow-lg">
-                  <div className="flex items-center gap-2 border-r border-zinc-900 pr-4">
+              {/* Zoom controls */}
+              <div className="w-full p-4 border-t border-zinc-200 dark:border-zinc-900 flex items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
+                <div className="flex items-center gap-4 bg-white dark:bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-lg">
+                  <button
+                    onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="h-4.5 w-4.5" />
+                  </button>
+                  <span className="text-[10px] font-bold font-mono text-zinc-650 dark:text-zinc-400 w-10 text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="h-4.5 w-4.5" />
+                  </button>
+              </div>
+            </div>
+        </div>
+
+        {/* RIGHT PANEL: SETTINGS & ACTIONS */}
+        <div className="w-full bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:w-72 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
+          
+
+              {/* Sidebar Header */}
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-1.5 shrink-0 bg-zinc-50 dark:bg-zinc-950">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                  <span>Crop settings</span>
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
+                
+                {/* Ratio presets */}
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-3.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Sliders className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    <span>Aspect Ratio</span>
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["free", "1:1", "4:3", "16:9"] as const).map((mode) => {
+                      const isSelected = aspectRatioMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          onClick={() => setAspectRatioMode(mode)}
+                          className={cn(
+                            "py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                            isSelected
+                              ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
+                              : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                          )}
+                        >
+                          {mode === "free" ? "Free Crop" : mode}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Target Pages */}
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    <span>Target pages</span>
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: "all" as const, label: "All Pages" },
+                      { key: "current" as const, label: "Current Page" },
+                      { key: "odd" as const, label: "Odd Pages" },
+                      { key: "even" as const, label: "Even Pages" },
+                    ].map((btn) => (
+                      <button
+                        key={btn.key}
+                        onClick={() => setApplyMode(btn.key)}
+                        className={cn(
+                          "py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                          applyMode === btn.key
+                            ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
+                            : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                        )}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                    
                     <button
-                      onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                      title="Zoom Out"
+                      onClick={() => setApplyMode("custom")}
+                      className={cn(
+                        "col-span-2 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                        applyMode === "custom"
+                          ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-955 shadow-md"
+                          : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                      )}
                     >
-                      <ZoomOut className="h-4.5 w-4.5" />
-                    </button>
-                    <span className="text-[10px] font-bold font-mono text-zinc-400 w-10 text-center">
-                      {Math.round(zoom * 100)}%
-                    </span>
-                    <button
-                      onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="h-4.5 w-4.5" />
+                      Custom page range
                     </button>
                   </div>
 
-                  <button
-                    onClick={rotateCurrentPage}
-                    className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
-                    title="Rotate Current Page 90°"
-                  >
-                    <RotateCw className="h-4 w-4 text-red-500" />
-                    <span>Rotate Page</span>
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* RIGHT SIDEBAR: Settings & Operations Panel */}
-        <div className="w-full bg-zinc-950 border-t border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-            
-            {/* Header */}
-            <div className="flex items-center gap-2 border-b border-zinc-900 pb-4">
-              <Settings className="h-4 w-4 text-red-500" />
-              <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-200">
-                Crop Settings
-              </h2>
-            </div>
-
-            {/* Coordinates & Aspect Ratio Presets */}
-            <div className="space-y-4 rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4">
-              
-              {/* Aspect Ratio Lock Presets */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1">
-                  {aspectRatioMode === "free" ? (
-                    <Unlock className="h-3.5 w-3.5 text-zinc-500" />
-                  ) : (
-                    <Lock className="h-3.5 w-3.5 text-red-500" />
+                  {applyMode === "custom" && (
+                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900 animate-fadeIn">
+                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Pages range string</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1-3, 5, 7-10"
+                        value={customRange}
+                        onChange={(e) => setCustomRange(e.target.value)}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                      />
+                    </div>
                   )}
-                  <span>Aspect Ratio</span>
-                </span>
-                
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(["free", "1:1", "4:3", "16:9"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setAspectRatioMode(mode)}
-                      className={cn(
-                        "py-1.5 rounded-lg text-[10px] font-bold border transition-all duration-200 cursor-pointer",
-                        aspectRatioMode === mode
-                          ? "bg-red-500/10 border-red-500/30 text-red-400"
-                          : "bg-zinc-950 border-zinc-900 text-zinc-500 hover:border-zinc-800 hover:text-zinc-300"
-                      )}
-                    >
-                      {mode === "free" ? "Free" : mode}
-                    </button>
-                  ))}
                 </div>
-              </div>
 
-              {/* Manual fine-tuning coordinates */}
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-900">
-                {[
-                  { label: "Left (X)", key: "x" as const },
-                  { label: "Top (Y)", key: "y" as const },
-                  { label: "Width", key: "w" as const },
-                  { label: "Height", key: "h" as const },
-                ].map((coord) => (
-                  <div key={coord.key} className="space-y-1">
-                    <label className="text-[9px] text-zinc-500 font-semibold block">{coord.label}</label>
-                    <div className="relative">
+                {/* Box values (Manual inputs) */}
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    <span>Coordinates (%)</span>
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-zinc-500 font-bold uppercase block">X-Offset</label>
                       <input
                         type="number"
                         min={0}
-                        max={100}
-                        disabled={!file}
-                        value={cropBox[coord.key]}
+                        max={90}
+                        value={cropBox.x}
                         onChange={(e) => {
-                          const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                          setCropBox((prev) => {
-                            const next = { ...prev, [coord.key]: val };
-                            if (coord.key === "x" && next.x + next.w > 100) next.w = 100 - next.x;
-                            if (coord.key === "y" && next.y + next.h > 100) next.h = 100 - next.y;
-                            if (coord.key === "w" && next.x + next.w > 100) next.x = 100 - next.w;
-                            if (coord.key === "h" && next.y + next.h > 100) next.y = 100 - next.h;
-                            return next;
-                          });
+                          const val = Number(e.target.value);
+                          setCropBox((prev) => ({ ...prev, x: val }));
                         }}
-                        className="w-full bg-zinc-950 border border-zinc-900 rounded-xl pl-2 pr-6 py-2 text-xs text-zinc-300 font-bold font-mono focus:border-red-500/80 focus:ring-1 focus:ring-red-500/20 focus:outline-none transition-all disabled:opacity-40"
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-zinc-600">%</span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-zinc-500 font-bold uppercase block">Y-Offset</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={90}
+                        value={cropBox.y}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setCropBox((prev) => ({ ...prev, y: val }));
+                        }}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-zinc-500 font-bold uppercase block">Width</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={100}
+                        value={cropBox.w}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setCropBox((prev) => ({ ...prev, w: val }));
+                        }}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-zinc-500 font-bold uppercase block">Height</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={100}
+                        value={cropBox.h}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setCropBox((prev) => ({ ...prev, h: val }));
+                        }}
+                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {file && currentSize && (
-                <div className="rounded-xl bg-zinc-950/60 p-2.5 border border-zinc-900 flex items-start gap-2 text-[10px] text-zinc-400">
-                  <Info className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
-                  <div>
-                    Dimensions: <span className="font-mono text-zinc-500">{Math.round(currentSize.width)}×{Math.round(currentSize.height)} pt</span>
-                    <br />
-                    Cropped: <span className="font-mono text-red-400 font-bold">{Math.round((cropBox.w / 100) * currentSize.width)}×{Math.round((cropBox.h / 100) * currentSize.height)} pt</span>
-                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Target Pages Apply Selection */}
-            {file && (
-              <div className="space-y-4 rounded-2xl border border-zinc-900 bg-zinc-900/10 p-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-zinc-500" />
-                  <span>Apply Crop Range</span>
-                </span>
-                
-                <select
-                  value={applyMode}
-                  onChange={(e) => setApplyMode(e.target.value as any)}
-                  className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-red-500 focus:outline-none transition cursor-pointer"
-                >
-                  <option value="all">All Pages</option>
-                  <option value="current">Current Page Only</option>
-                  <option value="odd">Odd Pages Only</option>
-                  <option value="even">Even Pages Only</option>
-                  <option value="custom">Custom Page Range</option>
-                </select>
-
-                {applyMode === "custom" && (
-                  <div className="space-y-1.5 animate-fadeIn">
-                    <label className="text-[9px] text-zinc-500 font-semibold block">Range String</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1, 3, 5-8"
-                      value={customRange}
-                      onChange={(e) => setCustomRange(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 font-bold focus:border-red-500 focus:outline-none transition"
-                    />
-                  </div>
-                )}
               </div>
-            )}
-          </div>
 
-          {/* Action Area */}
-          <div className="p-6 border-t border-zinc-900 space-y-3 shrink-0">
-            {file && (
-              <button
-                onClick={() => {
-                  setCropBox({ x: 15, y: 15, w: 70, h: 70 });
-                  setAspectRatioMode("free");
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-900 py-3 text-xs font-bold text-zinc-300 hover:bg-zinc-900 hover:text-white transition-all cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
-                Reset Crop Area
-              </button>
-            )}
+              {/* Action trigger panel */}
+              <div className="p-5 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 space-y-3 shrink-0">
+                
+                {aspectRatioMode !== "free" && (
+                  <button
+                    onClick={() => {
+                      setAspectRatioMode("free");
+                      setCropBox({ x: 15, y: 15, w: 70, h: 70 });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-900 py-3 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    Reset Crop Area
+                  </button>
+                )}
 
-            <button
-              onClick={processCrop}
-              disabled={!file || processing}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/10 transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 cursor-pointer",
-                theme.button
-              )}
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing Crop...
-                </>
-              ) : (
-                <>
-                  <Crop className="h-4 w-4" />
-                  Crop PDF File
-                </>
-              )}
-            </button>
-          </div>
+                <button
+                  onClick={processCrop}
+                  disabled={!file || processing}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/10 transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 cursor-pointer",
+                    theme.button
+                  )}
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing Crop...
+                    </>
+                  ) : (
+                    <>
+                      <Crop className="h-4 w-4" />
+                      Crop PDF File
+                    </>
+                  )}
+                </button>
+              </div>
         </div>
+      </>
+    )}
       </div>
-    </>
+    </div>
   );
 }

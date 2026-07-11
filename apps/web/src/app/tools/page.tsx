@@ -28,25 +28,25 @@ export default function AllToolsPage() {
   const categories = Object.keys(TOOL_CATEGORIES) as ToolCategory[];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
-      <div className="relative border-b border-zinc-800">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(124,58,237,0.15),transparent)]" />
+      <div className="relative border-b border-border bg-gradient-to-b from-card to-background">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(124,58,237,0.1),transparent)]" />
         <div className="relative mx-auto max-w-5xl px-4 py-16 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight mb-3">
+          <h1 className="text-4xl font-extrabold tracking-tight mb-3 text-zinc-900 dark:text-white">
             All{" "}
-            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
               {TOOLS.filter(t => t.enabled).length}+ Free Tools
             </span>
           </h1>
-          <p className="text-zinc-400 text-lg mb-8">
+          <p className="text-zinc-600 dark:text-zinc-400 text-lg mb-8">
             PDF, Image, Text, and Developer tools — no signup, no watermark.
           </p>
         </div>
       </div>
 
       {/* Category quick nav */}
-      <div className="border-b border-zinc-800/50 bg-zinc-900/40">
+      <div className="border-b border-border/50 bg-card/40">
         <div className="mx-auto max-w-5xl px-4 py-3 flex flex-wrap gap-2 justify-center">
           {categories.map(cat => {
             const Icon = CAT_ICONS[cat] || FileText;
@@ -75,8 +75,8 @@ export default function AllToolsPage() {
                     <Icon className={`h-4.5 w-4.5 ${CAT_COLORS[cat]}`} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">{TOOL_CATEGORIES[cat].label}</h2>
-                    <p className="text-xs text-zinc-500">{tools.length} tools</p>
+                    <h2 className="text-lg font-bold text-zinc-900 dark:text-white">{TOOL_CATEGORIES[cat].label}</h2>
+                    <p className="text-xs text-muted">{tools.length} tools</p>
                   </div>
                 </div>
                 <Link href={`/${cat === "calculator" ? "calculators" : cat + "-tools"}`}
@@ -87,15 +87,15 @@ export default function AllToolsPage() {
               <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {tools.map(tool => (
                   <Link key={tool.slug} href={`/tools/${tool.slug}`}
-                    className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:border-zinc-600 hover:bg-zinc-900 px-4 py-3 transition-all duration-200">
+                    className="group flex items-center gap-3 rounded-xl border border-border bg-card/40 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-card px-4 py-3 transition-all duration-200">
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${CAT_BG[cat]} group-hover:scale-110 transition-transform`}>
                       <Icon className={`h-4 w-4 ${CAT_COLORS[cat]}`} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{tool.name}</p>
-                      <p className="text-xs text-zinc-600 truncate">{tool.description}</p>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{tool.name}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{tool.description}</p>
                     </div>
-                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-zinc-600 opacity-0 group-hover:opacity-100 group-hover:text-violet-400 transition-all" />
+                    <ArrowRight className="h-3.5 w-3.5 ml-auto text-zinc-400 dark:text-zinc-600 opacity-0 group-hover:opacity-100 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-all" />
                   </Link>
                 ))}
               </div>

@@ -13,6 +13,7 @@ import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
 import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace";
 import { SignPdfWorkspace } from "@/components/tools/SignPdfWorkspace";
 import { ComparePdfWorkspace } from "@/components/tools/ComparePdfWorkspace";
+import { MergePdfWorkspace } from "@/components/tools/MergePdfWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -71,16 +72,24 @@ export default async function ToolPage({ params }: PageProps) {
     return <PageNumbersWorkspace tool={tool} />;
   }
 
-  if (slug === "watermark-pdf") {
-    return <WatermarkPdfWorkspace tool={tool} />;
-  }
-
   if (slug === "sign-pdf") {
     return <SignPdfWorkspace tool={tool} />;
   }
 
   if (slug === "compare-pdf") {
     return <ComparePdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "merge-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <MergePdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "watermark-pdf") {
+    return <WatermarkPdfWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];
@@ -107,6 +116,8 @@ export default async function ToolPage({ params }: PageProps) {
         <UtilityWorkspace tool={tool} />
       ) : resolveRuntime(tool) === "server" ? (
         <ServerToolWorkspace tool={tool} />
+      ) : slug === "merge-pdf" ? (
+        <MergePdfWorkspace tool={tool} />
       ) : (
         <BrowserToolWorkspace tool={tool} />
       )}

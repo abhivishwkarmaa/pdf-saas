@@ -20,7 +20,9 @@ import {
   RefreshCw,
   Layers,
   FileCheck,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import * as img from "@/lib/client/image-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
@@ -215,82 +217,113 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
   const pixelBox = getPixelBox();
   const currentSize = rotatedDimensions.width > 0 ? rotatedDimensions : null;
 
+  const Icon = theme.icon;
+
   return (
-    <>
+    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
       <Toaster position="top-center" richColors />
-      <div className="image-workspace-theme-wrapper flex lg:h-[calc(100vh-140px)] lg:min-h-[550px] min-h-[680px] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white text-zinc-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 dark:text-white lg:flex-row">
-        
-        {/* LEFT SIDEBAR: Image Preview card */}
-        {file && (
-          <div className="w-full bg-zinc-50/80 border-b border-zinc-200 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:bg-zinc-950/80 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
-              <Layers className="h-4 w-4 text-blue-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
-                Source Image
+      {!file && (
+        <div className="mb-8 text-center">
+          <span
+            className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            Image Tools
+          </span>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
+            {tool.name}
+          </h1>
+          <p className="mx-auto mt-2 max-w-lg text-zinc-600 dark:text-zinc-400">
+            {tool.description}
+          </p>
+        </div>
+      )}
+
+      {/* Back Navigation Bar */}
+      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
+        <Link
+          href="/#image"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Image Tools
+        </Link>
+      </div>
+
+      <div className={cn(
+        "image-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-955 text-zinc-900 dark:text-white lg:flex-row",
+        !file
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
+      )}>
+        {!file ? (
+          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
+            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 bg-zinc-100/50 dark:border-zinc-800 dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-blue-500/30 hover:bg-zinc-100 dark:hover:bg-zinc-900/30">
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-blue-500/20">
+                <Upload className="h-7 w-7 text-zinc-400 group-hover:text-blue-500 transition-colors" />
               </span>
-            </div>
-            
-            <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
-              <button
-                className="flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 bg-blue-50 border-blue-500/30 dark:bg-blue-950/5 dark:border-blue-500/50 shadow-md shadow-blue-500/5"
-              >
-                <span className="text-[10px] font-bold tracking-wider text-blue-600 dark:text-blue-400">
-                  IMAGE
-                </span>
-                
-                <div className="w-20 h-28 bg-zinc-150 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden relative">
-                  {previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewUrl}
-                      alt="Thumbnail"
-                      className="max-w-full max-h-full object-contain"
-                      draggable={false}
-                    />
-                  ) : (
-                    <FileCheck className="h-5 w-5 text-zinc-400 dark:text-zinc-800 animate-pulse" />
-                  )}
-                </div>
-              </button>
-            </div>
+              <span className="text-center">
+                <p className="text-sm font-bold text-zinc-650 dark:text-zinc-300 group-hover:text-zinc-800 dark:group-hover:text-zinc-100 transition-colors">
+                  Upload an Image to begin cropping
+                </p>
+                <p className="mt-1.5 text-xs text-zinc-500">
+                  Max size {tool.maxMb} MB · Local document processing
+                </p>
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files[0]) {
+                    setFile(files[0]);
+                    setRotation(0);
+                  }
+                }}
+              />
+            </label>
           </div>
-        )}
+        ) : (
+          <>
+            {/* LEFT SIDEBAR: Image Preview card */}
+            <div className="w-full bg-zinc-50/80 border-b border-zinc-200 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:bg-zinc-955/80 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-blue-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                  Source Image
+                </span>
+              </div>
+              
+              <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
+                <button
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 bg-blue-50 border-blue-500/30 dark:bg-blue-955/5 dark:border-blue-500/50 shadow-md shadow-blue-500/5"
+                >
+                  <span className="text-[10px] font-bold tracking-wider text-blue-600 dark:text-blue-400">
+                    IMAGE
+                  </span>
+                  
+                  <div className="w-20 h-28 bg-zinc-150 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden relative">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Thumbnail"
+                        className="max-w-full max-h-full object-contain"
+                        draggable={false}
+                      />
+                    ) : (
+                      <FileCheck className="h-5 w-5 text-zinc-400 dark:text-zinc-800 animate-pulse" />
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
 
         {/* CENTER VIEWPORT: Large Preview & Rnd Crop Selector */}
         <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
           {/* Grid Backdrop */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
-          {!file ? (
-            <div className="flex w-full max-w-xl flex-col items-center justify-center p-12 my-auto z-10">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 bg-zinc-100/50 dark:border-zinc-800 dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-blue-500/30 hover:bg-zinc-100 dark:hover:bg-zinc-900/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-blue-500/20">
-                  <Upload className="h-7 w-7 text-zinc-400 group-hover:text-blue-500 transition-colors" />
-                </span>
-                <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-650 dark:text-zinc-300 group-hover:text-zinc-800 dark:group-hover:text-zinc-100 transition-colors">
-                    Upload an Image to begin cropping
-                  </p>
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Max size {tool.maxMb} MB · Pure client-side canvas rendering
-                  </p>
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files[0]) {
-                      setFile(files[0]);
-                      setRotation(0);
-                    }
-                  }}
-                />
-              </label>
-            </div>
-          ) : (
-            <>
               {/* Header */}
               <div className="w-full p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900 z-10 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
@@ -468,10 +501,8 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                     <RotateCw className="h-4 w-4 text-blue-500" />
                     <span>Rotate Image</span>
                   </button>
-                </div>
               </div>
-            </>
-          )}
+            </div>
         </div>
 
         {/* RIGHT SIDEBAR: Settings & Operations Panel */}
@@ -604,7 +635,9 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
             </button>
           </div>
         </div>
+      </>
+    )}
       </div>
-    </>
+    </div>
   );
 }

@@ -107,13 +107,20 @@ const SOCIALS = [
   { icon: MessageCircle, label: "Discord", href: "https://discord.com", color: "hover:text-indigo-400" },
 ];
 
+import { usePathname } from "next/navigation";
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function Footer() {
+  const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+
+  if (pathname?.startsWith("/tools/")) {
+    return null;
+  }
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
