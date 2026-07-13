@@ -52,6 +52,12 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
   // Zoom factor (default 1.0, ranges from 0.5 to 2.0)
   const [zoom, setZoom] = useState(1.0);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setZoom(0.75);
+    }
+  }, []);
+
   // Aspect ratio state
   const [aspectRatioMode, setAspectRatioMode] = useState<"free" | "1:1" | "4:3" | "16:9">("free");
 
@@ -251,19 +257,19 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
       </div>
 
       <div className={cn(
-        "image-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-955 text-zinc-900 dark:text-white lg:flex-row",
+        "image-workspace-theme-wrapper flex flex-col overflow-hidden bg-workspace-bg text-foreground lg:flex-row border border-workspace-border",
         !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl shadow-2xl justify-center items-center"
           : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
       )}>
         {!file ? (
           <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 bg-zinc-100/50 dark:border-zinc-800 dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-blue-500/30 hover:bg-zinc-100 dark:hover:bg-zinc-900/30">
-              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-blue-500/20">
-                <Upload className="h-7 w-7 text-zinc-400 group-hover:text-blue-500 transition-colors" />
+            <label className="upload-dropzone upload-dropzone-image w-full">
+              <span className="upload-icon-container">
+                <Upload />
               </span>
               <span className="text-center">
-                <p className="text-sm font-bold text-zinc-650 dark:text-zinc-300 group-hover:text-zinc-800 dark:group-hover:text-zinc-100 transition-colors">
+                <p className="text-sm font-bold text-zinc-650 dark:text-zinc-300">
                   Upload an Image to begin cropping
                 </p>
                 <p className="mt-1.5 text-xs text-zinc-500">
@@ -287,8 +293,8 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
         ) : (
           <>
             {/* LEFT SIDEBAR: Image Preview card */}
-            <div className="w-full bg-zinc-50/80 border-b border-zinc-200 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:bg-zinc-955/80 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
-              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
+            <div className="w-full bg-workspace-sidebar border-b border-workspace-border lg:w-48 lg:border-b-0 lg:border-r flex flex-col shrink-0 lg:h-full">
+              <div className="p-4 border-b border-workspace-border flex items-center gap-2">
                 <Layers className="h-4 w-4 text-blue-500" />
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
                   Source Image
@@ -303,7 +309,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                     IMAGE
                   </span>
                   
-                  <div className="w-20 h-28 bg-zinc-150 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden relative">
+                  <div className="w-20 h-28 bg-zinc-900 rounded border border-zinc-800 flex items-center justify-center overflow-hidden relative">
                     {previewUrl ? (
                       <img
                         src={previewUrl}
@@ -320,17 +326,17 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
             </div>
 
         {/* CENTER VIEWPORT: Large Preview & Rnd Crop Selector */}
-        <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
+        <div className="flex flex-1 flex-col items-center bg-workspace-sidebar relative lg:h-full overflow-hidden">
           {/* Grid Backdrop */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
               {/* Header */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900 z-10 bg-white/40 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0">
+              <div className="w-full p-4 flex items-center justify-between border-b border-workspace-border z-10 bg-workspace-sidebar/50 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <ImageIcon className="h-4 w-4 text-blue-500" />
                   </div>
-                  <span className="max-w-[200px] truncate text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                  <span className="max-w-[200px] truncate text-sm font-bold text-foreground">
                     {file.name}
                   </span>
                 </div>
@@ -340,14 +346,14 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                     setFile(null);
                     setRotation(0);
                   }}
-                  className="flex items-center gap-2 rounded-lg bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-850 px-3.5 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-red-50 hover:border-red-500/30 hover:text-red-600 dark:hover:bg-red-950/20 dark:hover:border-red-500/30 dark:hover:text-red-400 transition-all duration-200 shadow-sm cursor-pointer"
+                  className="flex items-center gap-2 rounded-lg bg-workspace-card border border-workspace-border px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-red-50 hover:border-red-500/30 hover:text-red-650 transition-all duration-200 shadow-sm cursor-pointer"
                 >
                   <X className="h-4 w-4" /> Clear File
                 </button>
               </div>
 
               {/* Viewport Frame (Scrollable Body) */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-8">
+              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-2 sm:p-4 lg:p-8">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -357,8 +363,8 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                   <div className="text-center">
                     <p className="text-sm text-red-500 font-semibold">{error}</p>
                     <button
-                      onClick={() => setFile(null)}
-                      className="mt-3 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white underline"
+                       onClick={() => setFile(null)}
+                       className="mt-3 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white underline"
                     >
                       Choose another file
                     </button>
@@ -425,6 +431,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                           className="border-2 border-blue-500 bg-blue-500/5 shadow-[0_0_0_9999px_rgba(9,9,11,0.6)] rounded"
                           style={{
                             boxShadow: "0 0 20px rgba(59, 130, 246, 0.25), 0 0 0 9999px rgba(9,9,11,0.65)",
+                            touchAction: "none",
                           }}
                         >
                           {/* Inner dashed grid lines */}
@@ -468,15 +475,13 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                     </div>
                   )
                 )}
-              </div>
-
-              {/* Toolbar Zoom & Rotate Controls (Fixed Footer) */}
-              <div className="w-full p-4 border-t border-zinc-250 dark:border-zinc-900 flex items-center justify-center bg-white/40 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-250 dark:border-zinc-800 shadow-lg">
-                  <div className="flex items-center gap-2 border-r border-zinc-250 dark:border-zinc-900 pr-4">
+              </div>              {/* Toolbar Zoom & Rotate Controls (Fixed Footer) */}
+              <div className="w-full p-4 border-t border-workspace-border flex items-center justify-center bg-workspace-sidebar/50 backdrop-blur-sm shrink-0 z-10">
+                <div className="flex items-center gap-4 bg-workspace-card/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-workspace-border shadow-lg">
+                  <div className="flex items-center gap-2 border-r border-workspace-border pr-4">
                     <button
                       onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
                       title="Zoom Out"
                     >
                       <ZoomOut className="h-4.5 w-4.5" />
@@ -486,7 +491,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                     </span>
                     <button
                       onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
                       title="Zoom In"
                     >
                       <ZoomIn className="h-4.5 w-4.5" />
@@ -495,7 +500,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
 
                   <button
                     onClick={rotateCurrentPage}
-                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
                     title="Rotate 90° Clockwise"
                   >
                     <RotateCw className="h-4 w-4 text-blue-500" />
@@ -506,11 +511,11 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
         </div>
 
         {/* RIGHT SIDEBAR: Settings & Operations Panel */}
-        <div className="w-full bg-white border-t border-zinc-200 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:bg-zinc-950 dark:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden">
+        <div className="w-full bg-workspace-sidebar border-t border-workspace-border lg:w-80 lg:border-t-0 lg:border-l flex flex-col z-20 lg:h-full overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
             
             {/* Header */}
-            <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-900 pb-4">
+            <div className="flex items-center gap-2 border-b border-workspace-border pb-4">
               <Settings className="h-4 w-4 text-blue-500" />
               <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
                 Crop Settings
@@ -518,11 +523,11 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
             </div>
 
             {/* Coordinates & Aspect Ratio Presets */}
-            <div className="space-y-4 rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 p-4">
+            <div className="space-y-4 rounded-2xl border border-workspace-border bg-workspace-muted p-4">
               
               {/* Aspect Ratio Lock Presets */}
               <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 dark:text-zinc-400 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1">
                   {aspectRatioMode === "free" ? (
                     <Unlock className="h-3.5 w-3.5 text-zinc-500" />
                   ) : (
@@ -539,8 +544,8 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                       className={cn(
                         "py-1.5 rounded-lg text-[10px] font-bold border transition-all duration-200 cursor-pointer",
                         aspectRatioMode === mode
-                          ? "bg-blue-50 dark:bg-blue-950/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
-                          : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300 dark:bg-zinc-950 dark:border-zinc-900 dark:text-zinc-500 dark:hover:border-zinc-800 dark:hover:text-zinc-300"
+                          ? "bg-blue-50 dark:bg-blue-955/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 hover:border-zinc-300 dark:text-zinc-500 dark:hover:border-zinc-800 dark:hover:text-zinc-300"
                       )}
                     >
                       {mode === "free" ? "Free" : mode}
@@ -550,7 +555,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
               </div>
 
               {/* Manual fine-tuning coordinates */}
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-900">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-workspace-border">
                 {[
                   { label: "Left (X)", key: "x" as const },
                   { label: "Top (Y)", key: "y" as const },
@@ -558,7 +563,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                   { label: "Height", key: "h" as const },
                 ].map((coord) => (
                   <div key={coord.key} className="space-y-1">
-                    <label className="text-[9px] text-zinc-550 dark:text-zinc-500 font-semibold block">{coord.label}</label>
+                    <label className="text-[9px] text-zinc-555 dark:text-zinc-500 font-semibold block">{coord.label}</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -577,7 +582,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
                             return next;
                           });
                         }}
-                        className="w-full bg-white border border-zinc-200 rounded-xl pl-2 pr-6 py-2 text-xs text-zinc-800 dark:bg-zinc-950 dark:border-zinc-900 dark:text-zinc-300 font-bold font-mono focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all disabled:opacity-40"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl pl-2 pr-6 py-2 text-xs text-foreground font-bold font-mono focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all disabled:opacity-40"
                       />
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-zinc-500 dark:text-zinc-600">%</span>
                     </div>
@@ -586,7 +591,7 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
               </div>
 
               {file && currentSize && (
-                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950/60 p-2.5 border border-zinc-200 dark:border-zinc-900 flex items-start gap-2 text-[10px] text-zinc-650 dark:text-zinc-400">
+                <div className="rounded-xl bg-workspace-card p-2.5 border border-workspace-border flex items-start gap-2 text-[10px] text-zinc-650 dark:text-zinc-400">
                   <Info className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
                   <div>
                     Dimensions: <span className="font-mono text-zinc-500">{Math.round(currentSize.width)}×{Math.round(currentSize.height)} px</span>
@@ -599,14 +604,14 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
           </div>
 
           {/* Action Area */}
-          <div className="p-6 border-t border-zinc-200 dark:border-zinc-900 space-y-3 shrink-0">
+          <div className="p-6 border-t border-workspace-border space-y-3 shrink-0">
             {file && (
               <button
                 onClick={() => {
                   setCropBox({ x: 15, y: 15, w: 70, h: 70 });
                   setAspectRatioMode("free");
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-900 py-3 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-950 dark:hover:text-white transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-workspace-border py-3 text-xs font-bold text-zinc-650 dark:text-zinc-300 hover:bg-workspace-muted hover:text-zinc-950 dark:hover:text-white transition-all cursor-pointer"
               >
                 <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
                 Reset Crop Area

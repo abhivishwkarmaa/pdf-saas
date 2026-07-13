@@ -3,6 +3,7 @@
 import { Upload, X } from "lucide-react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface FileDropZoneProps {
   tool: ToolDefinition;
@@ -51,9 +52,9 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
   };
 
   return (
-    <label className="group flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/50 px-6 py-10 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/30 dark:hover:border-zinc-500">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 transition group-hover:scale-105 dark:bg-zinc-900 dark:ring-zinc-700">
-        <Upload className="h-6 w-6 text-zinc-400" />
+    <label className={cn("upload-dropzone w-full", `upload-dropzone-${tool.category}`)}>
+      <span className="upload-icon-container">
+        <Upload />
       </span>
       <span className="text-center">
         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">

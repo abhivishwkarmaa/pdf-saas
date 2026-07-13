@@ -854,7 +854,11 @@ except Exception as e:
       const files = await readdir(dir);
       const pages = files
         .filter((f) => f.startsWith("page") && f.endsWith(".png"))
-        .sort();
+        .sort((a, b) => {
+          const numA = parseInt(a.replace(/[^0-9]/g, ""), 10);
+          const numB = parseInt(b.replace(/[^0-9]/g, ""), 10);
+          return numA - numB;
+        });
 
       const ocrTexts: string[] = [];
       for (const pageFile of pages) {
@@ -973,7 +977,11 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
       const files = await readdir(dir);
       pages = files
         .filter((f) => f.startsWith("page") && f.endsWith(".png"))
-        .sort();
+        .sort((a, b) => {
+          const numA = parseInt(a.replace(/[^0-9]/g, ""), 10);
+          const numB = parseInt(b.replace(/[^0-9]/g, ""), 10);
+          return numA - numB;
+        });
     }
 
     const pptx = new pptxgen();

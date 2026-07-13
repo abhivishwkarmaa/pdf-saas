@@ -297,7 +297,7 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
 
         {/* Upload Box (Only when no files are uploaded) */}
         {files.length === 0 && (
-          <div className="group relative flex h-52 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-white p-6 text-center shadow-sm transition-all hover:border-zinc-400 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900/50">
+          <label className="upload-dropzone upload-dropzone-pdf w-full relative">
             <input
               type="file"
               accept=".pdf"
@@ -305,18 +305,18 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
               className="absolute inset-0 z-10 cursor-pointer opacity-0"
               onChange={handleFilesUpload}
             />
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-100 group-hover:bg-zinc-200 dark:bg-zinc-800 dark:group-hover:bg-zinc-700">
-                <Upload className="h-6 w-6 text-zinc-600 dark:text-zinc-400" />
-              </div>
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <span className="upload-icon-container">
+              <Upload />
+            </span>
+            <span className="text-center">
+              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
                 Click or drag PDF files here to upload
               </p>
-              <p className="text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-zinc-500">
                 Supports up to 50 PDF files. Maximum size 50MB per file.
               </p>
-            </div>
-          </div>
+            </span>
+          </label>
         )}
 
         {/* Workspace content */}

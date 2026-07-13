@@ -56,6 +56,12 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
   // Zoom factor (default 1.0, ranges from 0.5 to 2.0)
   const [zoom, setZoom] = useState(1.0);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setZoom(0.75);
+    }
+  }, []);
+
   // Aspect ratio state
   const [aspectRatioMode, setAspectRatioMode] = useState<"free" | "1:1" | "4:3" | "16:9">("free");
 
@@ -366,7 +372,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
       <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
         <Link
           href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="flex items-center gap-1.5 rounded-lg border border-workspace-border bg-workspace-card px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-workspace-muted text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to PDF Tools
@@ -374,19 +380,19 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
       </div>
 
       <div className={cn(
-        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white lg:flex-row",
+        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-workspace-bg text-foreground lg:flex-row border border-workspace-border",
         !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl shadow-2xl justify-center items-center"
           : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
       )}>
         {!file ? (
           <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
+            <label className="upload-dropzone upload-dropzone-pdf w-full">
+              <span className="upload-icon-container">
+                <Upload />
               </span>
               <span className="text-center">
-                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                   Upload PDF file to crop
                 </p>
                 <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
@@ -408,8 +414,8 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
           <>
             {/* LEFT SIDEBAR: Page Thumbnails */}
             {totalPages > 0 && (
-              <div className="w-full bg-zinc-50 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-900 lg:w-48 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full">
-                <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center gap-2">
+              <div className="w-full bg-workspace-sidebar border-b border-workspace-border lg:w-48 lg:border-b-0 lg:border-r flex flex-col shrink-0 lg:h-full">
+                <div className="p-4 border-b border-workspace-border flex items-center gap-2">
                   <Layers className="h-4 w-4 text-red-500" />
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
                     Pages ({totalPages})
@@ -431,7 +437,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                        "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200",
                        isSelected
                          ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
-                         : "bg-white dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/20"
+                         : "bg-workspace-card border-workspace-border hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-workspace-muted"
                      )}
                   >
                     <span className={cn(
@@ -461,17 +467,17 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
         )}
 
         {/* CENTER PANEL: LIVE PREVIEW & CROP VIEWPORT */}
-        <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
+        <div className="flex flex-1 flex-col items-center bg-workspace-sidebar relative lg:h-full overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
               {/* Top status bar: File detail, Clear, reset options */}
-              <div className="w-full p-4 border-b border-zinc-200 dark:border-zinc-900 flex items-center justify-between z-10 bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0">
+              <div className="w-full p-4 border-b border-workspace-border flex items-center justify-between z-10 bg-workspace-sidebar/50 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                    <FileText className="h-4 w-4 text-zinc-700 dark:text-zinc-300" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-workspace-muted border border-workspace-border">
+                    <FileText className="h-4 w-4 text-foreground" />
                   </div>
                   <div>
-                    <span className="max-w-[180px] block truncate text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                    <span className="max-w-[180px] block truncate text-xs font-bold text-foreground">
                       {file.name}
                     </span>
                     <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-mono block">
@@ -485,14 +491,14 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                     setFile(null);
                     setRotations({});
                   }}
-                  className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg bg-workspace-card border border-workspace-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" /> Clear File
                 </button>
               </div>
 
               {/* Viewport Frame (Scrollable Body) */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-8">
+              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-2 sm:p-4 lg:p-8">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-red-500" />
@@ -545,6 +551,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           className="border-2 border-red-500 bg-red-500/5 shadow-[0_0_0_9999px_rgba(9,9,11,0.6)] rounded"
                           style={{
                             boxShadow: "0 0 20px rgba(239, 68, 68, 0.25), 0 0 0 9999px rgba(9,9,11,0.65)",
+                            touchAction: "none",
                           }}
                         >
                           {/* Inner dashed grid lines */}
@@ -591,11 +598,11 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
               </div>
 
               {/* Zoom controls */}
-              <div className="w-full p-4 border-t border-zinc-200 dark:border-zinc-900 flex items-center justify-center bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-white dark:bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-lg">
+              <div className="w-full p-4 border-t border-workspace-border flex items-center justify-center bg-workspace-sidebar/50 backdrop-blur-sm shrink-0 z-10">
+                <div className="flex items-center gap-4 bg-workspace-card/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-workspace-border shadow-lg">
                   <button
                     onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
                     title="Zoom Out"
                   >
                     <ZoomOut className="h-4.5 w-4.5" />
@@ -605,7 +612,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                   </span>
                   <button
                     onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
                     title="Zoom In"
                   >
                     <ZoomIn className="h-4.5 w-4.5" />
@@ -615,13 +622,13 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
         </div>
 
         {/* RIGHT PANEL: SETTINGS & ACTIONS */}
-        <div className="w-full bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:w-72 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
+        <div className="w-full bg-workspace-sidebar border-t border-workspace-border lg:w-72 lg:border-t-0 lg:border-l flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
           
 
               {/* Sidebar Header */}
-              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-1.5 shrink-0 bg-zinc-50 dark:bg-zinc-950">
+              <div className="p-4 border-b border-workspace-border space-y-1.5 shrink-0 bg-workspace-sidebar">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                  <Settings className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                  <Settings className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-555" />
                   <span>Crop settings</span>
                 </span>
               </div>
@@ -629,9 +636,9 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
               <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
                 
                 {/* Ratio presets */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-3.5">
+                <div className="rounded-2xl border border-workspace-border bg-workspace-muted p-4 space-y-3.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Sliders className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    <Sliders className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-555" />
                     <span>Aspect Ratio</span>
                   </span>
 
@@ -645,8 +652,8 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           className={cn(
                             "py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer",
                             isSelected
-                              ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
-                              : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                              ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-955 shadow-md"
+                              : "bg-workspace-card border-workspace-border text-zinc-555 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
                           )}
                         >
                           {mode === "free" ? "Free Crop" : mode}
@@ -657,9 +664,9 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                 </div>
 
                 {/* Target Pages */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
+                <div className="rounded-2xl border border-workspace-border bg-workspace-muted p-4 space-y-4">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                    <Layers className="h-3.5 w-3.5 text-zinc-450 dark:text-zinc-555" />
                     <span>Target pages</span>
                   </span>
 
@@ -677,7 +684,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           "py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
                           applyMode === btn.key
                             ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
-                            : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                            : "bg-workspace-card border-workspace-border text-zinc-555 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
                         )}
                       >
                         {btn.label}
@@ -690,7 +697,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                         "col-span-2 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
                         applyMode === "custom"
                           ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-955 shadow-md"
-                          : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-350"
                       )}
                     >
                       Custom page range
@@ -698,23 +705,23 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                   </div>
 
                   {applyMode === "custom" && (
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900 animate-fadeIn">
-                      <label className="text-[9px] text-zinc-500 font-bold uppercase block">Pages range string</label>
+                    <div className="space-y-1.5 pt-2 border-t border-workspace-border animate-fadeIn">
+                      <label className="text-[9px] text-zinc-555 dark:text-zinc-450 font-bold uppercase block">Pages range string</label>
                       <input
                         type="text"
                         placeholder="e.g. 1-3, 5, 7-10"
                         value={customRange}
                         onChange={(e) => setCustomRange(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl px-3 py-2 text-xs text-foreground font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                   )}
                 </div>
 
                 {/* Box values (Manual inputs) */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Info className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                <div className="rounded-2xl border border-workspace-border bg-workspace-muted p-4 space-y-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-zinc-450 dark:text-zinc-555" />
                     <span>Coordinates (%)</span>
                   </span>
 
@@ -730,7 +737,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           const val = Number(e.target.value);
                           setCropBox((prev) => ({ ...prev, x: val }));
                         }}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl py-1.5 text-center text-xs font-bold font-mono text-foreground focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                     <div className="space-y-1">
@@ -744,7 +751,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           const val = Number(e.target.value);
                           setCropBox((prev) => ({ ...prev, y: val }));
                         }}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl py-1.5 text-center text-xs font-bold font-mono text-foreground focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                     <div className="space-y-1">
@@ -758,7 +765,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           const val = Number(e.target.value);
                           setCropBox((prev) => ({ ...prev, w: val }));
                         }}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl py-1.5 text-center text-xs font-bold font-mono text-foreground focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                     <div className="space-y-1">
@@ -772,7 +779,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                           const val = Number(e.target.value);
                           setCropBox((prev) => ({ ...prev, h: val }));
                         }}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1.5 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                        className="w-full bg-workspace-card border border-workspace-border rounded-xl py-1.5 text-center text-xs font-bold font-mono text-foreground focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                       />
                     </div>
                   </div>
@@ -780,7 +787,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
               </div>
 
               {/* Action trigger panel */}
-              <div className="p-5 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 space-y-3 shrink-0">
+              <div className="p-5 border-t border-workspace-border bg-workspace-sidebar space-y-3 shrink-0">
                 
                 {aspectRatioMode !== "free" && (
                   <button
@@ -788,7 +795,7 @@ export function CropPdfWorkspace({ tool }: CropPdfWorkspaceProps) {
                       setAspectRatioMode("free");
                       setCropBox({ x: 15, y: 15, w: 70, h: 70 });
                     }}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-900 py-3 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl border border-workspace-border py-3 text-xs font-bold text-zinc-650 dark:text-zinc-300 hover:bg-workspace-muted hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
                   >
                     <RefreshCw className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
                     Reset Crop Area

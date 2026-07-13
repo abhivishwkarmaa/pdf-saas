@@ -44,6 +44,12 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1.0);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setZoom(0.75);
+    }
+  }, []);
+
   // Left Sidebar Signature Creator State
   const [activeTab, setActiveTab] = useState<"draw" | "type" | "upload">("draw");
   const [activeColor, setActiveColor] = useState("#000000");
@@ -175,8 +181,10 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
     canvas.setPointerCapture(e.pointerId);
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -195,8 +203,10 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
     if (!ctx) return;
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -455,7 +465,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
       <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
         <Link
           href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="flex items-center gap-1.5 rounded-lg border border-workspace-border bg-workspace-card px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-workspace-muted text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to PDF Tools
@@ -463,19 +473,19 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
       </div>
 
       <div className={cn(
-        "pdf-workspace-theme-wrapper flex flex-col lg:flex-row overflow-hidden bg-white dark:bg-zinc-955 text-zinc-900 dark:text-white lg:h-[calc(100vh-80px)] min-h-[550px] w-full",
+        "pdf-workspace-theme-wrapper flex flex-col lg:flex-row overflow-hidden bg-workspace-bg text-foreground lg:h-[calc(100vh-80px)] min-h-[550px] w-full border border-workspace-border",
         !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
+          ? "lg:h-[450px] min-h-[450px] rounded-3xl shadow-2xl justify-center items-center"
           : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
       )}>
         {!file ? (
           <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
+            <label className="upload-dropzone upload-dropzone-pdf w-full">
+              <span className="upload-icon-container">
+                <Upload />
               </span>
               <span className="text-center">
-                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                   Upload PDF file to sign
                 </p>
                 <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
@@ -493,15 +503,15 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
         ) : (
           <>
             {/* LEFT SIDEBAR: SIGNATURE CREATOR */}
-            <div className="w-full lg:w-72 bg-zinc-50 dark:bg-zinc-955 border-b border-zinc-200 dark:border-zinc-900 lg:border-b-0 lg:border-r lg:border-zinc-200 dark:border-zinc-900 flex flex-col shrink-0 overflow-y-auto scrollbar-thin">
-              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-3">
+            <div className="w-full lg:w-72 bg-workspace-sidebar border-b border-workspace-border lg:border-b-0 lg:border-r flex flex-col shrink-0 overflow-y-auto scrollbar-thin">
+              <div className="p-4 border-b border-workspace-border space-y-3">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
                   <PenTool className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-555" />
                   <span>Signature Creator</span>
                 </span>
 
             {/* Ink Swatches Selector */}
-            <div className="flex items-center justify-between bg-zinc-100/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-900 rounded-xl p-2.5">
+            <div className="flex items-center justify-between bg-workspace-muted border border-workspace-border rounded-xl p-2.5">
               <span className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase">Ink Color</span>
               <div className="flex items-center gap-1.5">
                 {inkColors.map((color) => (
@@ -518,9 +528,8 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                 ))}
               </div>
             </div>
-
             {/* Tool Tabs */}
-            <div className="flex rounded-xl bg-zinc-100 dark:bg-zinc-900 p-1 border border-zinc-200 dark:border-zinc-850">
+            <div className="flex rounded-xl bg-workspace-muted p-1 border border-workspace-border">
               {(["draw", "type", "upload"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -529,7 +538,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                     "flex-1 py-1 rounded-lg text-[9px] font-bold transition-all uppercase tracking-wider cursor-pointer text-center",
                     activeTab === tab
                       ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+                      : "text-zinc-555 hover:text-zinc-800 dark:hover:text-zinc-300"
                   )}
                 >
                   {tab === "upload" ? "Upload Stamp" : tab}
@@ -538,11 +547,11 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
             </div>
           </div>
 
-          <div className="p-4 space-y-4 border-b border-zinc-200 dark:border-zinc-900">
+          <div className="p-4 space-y-4 border-b border-workspace-border">
             {/* Draw Pad Canvas */}
             {activeTab === "draw" && (
               <div className="space-y-2.5">
-                <div className="relative border border-dashed border-zinc-300 dark:border-zinc-800 bg-white rounded-2xl overflow-hidden h-36">
+                <div className="relative border border-dashed border-workspace-border bg-white rounded-2xl overflow-hidden h-36">
                   <canvas
                     ref={canvasRef}
                     width={400}
@@ -556,7 +565,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={clearCanvas}
-                    className="flex-1 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold text-zinc-650 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition cursor-pointer"
+                    className="flex-1 py-1.5 rounded-xl border border-workspace-border text-[10px] font-bold text-zinc-650 dark:text-zinc-400 hover:bg-workspace-muted transition cursor-pointer"
                   >
                     Clear
                   </button>
@@ -577,7 +586,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                   type="text"
                   value={typedText}
                   onChange={(e) => setTypedText(e.target.value)}
-                  className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
+                  className="w-full bg-workspace-card border border-workspace-border rounded-xl px-3 py-2 text-xs text-foreground font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
                   placeholder="Enter name..."
                 />
                 
@@ -596,7 +605,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                         "p-2.5 rounded-xl border text-[10px] text-center transition-all cursor-pointer font-bold",
                         selectedFont === font.key
                           ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white shadow-sm"
-                          : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 dark:text-zinc-400 hover:border-zinc-350 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
                       )}
                       style={{ fontFamily: font.style }}
                     >
@@ -616,7 +625,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
 
             {/* Simulated Image Upload */}
             {activeTab === "upload" && (
-              <label className="flex flex-col items-center justify-center border border-dashed border-zinc-800 bg-zinc-950/40 rounded-2xl p-6 cursor-pointer hover:border-zinc-700 transition">
+              <label className="flex flex-col items-center justify-center border border-dashed border-workspace-border bg-workspace-muted rounded-2xl p-6 cursor-pointer hover:border-zinc-700 transition">
                 <Upload className="h-6 w-6 text-zinc-500 mb-2" />
                 <span className="text-[10px] font-bold text-zinc-400">Upload Stamp Image</span>
                 <span className="text-[8px] text-zinc-650 mt-1">PNG, JPG format</span>
@@ -634,7 +643,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
           <div className="flex-1 p-4 space-y-3">
             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Saved Signatures</span>
             {savedSignatures.length === 0 ? (
-              <div className="text-center py-6 text-zinc-650 text-[10px] border border-dashed border-zinc-900/60 rounded-2xl bg-zinc-900/10">
+              <div className="text-center py-6 text-zinc-650 text-[10px] border border-dashed border-workspace-border rounded-2xl bg-workspace-muted">
                 Create a signature above to drag and drop
               </div>
             ) : (
@@ -642,7 +651,15 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                 {savedSignatures.map((sig, idx) => {
                   const isActive = activeSignature === sig;
                   return (
-                    <div key={idx} className="group relative aspect-video bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-900 rounded-2xl p-2.5 flex items-center justify-center cursor-grab hover:border-red-500/25 transition">
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", sig);
+                        setActiveSignature(sig);
+                      }}
+                      className="group relative aspect-video bg-workspace-card border border-workspace-border rounded-2xl p-2.5 flex items-center justify-center cursor-grab hover:border-red-500/25 transition"
+                    >
                       <button
                         onClick={() => setActiveSignature(sig)}
                         className="w-full h-full flex items-center justify-center p-1 cursor-pointer"
@@ -657,7 +674,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                           setSavedSignatures((prev) => prev.filter((_, i) => i !== idx));
                           if (isActive) setActiveSignature(null);
                         }}
-                        className="absolute -top-1.5 -right-1.5 p-1 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-400 hover:text-red-400 rounded-lg border border-zinc-200 dark:border-zinc-850 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-1.5 -right-1.5 p-1 bg-workspace-card border border-workspace-border text-zinc-400 hover:text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Delete Signature"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -673,8 +690,8 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
               <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-3 flex items-center gap-2 mt-4">
                 <MousePointerClick className="h-4 w-4 text-red-400 shrink-0 animate-bounce" />
                 <div>
-                  <span className="text-[10px] font-bold text-red-400 block">Drag & Drop Active</span>
-                  <span className="text-[8px] text-red-500/80 block leading-tight">Drag signature from above onto the document.</span>
+                  <span className="text-[10px] font-bold text-red-400 block">Signature Ready</span>
+                  <span className="text-[8px] text-red-500/80 block leading-tight">Drag onto page (desktop) or tap anywhere on page to place it (mobile/desktop).</span>
                 </div>
               </div>
             )}
@@ -682,20 +699,20 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
         </div>
 
         {/* CENTER PANEL: INTERACTIVE SIGNING VIEWER */}
-        <div className="flex flex-1 flex-col items-center bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
+        <div className="flex flex-1 flex-col items-center bg-workspace-sidebar relative lg:h-full overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
               {/* Interactive Document Area */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
+              <div className="w-full p-4 flex items-center justify-between border-b border-workspace-border z-10 bg-workspace-sidebar/40 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800">
-                    <FileText className="h-4 w-4 text-zinc-300" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-workspace-muted border border-workspace-border">
+                    <FileText className="h-4 w-4 text-foreground" />
                   </div>
                   <div>
-                    <span className="max-w-[200px] block truncate text-xs font-bold text-zinc-200">
+                    <span className="max-w-[200px] block truncate text-xs font-bold text-foreground">
                       {file.name}
                     </span>
-                    <span className="text-[9px] text-zinc-500 font-mono block">
+                    <span className="text-[9px] text-zinc-555 font-mono block">
                       {formatBytes(file.size)} • {totalPages} pages
                     </span>
                   </div>
@@ -706,14 +723,14 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                     setFile(null);
                     setPlacedSignatures([]);
                   }}
-                  className="flex items-center gap-1.5 rounded-lg bg-zinc-900 border border-zinc-850 px-3 py-1.5 text-xs font-bold text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-1.5 rounded-lg bg-workspace-card border border-workspace-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all cursor-pointer shadow-md"
                 >
                   <X className="h-3.5 w-3.5" /> Clear File
                 </button>
               </div>
 
               {/* Viewport page container */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-8">
+              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-2 sm:p-4 lg:p-8">
                 {loading ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
@@ -723,6 +740,16 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                   <div
                     onDragOver={handleDragOver}
                     onDrop={handleDropOnPage}
+                    onClick={(e) => {
+                      if (activeSignature) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const dropX = e.clientX - rect.left;
+                        const dropY = e.clientY - rect.top;
+                        const xPercent = (dropX / rect.width) * 100;
+                        const yPercent = (dropY / rect.height) * 100;
+                        addSignatureAtCoords(xPercent, yPercent, activeSignature);
+                      }
+                    }}
                     className="relative shadow-2xl rounded-lg border border-zinc-900 overflow-hidden bg-white select-none cursor-default"
                     style={{
                       width: `${360 * zoom}px`,
@@ -761,6 +788,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                              width: `${sig.widthPercent}%`,
                              height: `${sig.heightPercent}%`,
                              zIndex: 10,
+                             touchAction: "none",
                            }}
                            onClick={(e) => e.stopPropagation()} // prevent placing a signature on top of another signature
                          >
@@ -783,47 +811,48 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                              onPointerMove={(e) => handleResizePointerMove(e, idx)}
                              onPointerUp={(e) => handleResizePointerUp(e, idx)}
                              className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-red-500 border border-white rounded-full cursor-se-resize z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+                             style={{ touchAction: "none" }}
                            />
-
-                          {/* Remove Signature Hover button */}
-                          <button
-                            onPointerDown={(e) => e.stopPropagation()} // prevent starting drag on close click
-                            onClick={() => handleRemovePlacedSignature(idx)}
-                            className="absolute -top-3.5 -right-3.5 p-1 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-400 rounded-lg shadow-md cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Remove placed signature"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
+ 
+                           {/* Remove Signature Hover button */}
+                           <button
+                             onPointerDown={(e) => e.stopPropagation()} // prevent starting drag on close click
+                             onClick={() => handleRemovePlacedSignature(idx)}
+                             className="absolute -top-3.5 -right-3.5 p-1 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-400 rounded-lg shadow-md cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                             title="Remove placed signature"
+                           >
+                             <X className="h-3 w-3" />
+                           </button>
+                         </div>
+                       ))}
                   </div>
                 )}
               </div>
 
               {/* Page-by-page controls */}
-              <div className="w-full p-4 border-t border-zinc-200 dark:border-zinc-900 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
+              <div className="w-full p-4 border-t border-workspace-border flex items-center justify-between bg-workspace-sidebar/40 backdrop-blur-sm shrink-0 z-10">
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage <= 1}
-                    className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-850 disabled:opacity-30 disabled:hover:bg-white text-zinc-600 dark:text-zinc-350 transition-all cursor-pointer"
+                    className="p-2 rounded-xl bg-workspace-card border border-workspace-border hover:bg-workspace-muted disabled:opacity-30 disabled:hover:bg-workspace-card text-zinc-650 dark:text-zinc-350 transition-all cursor-pointer"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <span className="text-[10px] font-bold font-mono text-zinc-700 dark:text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 px-3 py-2 rounded-xl">
+                  <span className="text-[10px] font-bold font-mono text-zinc-700 dark:text-zinc-400 bg-workspace-card border border-workspace-border px-3 py-2 rounded-xl">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage >= totalPages}
-                    className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-850 disabled:opacity-30 disabled:hover:bg-white text-zinc-600 dark:text-zinc-350 transition-all cursor-pointer"
+                    className="p-2 rounded-xl bg-workspace-card border border-workspace-border hover:bg-workspace-muted disabled:opacity-30 disabled:hover:bg-workspace-card text-zinc-650 dark:text-zinc-350 transition-all cursor-pointer"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
 
                 {/* Zoom Controls */}
-                <div className="flex items-center gap-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 px-4 py-1.5 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3 bg-workspace-card border border-workspace-border px-4 py-1.5 rounded-2xl shadow-sm">
                   <button
                     onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
                     className="p-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
@@ -842,11 +871,11 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
         </div>
 
         {/* RIGHT SIDEBAR: PLACED SIGNATURES & TIPS */}
-        <div className="w-full lg:w-72 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 flex flex-col shrink-0 lg:h-full overflow-hidden">
+        <div className="w-full lg:w-72 bg-workspace-sidebar border-t border-workspace-border lg:border-t-0 lg:border-l flex flex-col shrink-0 lg:h-full overflow-hidden">
           
           {/* Running list of placed signatures */}
-          <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-3 shrink-0 bg-zinc-50 dark:bg-zinc-950">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+          <div className="p-4 border-b border-workspace-border space-y-3 shrink-0 bg-workspace-sidebar">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5">
               <FileCheck className="h-3.5 w-3.5 text-zinc-450 dark:text-zinc-500" />
               <span>Placed Signatures</span>
             </span>
@@ -854,7 +883,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
             {placedSignatures.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500 dark:text-zinc-650 text-[10px] leading-relaxed border border-dashed border-zinc-200 dark:border-zinc-900 rounded-2xl bg-zinc-100/50 dark:bg-zinc-900/10">
+              <div className="text-center py-8 text-zinc-500 dark:text-zinc-650 text-[10px] leading-relaxed border border-dashed border-workspace-border rounded-2xl bg-workspace-muted">
                 No signatures placed yet.<br />Drag a signature from the left sidebar and drop it onto the page.
               </div>
             ) : (
@@ -862,10 +891,10 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                 {placedSignatures.map((sig, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-800 rounded-xl p-3 gap-3 transition"
+                    className="flex items-center justify-between bg-workspace-card border border-workspace-border hover:border-zinc-300 dark:hover:border-zinc-800 rounded-xl p-3 gap-3 transition"
                   >
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="h-10 w-16 bg-white rounded-lg p-1.5 flex items-center justify-center border border-zinc-200 dark:border-zinc-850 shrink-0">
+                      <div className="h-10 w-16 bg-white rounded-lg p-1.5 flex items-center justify-center border border-workspace-border shrink-0">
                         <img src={sig.signatureDataUrl} alt="Placed sig thumb" className="max-h-full max-w-full object-contain" />
                       </div>
                       <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 font-mono">
@@ -874,7 +903,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
                     </div>
                     <button
                       onClick={() => handleRemovePlacedSignature(idx)}
-                      className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-400 dark:text-zinc-450 hover:text-red-500 rounded-lg border border-zinc-200 dark:border-zinc-850 transition cursor-pointer"
+                      className="p-1.5 hover:bg-workspace-muted text-zinc-400 dark:text-zinc-450 hover:text-red-500 rounded-lg border border-workspace-border transition cursor-pointer"
                       title="Remove signature"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -885,8 +914,8 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
             )}
 
             {/* Contextual Tips Panel */}
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+            <div className="rounded-2xl border border-workspace-border bg-workspace-muted p-4 space-y-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5">
                 <HelpCircle className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-555" />
                 <span>Contextual Tips</span>
               </span>
@@ -899,7 +928,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
           </div>
 
           {/* Action button */}
-          <div className="p-4 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 shrink-0">
+          <div className="p-4 border-t border-workspace-border bg-workspace-sidebar shrink-0">
             <button
               onClick={handleProcess}
               disabled={!file || processing || loading || placedSignatures.length === 0}

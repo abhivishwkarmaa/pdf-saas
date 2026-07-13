@@ -15,7 +15,11 @@ export async function ocrPdf(buffer: Buffer, lang: string): Promise<Buffer> {
       const { readdir } = await import("fs/promises");
       const pages = (await readdir(dir))
         .filter((f) => f.startsWith("page") && f.endsWith(".png"))
-        .sort();
+        .sort((a, b) => {
+          const numA = parseInt(a.replace(/[^0-9]/g, ""), 10);
+          const numB = parseInt(b.replace(/[^0-9]/g, ""), 10);
+          return numA - numB;
+        });
 
       const outDoc = await PDFDocument.create();
 

@@ -190,12 +190,12 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
       )}>
         {!file ? (
           <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-zinc-900/30">
-              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
+            <label className="upload-dropzone upload-dropzone-pdf w-full">
+              <span className="upload-icon-container">
+                <Upload />
               </span>
               <span className="text-center">
-                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                   Upload PDF file to add page numbers
                 </p>
                 <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">

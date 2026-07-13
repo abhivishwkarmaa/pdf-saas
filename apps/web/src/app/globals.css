@@ -8,6 +8,11 @@
   --card: #ffffff;
   --muted: #71717a;
   --border: #e4e4e7;
+  --workspace-bg: #ffffff;
+  --workspace-sidebar: #f8fafc;
+  --workspace-card: #ffffff;
+  --workspace-border: #e2e8f0;
+  --workspace-muted: #f1f5f9;
 }
 
 .dark {
@@ -16,6 +21,11 @@
   --card: #18181b;
   --muted: #a1a1aa;
   --border: #3f3f46;
+  --workspace-bg: #09090b;
+  --workspace-sidebar: #09090b80;
+  --workspace-card: #121214;
+  --workspace-border: #1f1f23;
+  --workspace-muted: #18181b;
 }
 
 @theme inline {
@@ -24,6 +34,11 @@
   --color-card: var(--card);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-workspace-bg: var(--workspace-bg);
+  --color-workspace-sidebar: var(--workspace-sidebar);
+  --color-workspace-card: var(--workspace-card);
+  --color-workspace-border: var(--workspace-border);
+  --color-workspace-muted: var(--workspace-muted);
   --font-sans: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -37,92 +52,237 @@ body {
   @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100;
 }
 
-/* Light Theme Overrides for PDF Workspaces */
-html:not(.dark) .pdf-workspace-theme-wrapper {
-  background-color: #ffffff !important;
-  color: #18181b !important;
-  border-color: #e4e4e7 !important;
+/* Upload Dropzone Hover Effects */
+.upload-dropzone {
+  display: flex;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px dashed var(--workspace-border);
+  background-color: var(--workspace-bg);
+  padding: 5rem 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/80,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/60,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/90 {
-  background-color: #f4f4f5 !important; /* bg-zinc-100 */
-  color: #18181b !important;
+.upload-icon-container {
+  display: flex;
+  height: 4rem;
+  width: 4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background-color: var(--workspace-muted);
+  border: 1px solid var(--workspace-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.backdrop-blur-sm,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.backdrop-blur-md {
-  background-color: rgba(244, 244, 245, 0.8) !important;
+.upload-icon-container svg {
+  height: 1.75rem;
+  width: 1.75rem;
+  color: #71717a;
+  transition: color 0.3s ease;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/60,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/40,
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900\/10 {
-  background-color: #e4e4e7 !important; /* bg-zinc-200 */
-  color: #18181b !important;
+/* Category-specific theme variables / classes for hover */
+.upload-dropzone-pdf:hover {
+  border-color: #ef4444 !important; /* red-500 */
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+.upload-dropzone-pdf:hover .upload-icon-container {
+  transform: scale(1.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.upload-dropzone-pdf:hover .upload-icon-container svg {
+  color: #ef4444 !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950.border-t {
-  border-color: #e4e4e7 !important;
+.upload-dropzone-image:hover {
+  border-color: #3b82f6 !important; /* blue-500 */
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+.upload-dropzone-image:hover .upload-icon-container {
+  transform: scale(1.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.upload-dropzone-image:hover .upload-icon-container svg {
+  color: #3b82f6 !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-900,
-html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-800,
-html:not(.dark) .pdf-workspace-theme-wrapper .border-zinc-850 {
-  border-color: #e4e4e7 !important; /* border-zinc-200 */
+.upload-dropzone-text:hover {
+  border-color: #8b5cf6 !important; /* violet-500 */
+  background-color: rgba(139, 92, 246, 0.05) !important;
+}
+.upload-dropzone-text:hover .upload-icon-container {
+  transform: scale(1.1);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+.upload-dropzone-text:hover .upload-icon-container svg {
+  color: #8b5cf6 !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-\[radial-gradient\(ellipse_at_top\,rgba\(20\,20\,25\,0\.7\)\,rgba\(9\,9\,11\,1\)\)\] {
-  background: #f4f4f5 !important; /* light grey viewport background */
+.upload-dropzone-developer:hover {
+  border-color: #f59e0b !important; /* amber-500 */
+  background-color: rgba(245, 158, 11, 0.05) !important;
+}
+.upload-dropzone-developer:hover .upload-icon-container {
+  transform: scale(1.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.upload-dropzone-developer:hover .upload-icon-container svg {
+  color: #f59e0b !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950.shrink-0 {
-  background-color: #f4f4f5 !important;
+.upload-dropzone-calculator:hover {
+  border-color: #14b8a6 !important; /* teal-500 */
+  background-color: rgba(20, 184, 166, 0.05) !important;
+}
+.upload-dropzone-calculator:hover .upload-icon-container {
+  transform: scale(1.1);
+  border-color: rgba(20, 184, 166, 0.3);
+}
+.upload-dropzone-calculator:hover .upload-icon-container svg {
+  color: #14b8a6 !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-100,
-html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-200,
-html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-300,
-html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-400 {
-  color: #27272a !important; /* text-zinc-800 */
+/* Custom Workspace Theme Utilities */
+.ws-layout {
+  background-color: var(--workspace-bg) !important;
+  color: var(--foreground) !important;
+  border-color: var(--workspace-border) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .text-zinc-500 {
-  color: #71717a !important; /* text-zinc-500 */
+.ws-sidebar {
+  background-color: var(--workspace-sidebar) !important;
+  border-color: var(--workspace-border) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper input,
-html:not(.dark) .pdf-workspace-theme-wrapper select,
-html:not(.dark) .pdf-workspace-theme-wrapper textarea {
-  background-color: #ffffff !important;
-  color: #18181b !important;
-  border-color: #ccc !important;
+.ws-card {
+  background-color: var(--workspace-card) !important;
+  border-color: var(--workspace-border) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900.rounded {
-  background-color: #e4e4e7 !important;
+.ws-header {
+  background-color: var(--workspace-muted) !important;
+  border-color: var(--workspace-border) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-950\/40.rounded-2xl {
-  background-color: rgba(228, 228, 230, 0.4) !important;
+.ws-border {
+  border-color: var(--workspace-border) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper .bg-zinc-900.border-zinc-800 {
-  background-color: #ffffff !important;
-  border-color: #e4e4e7 !important;
+.ws-bg {
+  background-color: var(--workspace-bg) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper button:not([style*="background"]):not([style*="color"]):not(.bg-red-600):not(.bg-blue-600):not(.bg-violet-600):not(.bg-amber-600):not(.bg-teal-600) {
-  background-color: #ffffff !important;
-  color: #18181b !important;
-  border-color: #e4e4e7 !important;
+.ws-text {
+  color: var(--foreground) !important;
 }
 
-html:not(.dark) .pdf-workspace-theme-wrapper button:not([style*="background"]):not([style*="color"]):not(.bg-red-600):not(.bg-blue-600):not(.bg-violet-600):not(.bg-amber-600):not(.bg-teal-600):hover {
-  background-color: #f4f4f5 !important;
+/* Compare PDF Workspace Styles */
+.compare-nav-bar {
+  @apply flex items-center justify-between mb-4;
 }
+
+.compare-nav-btn {
+  @apply flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+  color: var(--foreground);
+}
+.compare-nav-btn:hover {
+  background-color: var(--workspace-muted);
+}
+
+.compare-header-bar {
+  @apply flex flex-wrap items-center justify-between border-b p-4 gap-4 w-full;
+  background-color: var(--workspace-sidebar);
+  border-color: var(--workspace-border);
+}
+
+.compare-mode-btn {
+  @apply px-3 py-1 text-xs font-bold rounded-lg border transition cursor-pointer flex items-center gap-1.5;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+  color: #71717a;
+}
+.compare-mode-btn:hover {
+  background-color: var(--workspace-muted);
+}
+.compare-mode-btn-active {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+}
+
+.compare-btn-clear {
+  @apply px-3 py-2 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center gap-1.5;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+}
+.compare-btn-clear:hover {
+  background-color: var(--workspace-muted);
+}
+
+.compare-btn-download {
+  @apply px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer flex items-center gap-2 shadow-md text-white;
+  background-color: #ef4444;
+}
+.compare-btn-download:hover {
+  background-color: #dc2626;
+}
+
+.compare-upload-container {
+  @apply flex-1 flex flex-col justify-between p-8 relative;
+  background-color: var(--workspace-sidebar);
+}
+
+.compare-sparkles-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-extrabold uppercase tracking-widest text-red-500;
+  background-color: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.compare-mode-card {
+  @apply cursor-pointer p-4 rounded-2xl border transition-all duration-300 flex flex-col gap-2 relative overflow-hidden;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+  user-select: none;
+}
+.compare-mode-card:hover {
+  background-color: var(--workspace-muted);
+}
+.compare-mode-card-active {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.compare-slot-card {
+  @apply text-center space-y-3 p-6 rounded-2xl border min-h-[220px] flex flex-col justify-center items-center;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+}
+
+.compare-info-banner {
+  @apply p-4 rounded-2xl border flex items-start gap-2;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+}
+
+.compare-iframe-pane {
+  @apply flex-1 flex flex-col rounded-2xl border overflow-hidden shadow-sm;
+  background-color: var(--workspace-card);
+  border-color: var(--workspace-border);
+}
+
+.compare-iframe-header {
+  @apply flex items-center justify-between border-b px-4 py-2;
+  background-color: var(--workspace-muted);
+  border-color: var(--workspace-border);
+}
+
 

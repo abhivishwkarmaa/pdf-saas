@@ -14,9 +14,11 @@ import {
   CheckCircle,
   FileText,
   Trash2,
+  ArrowLeft,
 } from "lucide-react";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface HtmlToPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -113,10 +115,22 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="flex h-full min-h-[550px] flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-white shadow-2xl lg:flex-row">
+      
+      {/* Back Navigation Bar */}
+      <div className="flex items-center justify-between mb-4">
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-workspace-border bg-workspace-card px-3 py-1.5 text-xs font-semibold text-zinc-650 shadow-sm transition hover:bg-workspace-muted text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+      </div>
+
+      <div className="pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-workspace-bg text-foreground border border-workspace-border w-full lg:flex-row lg:h-[calc(100vh-80px)] min-h-[550px]">
         
         {/* LEFT WORKSPACE: Input area */}
-        <div className="flex flex-1 flex-col justify-between bg-zinc-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] p-8 relative">
+        <div className="flex flex-1 flex-col justify-between bg-workspace-sidebar p-8 relative">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
           
           <div className="z-10 w-full max-w-2xl mx-auto space-y-6 my-auto">
@@ -129,14 +143,14 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
             </div>
 
             {/* Mode Selector Tabs */}
-            <div className="flex p-1.5 bg-zinc-100 dark:bg-zinc-900/60 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-zinc-800 max-w-sm mx-auto">
+            <div className="flex p-1.5 bg-workspace-muted rounded-2xl border border-workspace-border max-w-sm mx-auto w-full">
               <button
                 onClick={() => setActiveTab("file")}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
                   activeTab === "file"
                     ? "bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white shadow-md border border-zinc-200 dark:border-zinc-700"
-                    : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    : "text-zinc-555 hover:text-zinc-700 dark:hover:text-zinc-300"
                 )}
               >
                 <FileCode className="h-4 w-4" />
@@ -148,7 +162,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
                   "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
                   activeTab === "url"
                     ? "bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white shadow-md border border-zinc-200 dark:border-zinc-700"
-                    : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    : "text-zinc-555 hover:text-zinc-700 dark:hover:text-zinc-300"
                 )}
               >
                 <Globe className="h-4 w-4" />
@@ -161,12 +175,12 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
               {activeTab === "file" ? (
                 <div className="w-full">
                   {!file ? (
-                    <label className="group flex w-full cursor-pointer flex-col items-center gap-5 rounded-3xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/10 backdrop-blur-sm px-6 py-12 transition-all duration-300 hover:border-zinc-400 dark:hover:border-zinc-700 hover:bg-zinc-150/40 dark:hover:bg-zinc-900/20">
-                      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 transition-all duration-300 group-hover:scale-110 group-hover:border-zinc-400 dark:group-hover:border-zinc-700">
-                        <Upload className="h-6 w-6 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
+                    <label className="upload-dropzone upload-dropzone-pdf w-full">
+                      <span className="upload-icon-container">
+                        <Upload />
                       </span>
                       <span className="text-center">
-                        <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">
+                        <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                           Choose HTML file or drag & drop here
                         </p>
                         <p className="mt-1 text-xs text-zinc-500">
@@ -238,13 +252,13 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
         </div>
 
         {/* RIGHT PANEL: Settings & Actions */}
-        <div className="w-full bg-zinc-50 dark:bg-zinc-950 p-8 border-t border-zinc-200 dark:border-zinc-900 lg:w-80 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 flex flex-col justify-between shrink-0">
+        <div className="w-full bg-workspace-sidebar p-8 border-t border-workspace-border lg:w-80 lg:border-t-0 lg:border-l flex flex-col justify-between shrink-0">
           <div className="space-y-6">
             
             {/* Header */}
-            <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-900 pb-4">
+            <div className="flex items-center gap-2 border-b border-workspace-border pb-4">
               <Settings className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-              <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-700 dark:text-zinc-200">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-750 dark:text-zinc-200">
                 PDF Layout Settings
               </h2>
             </div>
@@ -263,7 +277,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
                         "py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer",
                         pageSize === size
                           ? "bg-white dark:bg-white/5 border-zinc-300 dark:border-white/20 text-zinc-900 dark:text-white shadow-sm"
-                          : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 hover:text-zinc-705 dark:hover:text-zinc-300"
                       )}
                     >
                       {size}
@@ -284,7 +298,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
                         "py-2 rounded-xl text-xs font-bold border capitalize transition-all cursor-pointer",
                         orientation === orient
                           ? "bg-white dark:bg-white/5 border-zinc-300 dark:border-white/20 text-zinc-900 dark:text-white shadow-sm"
-                          : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 hover:text-zinc-705 dark:hover:text-zinc-300"
                       )}
                     >
                       {orient}
@@ -305,7 +319,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
                         "py-2 rounded-xl text-[10px] font-bold border capitalize transition-all cursor-pointer",
                         margin === m
                           ? "bg-white dark:bg-white/5 border-zinc-300 dark:border-white/20 text-zinc-900 dark:text-white shadow-sm"
-                          : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                          : "bg-workspace-card border-workspace-border text-zinc-555 hover:text-zinc-705 dark:hover:text-zinc-300"
                       )}
                     >
                       {m}
@@ -317,7 +331,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
           </div>
 
           {/* Action button */}
-          <div className="mt-8 border-t border-zinc-200 dark:border-zinc-900 pt-6">
+          <div className="mt-8 border-t border-workspace-border pt-6">
             <button
               onClick={handleConvert}
               disabled={processing || (activeTab === "file" ? !file : !url)}
