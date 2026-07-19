@@ -1,13 +1,28 @@
 export async function convertImageFormat(
   file: File,
-  mime: "image/jpeg" | "image/png" | "image/webp"
+  mime: "image/jpeg" | "image/png" | "image/webp",
+  options?: { maxDimension?: number }
 ): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+
+  if (options?.maxDimension && options.maxDimension > 0) {
+    if (width > options.maxDimension || height > options.maxDimension) {
+      if (width > height) {
+        height = Math.round((height * options.maxDimension) / width);
+        width = options.maxDimension;
+      } else {
+        width = Math.round((width * options.maxDimension) / height);
+        height = options.maxDimension;
+      }
+    }
+  }
+
   const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bitmap, 0, 0);
+  ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -17,6 +32,7 @@ export async function convertImageFormat(
     );
   });
 }
+
 
 export async function compressImage(file: File, quality: number): Promise<Blob> {
   return convertImageFormat(file, "image/jpeg").then(async (blob) => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
+import JSZip from "jszip";
 import * as pdf from "@/lib/client/pdf-tools";
 import * as img from "@/lib/client/image-tools";
 import { downloadBlob } from "@/lib/client/pdf-tools";
@@ -157,12 +158,28 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "signed.pdf");
           break;
-        case "jpg-to-png":
+        case "jpg-to-png": {
           setStatusMessage("Converting format... 50%");
-          blob = await img.convertImageFormat(files[0], "image/png");
-          setStatusMessage("Downloading... 100%");
-          downloadBlob(blob, changeExtension(files[0].name, "png"));
+          const maxDimension = 800;
+          if (files.length === 1) {
+            blob = await img.convertImageFormat(files[0], "image/png", { maxDimension });
+            setStatusMessage("Downloading... 100%");
+            downloadBlob(blob, changeExtension(files[0].name, "png"));
+          } else {
+            const zip = new JSZip();
+            for (let i = 0; i < files.length; i++) {
+              setStatusMessage(`Converting image ${i + 1} of ${files.length}...`);
+              const convertedBlob = await img.convertImageFormat(files[i], "image/png", { maxDimension });
+              const name = changeExtension(files[i].name, "png");
+              zip.file(name, convertedBlob);
+            }
+            setStatusMessage("Creating ZIP archive...");
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            setStatusMessage("Downloading ZIP... 100%");
+            downloadBlob(zipBlob, "converted-images.zip");
+          }
           break;
+        }
         case "png-to-jpg":
         case "bmp-to-jpg":
           setStatusMessage("Converting format... 50%");
