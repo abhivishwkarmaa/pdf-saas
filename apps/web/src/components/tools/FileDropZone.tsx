@@ -1,43 +1,15 @@
 "use client";
 
-import { Upload, X } from "lucide-react";
+import { Upload, X, ShieldAlert } from "lucide-react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { validateFileSecurity } from "@/lib/file-security";
 
 interface FileDropZoneProps {
   tool: ToolDefinition;
   files: File[];
   onFiles: (files: File[]) => void;
-}
-
-function isFileTypeAccepted(file: File, acceptList: string[]): boolean {
-  if (!acceptList || acceptList.length === 0) return true;
-  const fileName = file.name.toLowerCase();
-  const fileType = file.type.toLowerCase();
-  
-  return acceptList.some((pattern) => {
-    const cleanPattern = pattern.trim().toLowerCase();
-    if (cleanPattern.startsWith(".")) {
-      return fileName.endsWith(cleanPattern);
-    } else if (cleanPattern.endsWith("/*")) {
-      const group = cleanPattern.slice(0, -2);
-      return fileType.startsWith(group);
-    } else {
-      if (fileType === cleanPattern) return true;
-      
-      const parts = cleanPattern.split("/");
-      if (parts.length === 2) {
-        const ext = parts[1];
-        if (fileName.endsWith("." + ext)) return true;
-        if (ext === "jpeg" && fileName.endsWith(".jpg")) return true;
-        if (ext === "jpg" && fileName.endsWith(".jpeg")) return true;
-        if (ext === "heic" && fileName.endsWith(".heif")) return true;
-        if (ext === "heif" && fileName.endsWith(".heic")) return true;
-      }
-      return false;
-    }
-  });
 }
 
 function formatBytes(bytes: number): string {
@@ -51,8 +23,46 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
     onFiles(files.filter((_, i) => i !== index));
   };
 
+  const handleFileSelection = async (pickedFiles: File[]) => {
+    const validPicked: File[] = [];
+
+    for (const f of pickedFiles) {
+      const secResult = await validateFileSecurity(f, f.name, tool.accept, tool.maxMb);
+      if (!secResult.valid) {
+        toast.error(secResult.error || `File "${f.name}" was rejected for security or format reasons.`, {
+          icon: <ShieldAlert className="h-5 w-5 text-red-500" />,
+          duration: 5000,
+        });
+      } else {
+        validPicked.push(f);
+      }
+    }
+
+    if (validPicked.length === 0) return;
+
+    if (tool.maxFiles > 1 && files.length > 0) {
+      onFiles([...files, ...validPicked].slice(0, tool.maxFiles));
+    } else {
+      onFiles(validPicked.slice(0, tool.maxFiles));
+    }
+  };
+
   return (
-    <label className={cn("upload-dropzone w-full", `upload-dropzone-${tool.category}`)}>
+    <label
+      className={cn("upload-dropzone w-full cursor-pointer", `upload-dropzone-${tool.category}`)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropped = Array.from(e.dataTransfer.files ?? []);
+        if (dropped.length > 0) {
+          void handleFileSelection(dropped);
+        }
+      }}
+    >
       <span className="upload-icon-container">
         <Upload />
       </span>
@@ -72,31 +82,8 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
         multiple={tool.maxFiles > 1}
         onChange={(e) => {
           const picked = Array.from(e.target.files ?? []);
-          const invalidFiles = picked.filter(f => !isFileTypeAccepted(f, tool.accept));
-          
-          if (invalidFiles.length > 0) {
-            const acceptedDisplay = tool.accept
-              .map(a => a.startsWith(".") ? a.toUpperCase() : a.replace("image/", "").replace("application/", "").toUpperCase())
-              .join(", ");
-            toast.error(`Invalid file format. This tool only accepts: ${acceptedDisplay}`);
-            
-            const validPicked = picked.filter(f => isFileTypeAccepted(f, tool.accept));
-            if (validPicked.length === 0) {
-              e.target.value = "";
-              return;
-            }
-            
-            if (tool.maxFiles > 1 && files.length > 0) {
-              onFiles([...files, ...validPicked].slice(0, tool.maxFiles));
-            } else {
-              onFiles(validPicked.slice(0, tool.maxFiles));
-            }
-          } else {
-            if (tool.maxFiles > 1 && files.length > 0) {
-              onFiles([...files, ...picked].slice(0, tool.maxFiles));
-            } else {
-              onFiles(picked.slice(0, tool.maxFiles));
-            }
+          if (picked.length > 0) {
+            void handleFileSelection(picked);
           }
           e.target.value = "";
         }}
@@ -108,7 +95,7 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
               key={`${f.name}-${i}`}
               className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
             >
-              <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">
+              <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300 font-medium">
                 {f.name}
               </span>
               <span className="shrink-0 text-xs text-zinc-500">{formatBytes(f.size)}</span>

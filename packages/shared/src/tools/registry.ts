@@ -20,7 +20,7 @@ export const TOOL_CATEGORIES: Record<
   },
   developer: {
     label: "Developer Tools",
-    description: "JSON, Base64, URL encoding, and SHA-256 — private in-browser utilities",
+    description: "JSON, Base64, URL encoding, and MD5 & SHA Hash Generator — private in-browser utilities",
   },
   calculator: {
     label: "Calculators",
@@ -843,7 +843,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     slug: "hash-generator",
     name: "Hash Generator",
-    description: "Generate MD5 and SHA-256 hashes",
+    description: "Generate MD5, SHA-1, SHA-256, SHA-384, and SHA-512 hashes",
     category: "developer",
     tier: "sync",
     kind: "utility",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToolBySlug, resolveRuntime } from "@pdf-saas/shared";
 import { processOnServer } from "@/lib/server/process";
+import { validateFileSecurity } from "@/lib/file-security";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -34,13 +35,26 @@ export async function POST(
       return NextResponse.json({ error: "No files or URL provided" }, { status: 400 });
     }
     if (files.length > tool.maxFiles) {
-      return NextResponse.json({ error: "Too many files" }, { status: 400 });
+      return NextResponse.json({ error: `Too many files. Max allowed is ${tool.maxFiles}` }, { status: 400 });
     }
 
     const filenames = files.map((f) => f.name);
     const buffers = await Promise.all(
       files.map(async (f) => Buffer.from(await f.arrayBuffer()))
     );
+
+    // Enforce Security & Magic Byte Validation on all uploaded file payloads
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const buffer = buffers[i];
+      const secResult = await validateFileSecurity(buffer, file.name, tool.accept, tool.maxMb);
+      if (!secResult.valid) {
+        return NextResponse.json(
+          { error: secResult.error || `Security Error: File "${file.name}" was rejected.` },
+          { status: 400 }
+        );
+      }
+    }
 
     const result = await processOnServer(slug, buffers, options, filenames);
 
@@ -60,6 +74,6 @@ export async function POST(
   } catch (e) {
     console.error("API PROCESS ERROR:", e);
     const message = e instanceof Error ? e.message : "Processing failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

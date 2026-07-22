@@ -12,7 +12,7 @@ COPY scripts/docker-npm-native.sh /tmp/docker-npm-native.sh
 
 # Install inside Linux container so native modules match the image arch (not macOS lockfile)
 RUN sed -i 's/\r$//' /tmp/docker-npm-native.sh \
-  && npm config set registry http://registry.npmjs.org/ \
+  && npm config set registry https://registry.npmjs.org/ \
   && npm config set fetch-retries 5 \
   && npm config set fetch-retry-mintimeout 20000 \
   && npm config set fetch-retry-maxtimeout 120000 \
@@ -41,20 +41,20 @@ FROM node:22-bookworm-slim AS runner
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    ghostscript \
-    poppler-utils \
-    qpdf \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    libreoffice-writer \
-    libreoffice-calc \
-    libreoffice-impress \
-    fonts-dejavu-core \
-    fonts-liberation \
-    python3 \
-    python3-pip \
-    chromium \
+  ca-certificates \
+  ghostscript \
+  poppler-utils \
+  qpdf \
+  tesseract-ocr \
+  tesseract-ocr-eng \
+  libreoffice-writer \
+  libreoffice-calc \
+  libreoffice-impress \
+  fonts-dejavu-core \
+  fonts-liberation \
+  python3 \
+  python3-pip \
+  chromium \
   && pip3 install --default-timeout=1000 --retries 10 --no-cache-dir "PyMuPDF<1.24.0" pdf2docx --break-system-packages \
   && rm -rf /var/lib/apt/lists/* \
   && command -v soffice \
@@ -87,6 +87,6 @@ COPY apps/web/next.config.ts apps/web/
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=> xit(1))"
 
 CMD ["npm", "run", "start", "-w", "@pdf-saas/web"]
