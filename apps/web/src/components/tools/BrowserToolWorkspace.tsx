@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
 import JSZip from "jszip";
@@ -34,6 +34,26 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
+  // Live Text Editor State for Text Category Tools ONLY
+  const isTextTool = tool.category === "text";
+  const [editedText, setEditedText] = useState<string>("");
+  const [originalFileText, setOriginalFileText] = useState<string>("");
+
+  useEffect(() => {
+    if (isTextTool && files.length > 0) {
+      files[0]
+        .text()
+        .then((text) => {
+          setEditedText(text);
+          setOriginalFileText(text);
+        })
+        .catch(() => {});
+    } else if (isTextTool && files.length === 0) {
+      setEditedText("");
+      setOriginalFileText("");
+    }
+  }, [files, isTextTool]);
+
   const handleFilesChange = (newFiles: File[]) => {
     if (newFiles.length < files.length) {
       const deletedIndex = files.findIndex((f) => !newFiles.includes(f));
@@ -50,8 +70,17 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
   };
 
   const process = async () => {
-    if (files.length === 0) {
-      toast.error("Please select file(s)");
+    let filesToSend = files;
+
+    if (isTextTool && editedText.trim().length > 0) {
+      const fileName = files[0]?.name || "document.txt";
+      const fileType = files[0]?.type || "text/plain";
+      const updatedFile = new File([editedText], fileName, { type: fileType });
+      filesToSend = [updatedFile];
+    }
+
+    if (filesToSend.length === 0) {
+      toast.error("Please select or enter file text");
       return;
     }
     setProcessing(true);
@@ -62,12 +91,12 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
 
       switch (slug) {
         case "merge-pdf":
-          blob = await pdf.mergePdfs(files, (pct) => setStatusMessage(`Merging PDFs... ${pct}%`));
+          blob = await pdf.mergePdfs(filesToSend, (pct) => setStatusMessage(`Merging PDFs... ${pct}%`));
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "merged.pdf");
           break;
         case "split-pdf": {
-          const parts = await pdf.splitPdf(files[0], options.ranges || "1", (pct) => setStatusMessage(`Splitting PDF... ${pct}%`));
+          const parts = await pdf.splitPdf(filesToSend[0], options.ranges || "1", (pct) => setStatusMessage(`Splitting PDF... ${pct}%`));
           if (parts.length > 10) {
             throw new Error("You can split into a maximum of 10 PDF files at a time to prevent browser download blocks.");
           }
@@ -78,26 +107,26 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         }
         case "remove-pages":
           setStatusMessage("Processing layout... 40%");
-          blob = await pdf.removePages(files[0], options.pages || "1");
+          blob = await pdf.removePages(filesToSend[0], options.pages || "1");
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "removed.pdf");
           break;
         case "extract-pages":
           setStatusMessage("Processing layout... 40%");
-          blob = await pdf.extractPages(files[0], options.pages || "1");
+          blob = await pdf.extractPages(filesToSend[0], options.pages || "1");
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "extracted.pdf");
           break;
         case "organize-pdf":
           setStatusMessage("Re-ordering pages... 40%");
-          blob = await pdf.organizePdf(files[0], options.order || "1");
+          blob = await pdf.organizePdf(filesToSend[0], options.order || "1");
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "organized.pdf");
           break;
         case "rotate-pdf":
           setStatusMessage("Rotating document... 40%");
           blob = await pdf.rotatePdf(
-            files[0],
+            filesToSend[0],
             (Number(options.angle) || 90) as 90 | 180 | 270,
             options.pages
           );
@@ -108,7 +137,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         case "png-to-pdf":
         case "scan-to-pdf":
         case "image-to-pdf": {
-          const processedFiles = [...files];
+          const processedFiles = [...filesToSend];
           for (let i = 0; i < processedFiles.length; i++) {
             setStatusMessage(`Rotating images... ${Math.round((i / processedFiles.length) * 100)}%`);
             const rot = rotations[i] || 0;
@@ -124,19 +153,19 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
         }
         case "watermark-pdf":
           setStatusMessage("Applying watermark... 50%");
-          blob = await pdf.watermarkPdf(files[0], options.text || "CONFIDENTIAL");
+          blob = await pdf.watermarkPdf(filesToSend[0], options.text || "CONFIDENTIAL");
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "watermarked.pdf");
           break;
         case "page-numbers":
           setStatusMessage("Adding page numbers... 50%");
-          blob = await pdf.addPageNumbers(files[0]);
+          blob = await pdf.addPageNumbers(filesToSend[0]);
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "numbered.pdf");
           break;
         case "txt-to-pdf":
           setStatusMessage("Generating layout... 50%");
-          blob = await pdf.txtToPdf(files[0]);
+          blob = await pdf.txtToPdf(filesToSend[0] || editedText);
           setStatusMessage("Downloading... 100%");
           downloadBlob(blob, "document.pdf");
           break;
@@ -266,6 +295,10 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
             onFilesChange={handleFilesChange}
             rotations={rotations}
             onRotationsChange={setRotations}
+            editedText={editedText}
+            onEditedTextChange={setEditedText}
+            originalFileText={originalFileText}
+            onResetFileText={() => setEditedText(originalFileText)}
           />
         }
       >
@@ -276,7 +309,7 @@ export function BrowserToolWorkspace({ tool }: BrowserToolWorkspaceProps) {
           label={`Process ${tool.name}`}
           loading={processing}
           loadingLabel={statusMessage || "Processing..."}
-          disabled={files.length === 0}
+          disabled={files.length === 0 && editedText.trim().length === 0}
           onClick={() => void process()}
         />
       </ToolWorkspaceLayout>

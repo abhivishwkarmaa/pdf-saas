@@ -17,6 +17,79 @@ export interface FileValidationResult {
 }
 
 /**
+ * Known MIME types mapped to their allowed file extensions.
+ */
+export const MIME_TO_EXTENSIONS: Record<string, string[]> = {
+  "text/markdown": [".md", ".markdown", ".mdown", ".mkd", ".txt"],
+  "text/x-markdown": [".md", ".markdown", ".mdown", ".mkd", ".txt"],
+  "text/plain": [".txt", ".text", ".log", ".md", ".markdown"],
+  "application/pdf": [".pdf"],
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/jpg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/gif": [".gif"],
+  "image/bmp": [".bmp"],
+  "image/webp": [".webp"],
+  "image/heic": [".heic", ".heif"],
+  "image/heif": [".heic", ".heif"],
+  "image/svg+xml": [".svg"],
+  "image/avif": [".avif"],
+  "application/msword": [".doc"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+  "application/vnd.ms-excel": [".xls"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  "application/vnd.ms-powerpoint": [".ppt"],
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+  "application/epub+zip": [".epub"],
+  "application/x-epub+zip": [".epub"],
+  "application/rtf": [".rtf"],
+  "text/rtf": [".rtf"],
+  "application/x-tex": [".tex"],
+  "text/x-tex": [".tex"],
+  "application/x-iwork-pages-sffpages": [".pages"],
+  "application/vnd.apple.pages": [".pages"],
+  "text/html": [".html", ".htm"],
+};
+
+/**
+ * Checks if a file name is accepted given an accept pattern list (MIME types or extensions).
+ */
+export function isFileAccepted(fileName: string, acceptList: string[]): boolean {
+  if (!acceptList || acceptList.length === 0) return true;
+  if (!fileName) return false;
+  
+  const ext = "." + fileName.split(".").pop()?.toLowerCase().trim();
+
+  return acceptList.some((pattern) => {
+    const p = pattern.trim().toLowerCase();
+    
+    // 1. Direct extension match (e.g., ".md", ".markdown", ".pdf")
+    if (p.startsWith(".")) {
+      return p === ext;
+    }
+
+    // 2. Lookup in MIME_TO_EXTENSIONS dictionary
+    const allowedExts = MIME_TO_EXTENSIONS[p];
+    if (allowedExts && allowedExts.includes(ext)) {
+      return true;
+    }
+
+    // 3. Fallback MIME pattern matching
+    if (p.includes("/")) {
+      const [mainType, subType] = p.split("/");
+      if (subType === "*") return true;
+      const cleanSub = subType.replace(/^x-/, "");
+      const cleanExt = ext.slice(1);
+      if (cleanSub === cleanExt || cleanSub.includes(cleanExt) || cleanExt.includes(cleanSub)) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
+
+/**
  * Checks file extension against dangerous/executable blacklists.
  */
 export function isDangerousExtension(fileName: string): boolean {
@@ -132,15 +205,7 @@ export async function validateFileSecurity(
 
   // 2. Accept list check
   if (acceptList && acceptList.length > 0) {
-    const ext = "." + fileName.split(".").pop()?.toLowerCase();
-    const isAccepted = acceptList.some((pattern) => {
-      const p = pattern.trim().toLowerCase();
-      if (p.startsWith(".")) return p === ext;
-      if (p.includes("/")) return ext === "." + p.split("/")[1];
-      return false;
-    });
-
-    if (!isAccepted) {
+    if (!isFileAccepted(fileName, acceptList)) {
       return {
         valid: false,
         error: `Unsupported file type for this tool (${fileName}).`,

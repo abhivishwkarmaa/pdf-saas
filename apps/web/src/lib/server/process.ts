@@ -5,7 +5,7 @@ import { compressPdf } from "./handlers/compress";
 import { convertOffice } from "./handlers/office";
 import { ocrPdf } from "./handlers/ocr";
 import { comparePdfs } from "./handlers/compare";
-import { htmlToPdf } from "./handlers/html";
+import { htmlToPdf, markdownToPdf } from "./handlers/html";
 import { imageToWord } from "./handlers/image-word";
 import { repairPdf } from "./handlers/repair";
 import { pdfToPdfA } from "./handlers/pdfa";

@@ -5,12 +5,21 @@ import { useEffect, useState } from "react";
 const TEXT_TYPES = new Set([
   "text/plain",
   "text/markdown",
+  "text/x-markdown",
   "text/rtf",
   "application/x-tex",
 ]);
 
+const TEXT_EXTENSIONS = new Set(["md", "markdown", "mdown", "mkd", "txt", "rtf", "tex", "log"]);
+
+function isTextFile(file: File): boolean {
+  if (TEXT_TYPES.has(file.type)) return true;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return TEXT_EXTENSIONS.has(ext);
+}
+
 function updateTextPreview(file: File | undefined, setSnippet: (s: string | null) => void, cancelled: { current: boolean }) {
-  if (!file || !TEXT_TYPES.has(file.type)) {
+  if (!file || !isTextFile(file)) {
     if (!cancelled.current) setSnippet(null);
     return;
   }

@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@pdf-saas/shared": "*",
     "bullmq": "^5.41.0",
     "class-variance-authority": "^0.7.1",

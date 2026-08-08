@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
 import { useFilePreviewUrls } from "@/hooks/use-file-preview-urls";
@@ -28,12 +28,41 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
+  // Live Text Editor State for Text Category Tools ONLY
+  const isTextTool = tool.category === "text";
+  const [editedText, setEditedText] = useState<string>("");
+  const [originalFileText, setOriginalFileText] = useState<string>("");
+
+  useEffect(() => {
+    if (isTextTool && files.length > 0) {
+      files[0]
+        .text()
+        .then((text) => {
+          setEditedText(text);
+          setOriginalFileText(text);
+        })
+        .catch(() => {});
+    } else if (isTextTool && files.length === 0) {
+      setEditedText("");
+      setOriginalFileText("");
+    }
+  }, [files, isTextTool]);
+
   const process = async () => {
-    if (files.length === 0) {
-      toast.error("Please select file(s)");
+    let filesToSend = files;
+
+    if (isTextTool && editedText.trim().length > 0) {
+      const fileName = files[0]?.name || (tool.slug.includes("markdown") ? "document.md" : "document.txt");
+      const fileType = files[0]?.type || "text/plain";
+      const updatedFile = new File([editedText], fileName, { type: fileType });
+      filesToSend = [updatedFile];
+    }
+
+    if (filesToSend.length === 0) {
+      toast.error("Please select or enter file text");
       return;
     }
-    if (files.length > tool.maxFiles) {
+    if (filesToSend.length > tool.maxFiles) {
       toast.error(`Maximum ${tool.maxFiles} file(s)`);
       return;
     }
@@ -54,7 +83,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
 
     try {
       const formData = new FormData();
-      files.forEach((f) => formData.append("files", f));
+      filesToSend.forEach((f) => formData.append("files", f));
       formData.append("options", JSON.stringify(options));
 
       const xhr = new XMLHttpRequest();
@@ -158,6 +187,10 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
             fileUrls={fileUrls}
             textSnippet={textSnippet}
             options={options}
+            editedText={editedText}
+            onEditedTextChange={setEditedText}
+            originalFileText={originalFileText}
+            onResetFileText={() => setEditedText(originalFileText)}
           />
         }
       >
@@ -168,7 +201,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
           label={`Process ${tool.name}`}
           loading={processing}
           loadingLabel={statusMessage || "Processing..."}
-          disabled={files.length === 0}
+          disabled={files.length === 0 && editedText.trim().length === 0}
           onClick={() => void process()}
         />
       </ToolWorkspaceLayout>

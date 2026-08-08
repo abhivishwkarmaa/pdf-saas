@@ -9,11 +9,13 @@ import { CropPdfWorkspace } from "@/components/tools/CropPdfWorkspace";
 import { CropImageWorkspace } from "@/components/tools/CropImageWorkspace";
 import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
+import { TextToPdfWorkspace } from "@/components/tools/TextToPdfWorkspace";
 import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
 import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace";
 import { SignPdfWorkspace } from "@/components/tools/SignPdfWorkspace";
 import { ComparePdfWorkspace } from "@/components/tools/ComparePdfWorkspace";
 import { MergePdfWorkspace } from "@/components/tools/MergePdfWorkspace";
+import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -68,6 +70,14 @@ export default async function ToolPage({ params }: PageProps) {
     return <HtmlToPdfWorkspace tool={tool} />;
   }
 
+  if (slug === "txt-to-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <TextToPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
   if (slug === "page-numbers") {
     return <PageNumbersWorkspace tool={tool} />;
   }
@@ -90,6 +100,14 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "watermark-pdf") {
     return <WatermarkPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "json-formatter") {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <JsonFormatterWorkspace tool={tool} />
+      </div>
+    );
   }
 
   const theme = CATEGORY_THEME[tool.category];

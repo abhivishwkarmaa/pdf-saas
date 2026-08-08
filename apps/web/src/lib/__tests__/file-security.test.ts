@@ -96,6 +96,42 @@ async function runSecurityTests() {
   const batFile = await validateFileSecurity(Buffer.from("echo hello"), "payload.bat");
   assert(!batFile.valid, "Pipeline blocks payload.bat");
 
+  // 6. Markdown & All Tool Accept List Verification
+  console.log("\n--- 6. All Tool Accept List Verification ---");
+  const mdBuf = Buffer.from("# Hello World\nThis is markdown text.");
+  const mdRes = await validateFileSecurity(mdBuf, "notes.md", ["text/markdown", "text/plain"]);
+  assert(mdRes.valid, "Allows .md file with ['text/markdown', 'text/plain'] accept list");
+
+  const markdownExtRes = await validateFileSecurity(mdBuf, "document.markdown", [".md", ".markdown", "text/markdown"]);
+  assert(markdownExtRes.valid, "Allows .markdown file with explicit extension accept list");
+
+  // Valid Zip magic for DOCX/XLSX/PPTX/EPUB
+  const zipMagicBuf = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
+  
+  const docxRes = await validateFileSecurity(zipMagicBuf, "report.docx", [".docx", ".doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
+  assert(docxRes.valid, "Allows .docx file for Word to PDF tool");
+
+  const xlsxRes = await validateFileSecurity(zipMagicBuf, "sheet.xlsx", [".xlsx", ".xls", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
+  assert(xlsxRes.valid, "Allows .xlsx file for Excel to PDF tool");
+
+  const pptxRes = await validateFileSecurity(zipMagicBuf, "slides.pptx", [".pptx", ".ppt", "application/vnd.openxmlformats-officedocument.presentationml.presentation"]);
+  assert(pptxRes.valid, "Allows .pptx file for PowerPoint to PDF tool");
+
+  const epubRes = await validateFileSecurity(zipMagicBuf, "book.epub", [".epub", "application/epub+zip"]);
+  assert(epubRes.valid, "Allows .epub file for EPUB to PDF tool");
+
+  const jpgMagicBuf = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+  const jpgRes = await validateFileSecurity(jpgMagicBuf, "photo.jpg", [".jpg", ".jpeg", "image/jpeg", "image/jpg"]);
+  assert(jpgRes.valid, "Allows .jpg file for JPG to PDF / Image tools");
+
+  const pngMagicBuf = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const pngRes = await validateFileSecurity(pngMagicBuf, "graphic.png", [".png", "image/png"]);
+  assert(pngRes.valid, "Allows .png file for PNG tools");
+
+  const htmlBuf = Buffer.from("<!DOCTYPE html><html><body><h1>Test</h1></body></html>");
+  const htmlRes = await validateFileSecurity(htmlBuf, "page.html", [".html", ".htm", "text/html"]);
+  assert(htmlRes.valid, "Allows .html file for HTML to PDF tool");
+
   console.log("\n=========================================");
   console.log(`   TEST RESULTS: ${passed} PASSED, ${failed} FAILED   `);
   console.log("=========================================\n");

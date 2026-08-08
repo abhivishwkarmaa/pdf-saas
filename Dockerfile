@@ -87,6 +87,6 @@ COPY apps/web/next.config.ts apps/web/
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=> xit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=> process.exit(1))"
 
 CMD ["npm", "run", "start", "-w", "@pdf-saas/web"]

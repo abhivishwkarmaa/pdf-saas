@@ -514,31 +514,215 @@ function toAlpha(num: number): string {
   return alpha || "A";
 }
 
-export async function txtToPdf(file: File): Promise<Blob> {
-  const text = await file.text();
+export interface TextToPdfOptions {
+  pageSize?: "A4" | "Letter" | "Legal";
+  orientation?: "portrait" | "landscape";
+  fontFamily?: "Helvetica" | "TimesRoman" | "Courier";
+  fontSize?: number;
+  lineSpacing?: number;
+  margin?: number;
+}
+
+export async function txtToPdf(
+  input: File | string,
+  options: TextToPdfOptions = {}
+): Promise<Blob> {
+  const text = typeof input === "string" ? input : await input.text();
   const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  let page = doc.addPage([612, 792]);
-  const margin = 50;
-  const fontSize = 11;
-  const lineHeight = 14;
-  let y = 792 - margin;
-  const lines = text.split("\n");
-  for (const line of lines) {
-    if (y < margin + lineHeight) {
-      page = doc.addPage([612, 792]);
-      y = 792 - margin;
-    }
-    const cleanLine = line.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
-    page.drawText(cleanLine, {
-      x: margin,
-      y,
-      size: fontSize,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
-    });
-    y -= lineHeight;
+
+  let fontRef = StandardFonts.Helvetica;
+  let fontBoldRef = StandardFonts.HelveticaBold;
+  let fontObliqueRef = StandardFonts.HelveticaOblique;
+
+  if (options.fontFamily === "TimesRoman") {
+    fontRef = StandardFonts.TimesRoman;
+    fontBoldRef = StandardFonts.TimesRomanBold;
+    fontObliqueRef = StandardFonts.TimesRomanItalic;
+  } else if (options.fontFamily === "Courier") {
+    fontRef = StandardFonts.Courier;
+    fontBoldRef = StandardFonts.CourierBold;
+    fontObliqueRef = StandardFonts.CourierOblique;
   }
+
+  const font = await doc.embedFont(fontRef);
+  const fontBold = await doc.embedFont(fontBoldRef);
+  const fontOblique = await doc.embedFont(fontObliqueRef);
+
+  let [baseWidth, baseHeight] = [612, 792]; // Letter default
+  if (options.pageSize === "A4") {
+    [baseWidth, baseHeight] = [595.28, 841.89];
+  } else if (options.pageSize === "Legal") {
+    [baseWidth, baseHeight] = [612, 1008];
+  }
+
+  const isLandscape = options.orientation === "landscape";
+  const pageWidth = isLandscape ? baseHeight : baseWidth;
+  const pageHeight = isLandscape ? baseWidth : baseHeight;
+
+  const margin = options.margin !== undefined ? options.margin : 50;
+  const baseFontSize = options.fontSize || 11;
+  const spacingMultiplier = options.lineSpacing || 1.3;
+  const baseLineHeight = baseFontSize * spacingMultiplier;
+
+  let page = doc.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - margin;
+
+  const rawLines = text.split("\n");
+
+  for (let rawLine of rawLines) {
+    const cleanLine = rawLine.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
+
+    if (!cleanLine.trim()) {
+      if (y < margin + baseLineHeight) {
+        page = doc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+      y -= baseLineHeight;
+      continue;
+    }
+
+    let lineText = cleanLine;
+    let currentFont = font;
+    let currentFontSize = baseFontSize;
+    let isQuote = false;
+    let isHeading = false;
+    let indentX = margin;
+
+    // Headings
+    if (lineText.startsWith("# ")) {
+      lineText = lineText.slice(2).trim();
+      currentFont = fontBold;
+      currentFontSize = baseFontSize * 1.45;
+      isHeading = true;
+    } else if (lineText.startsWith("## ")) {
+      lineText = lineText.slice(3).trim();
+      currentFont = fontBold;
+      currentFontSize = baseFontSize * 1.25;
+      isHeading = true;
+    } else if (lineText.startsWith("### ")) {
+      lineText = lineText.slice(4).trim();
+      currentFont = fontBold;
+      currentFontSize = baseFontSize * 1.1;
+      isHeading = true;
+    } else if (lineText.startsWith("> ")) {
+      lineText = lineText.slice(2).trim();
+      currentFont = fontOblique;
+      isQuote = true;
+      indentX = margin + 14;
+    } else if (lineText.startsWith("- ") || lineText.startsWith("* ")) {
+      lineText = "•  " + lineText.slice(2).trim();
+      indentX = margin + 10;
+    }
+
+    // Strip inline bold/italic markers (** or *) for clean pdf rendering
+    const hasBoldInline = lineText.includes("**");
+    const hasItalicInline = lineText.includes("*");
+
+    let activeFont = currentFont;
+    if (!isHeading && !isQuote) {
+      if (hasBoldInline) {
+        activeFont = fontBold;
+        lineText = lineText.replace(/\*\*/g, "");
+      } else if (hasItalicInline) {
+        activeFont = fontOblique;
+        lineText = lineText.replace(/\*/g, "");
+      }
+    } else {
+      lineText = lineText.replace(/\*\*/g, "").replace(/\*/g, "");
+    }
+
+    // Strip backticks or quotes
+    lineText = lineText.replace(/`/g, "");
+
+    const currentLineHeight = currentFontSize * spacingMultiplier;
+    const currentMaxWidth = pageWidth - indentX - margin;
+
+    // Extra spacing before heading
+    if (isHeading && y < pageHeight - margin - 20) {
+      y -= 6;
+    }
+
+    // Draw Quote bar if quote
+    if (isQuote) {
+      page.drawLine({
+        start: { x: margin + 4, y: y + 2 },
+        end: { x: margin + 4, y: y - currentLineHeight + 4 },
+        thickness: 2.5,
+        color: rgb(0.55, 0.35, 0.95), // Violet accent line
+      });
+    }
+
+    // Word wrapping logic
+    const words = lineText.split(" ");
+    let currentLine = "";
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = activeFont.widthOfTextAtSize(testLine, currentFontSize);
+
+      if (testWidth <= currentMaxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          if (y < margin + currentLineHeight) {
+            page = doc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+          }
+          page.drawText(currentLine, {
+            x: indentX,
+            y,
+            size: currentFontSize,
+            font: activeFont,
+            color: isQuote ? rgb(0.3, 0.3, 0.35) : rgb(0.1, 0.1, 0.1),
+          });
+          y -= currentLineHeight;
+        }
+
+        if (activeFont.widthOfTextAtSize(word, currentFontSize) > currentMaxWidth) {
+          let charLine = "";
+          for (const char of word) {
+            if (activeFont.widthOfTextAtSize(charLine + char, currentFontSize) <= currentMaxWidth) {
+              charLine += char;
+            } else {
+              if (y < margin + currentLineHeight) {
+                page = doc.addPage([pageWidth, pageHeight]);
+                y = pageHeight - margin;
+              }
+              page.drawText(charLine, {
+                x: indentX,
+                y,
+                size: currentFontSize,
+                font: activeFont,
+                color: isQuote ? rgb(0.3, 0.3, 0.35) : rgb(0.1, 0.1, 0.1),
+              });
+              y -= currentLineHeight;
+              charLine = char;
+            }
+          }
+          currentLine = charLine;
+        } else {
+          currentLine = word;
+        }
+      }
+    }
+
+    if (currentLine) {
+      if (y < margin + currentLineHeight) {
+        page = doc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+      page.drawText(currentLine, {
+        x: indentX,
+        y,
+        size: currentFontSize,
+        font: activeFont,
+        color: isQuote ? rgb(0.3, 0.3, 0.35) : rgb(0.1, 0.1, 0.1),
+      });
+      y -= currentLineHeight;
+    }
+  }
+
   return blobFromPdf(doc);
 }
 

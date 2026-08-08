@@ -193,3 +193,261 @@ export async function htmlToPdf(
     await page.close();
   }
 }
+
+/**
+ * Renders raw Markdown text into a fully styled HTML document.
+ */
+export function renderMarkdownToHtml(markdownText: string, title = "Document"): string {
+  const lines = markdownText.split(/\r?\n/);
+  let htmlBody = "";
+  let inCodeBlock = false;
+  let inList = false;
+  let listType: "ul" | "ol" | null = null;
+  let inTable = false;
+
+  function formatInline(text: string): string {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/_([^_]+)_/g, "<em>$1</em>")
+      .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;" />')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Fenced Code Blocks (```)
+    if (line.trim().startsWith("```")) {
+      if (inCodeBlock) {
+        htmlBody += "</code></pre>\n";
+        inCodeBlock = false;
+      } else {
+        if (inList) {
+          htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+          inList = false;
+          listType = null;
+        }
+        if (inTable) {
+          htmlBody += "</tbody></table>\n";
+          inTable = false;
+        }
+        const lang = line.trim().slice(3).trim();
+        htmlBody += `<pre><code class="${lang ? "language-" + lang : ""}">`;
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      htmlBody += line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "\n";
+      continue;
+    }
+
+    const trimmed = line.trim();
+
+    // Table rows
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      if (inList) {
+        htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        inList = false;
+        listType = null;
+      }
+
+      // Check if divider line like |---|---|
+      if (/^\|[\s-:]+(\|[\s-:]+)+\|$/.test(trimmed)) {
+        continue;
+      }
+
+      const cells = trimmed.slice(1, -1).split("|").map((c) => c.trim());
+      if (!inTable) {
+        htmlBody += "<table><thead><tr>";
+        cells.forEach((cell) => {
+          htmlBody += `<th>${formatInline(cell)}</th>`;
+        });
+        htmlBody += "</tr></thead><tbody>\n";
+        inTable = true;
+      } else {
+        htmlBody += "<tr>";
+        cells.forEach((cell) => {
+          htmlBody += `<td>${formatInline(cell)}</td>`;
+        });
+        htmlBody += "</tr>\n";
+      }
+      continue;
+    } else if (inTable) {
+      htmlBody += "</tbody></table>\n";
+      inTable = false;
+    }
+
+    if (!trimmed) {
+      if (inList) {
+        htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        inList = false;
+        listType = null;
+      }
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith("#")) {
+      if (inList) {
+        htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        inList = false;
+        listType = null;
+      }
+      const match = trimmed.match(/^(#{1,6})\s+(.*)$/);
+      if (match) {
+        const level = match[1].length;
+        const text = match[2];
+        htmlBody += `<h${level}>${formatInline(text)}</h${level}>\n`;
+        continue;
+      }
+    }
+
+    // Horizontal Rules
+    if (/^---$|^\*\*\*$|^___$/.test(trimmed)) {
+      if (inList) {
+        htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        inList = false;
+        listType = null;
+      }
+      htmlBody += "<hr />\n";
+      continue;
+    }
+
+    // Blockquotes
+    if (trimmed.startsWith(">")) {
+      if (inList) {
+        htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        inList = false;
+        listType = null;
+      }
+      const text = trimmed.replace(/^>\s*/, "");
+      htmlBody += `<blockquote><p>${formatInline(text)}</p></blockquote>\n`;
+      continue;
+    }
+
+    // Unordered Lists
+    if (/^[-*+]\s+/.test(trimmed)) {
+      if (!inList || listType !== "ul") {
+        if (inList) htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        htmlBody += "<ul>\n";
+        inList = true;
+        listType = "ul";
+      }
+      const itemText = trimmed.replace(/^[-*+]\s+/, "");
+      htmlBody += `  <li>${formatInline(itemText)}</li>\n`;
+      continue;
+    }
+
+    // Ordered Lists
+    if (/^\d+\.\s+/.test(trimmed)) {
+      if (!inList || listType !== "ol") {
+        if (inList) htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+        htmlBody += "<ol>\n";
+        inList = true;
+        listType = "ol";
+      }
+      const itemText = trimmed.replace(/^\d+\.\s+/, "");
+      htmlBody += `  <li>${formatInline(itemText)}</li>\n`;
+      continue;
+    }
+
+    // Paragraph
+    if (inList) {
+      htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+      inList = false;
+      listType = null;
+    }
+    htmlBody += `<p>${formatInline(trimmed)}</p>\n`;
+  }
+
+  if (inCodeBlock) htmlBody += "</code></pre>\n";
+  if (inList) htmlBody += listType === "ul" ? "</ul>\n" : "</ol>\n";
+  if (inTable) htmlBody += "</tbody></table>\n";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #111827;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    h1 { font-size: 2em; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.3em; }
+    h2 { font-size: 1.5em; border-bottom: 1px solid #f3f4f6; padding-bottom: 0.2em; }
+    h3 { font-size: 1.25em; }
+    p { margin-top: 0; margin-bottom: 1em; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background-color: #f3f4f6;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+    pre {
+      background-color: #1f2937;
+      color: #f9fafb;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      color: inherit;
+    }
+    blockquote {
+      border-left: 4px solid #3b82f6;
+      padding-left: 1rem;
+      margin: 1em 0;
+      color: #4b5563;
+      background: #f8fafc;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+    ul, ol { padding-left: 2rem; margin-bottom: 1em; }
+    li { margin-bottom: 0.3em; }
+    hr { border: 0; height: 1px; background: #e5e7eb; margin: 2em 0; }
+    a { color: #2563eb; text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+    th { background: #f9fafb; font-weight: 600; }
+  </style>
+</head>
+<body>
+  ${htmlBody}
+</body>
+</html>`;
+}
+
+export async function markdownToPdf(
+  markdownBuffer: Buffer,
+  originalFileName?: string
+): Promise<Buffer> {
+  const mdText = markdownBuffer.toString("utf-8");
+  const title = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "Document";
+  const html = renderMarkdownToHtml(mdText, title);
+  return htmlToPdf(html);
+}

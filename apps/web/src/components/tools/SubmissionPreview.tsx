@@ -15,6 +15,8 @@ import { CATEGORY_THEME } from "@/lib/category-theme";
 import { getToolOptionFields } from "@/lib/tool-options";
 import { cn } from "@/lib/utils";
 
+import { TextToolPreviewEditor } from "./TextToolPreviewEditor";
+
 export type PreviewSummaryItem = { label: string; value: string };
 
 interface SubmissionPreviewProps {
@@ -30,6 +32,10 @@ interface SubmissionPreviewProps {
   onFilesChange?: (files: File[]) => void;
   rotations?: number[];
   onRotationsChange?: (rotations: number[]) => void;
+  editedText?: string;
+  onEditedTextChange?: (val: string) => void;
+  originalFileText?: string;
+  onResetFileText?: () => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -51,7 +57,12 @@ export function SubmissionPreview({
   onFilesChange,
   rotations = [],
   onRotationsChange,
+  editedText = "",
+  onEditedTextChange,
+  originalFileText = "",
+  onResetFileText,
 }: SubmissionPreviewProps) {
+  const isTextTool = tool.category === "text";
   const isImageToPdf = ["jpg-to-pdf", "png-to-pdf", "scan-to-pdf", "image-to-pdf"].includes(tool.slug);
   const theme = CATEGORY_THEME[tool.category];
   const optionFields = getToolOptionFields(tool.slug);
@@ -65,7 +76,22 @@ export function SubmissionPreview({
     hasTextInput ||
     hasSummary ||
     Boolean(textOutput?.trim()) ||
-    Boolean(resultPreview);
+    Boolean(resultPreview) ||
+    Boolean(editedText?.trim());
+
+  // Render dedicated Live Interactive Preview & Editor ONLY for text category tools
+  if (isTextTool) {
+    return (
+      <TextToolPreviewEditor
+        tool={tool}
+        files={files}
+        textValue={editedText}
+        onTextChange={onEditedTextChange || (() => {})}
+        originalText={originalFileText}
+        onResetText={onResetFileText}
+      />
+    );
+  }
 
   return (
     <div

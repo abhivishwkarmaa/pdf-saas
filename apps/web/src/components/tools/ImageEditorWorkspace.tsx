@@ -146,7 +146,21 @@ const CANVAS_SIZES: CanvasSize[] = [
   { width: 800, height: 600, label: "Custom 800×600" },
 ];
 
-const FONT_FAMILIES = ["Inter", "Georgia", "Courier New", "Impact", "Verdana", "Arial Black", "Trebuchet MS"];
+const FONT_FAMILIES = ["Inter", "'Alex Brush', cursive", "'Caveat', cursive", "'Great Vibes', cursive", "'Dancing Script', cursive", "'Pacifico', cursive", "'Monsieur La Doulaise', cursive", "Georgia", "Courier New", "Impact", "Verdana", "Arial Black", "Trebuchet MS"];
+
+export const FONT_PRESETS = [
+  { name: "Inter", font: "Inter", style: "Inter, sans-serif" },
+  { name: "Alex Brush", font: "'Alex Brush', cursive", style: "'Alex Brush', cursive" },
+  { name: "Caveat", font: "'Caveat', cursive", style: "'Caveat', cursive" },
+  { name: "Great Vibes", font: "'Great Vibes', cursive", style: "'Great Vibes', cursive" },
+  { name: "Dancing Script", font: "'Dancing Script', cursive", style: "'Dancing Script', cursive" },
+  { name: "Pacifico", font: "'Pacifico', cursive", style: "'Pacifico', cursive" },
+  { name: "Monsieur", font: "'Monsieur La Doulaise', cursive", style: "'Monsieur La Doulaise', cursive" },
+  { name: "Impact", font: "Impact", style: "Impact, sans-serif" },
+  { name: "Georgia", font: "Georgia", style: "Georgia, serif" },
+  { name: "Courier", font: "Courier New", style: "'Courier New', monospace" },
+];
+
 const STICKERS = ["🎉", "🔥", "⭐", "❤️", "✨", "🎨", "🚀", "💡", "🎯", "🌈", "💎", "🏆", "🎭", "🌟", "💫", "🎪"];
 const PRESET_COLORS = ["#ffffff", "#000000", "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280", "#78716c"];
 
@@ -205,9 +219,20 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
   const [canvasBackground, setCanvasBackground] = useState("#ffffff");
   const [textInput, setTextInput] = useState("Your text here");
   const [textColor, setTextColor] = useState("#000000");
+  const [selectedFontFamily, setSelectedFontFamily] = useState<string>("Inter");
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [shapeColor, setShapeFill] = useState("#3b82f6");
   const [shapeStroke, setShapeStroke] = useState("transparent");
   const [shapeStrokeWidth, setShapeStrokeWidth] = useState(0);
+
+  // Dynamic Google Cursive & Display Fonts Injector
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Alex+Brush&family=Caveat:wght@400;700&family=Dancing+Script:wght@700&family=Great+Vibes&family=Monsieur+La+Doulaise&family=Pacifico&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }, []);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
@@ -340,12 +365,56 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
 
   // ─── Add Layers ─────────────────────────────────────────────────────────────
   const addTextLayer = () => {
+    const text = textInput.trim() || "Your text here";
+    const isCursive = selectedFontFamily.includes("cursive");
     const layer: TextLayer = {
-      id: uid(), type: "text", name: textInput.slice(0, 15) || "Text",
-      text: textInput, fontSize: 36, fontFamily: "Inter",
-      color: textColor, align: "center", bold: false, italic: false,
-      letterSpacing: 0, x: canvasSize.width / 2 - 150, y: canvasSize.height / 2 - 25,
+      id: uid(), type: "text", name: text.slice(0, 15),
+      text, fontSize: isCursive ? 42 : 36, fontFamily: selectedFontFamily,
+      color: textColor, align: "center", bold: !isCursive, italic: false,
+      letterSpacing: 0, x: Math.max(20, (canvasSize.width - 300) / 2), y: Math.max(20, (canvasSize.height - 60) / 2),
       width: 300, height: 60, rotation: 0, opacity: 100,
+      visible: true, locked: false, flipX: false, flipY: false,
+    };
+    commit([...layers, layer]);
+    setSelectedId(layer.id);
+    if (window.innerWidth < 1024) setActiveMobileView("canvas");
+  };
+
+  const addPresetText = (presetType: "heading" | "subheading" | "body" | "script") => {
+    let text = "Add a Heading";
+    let fontSize = 48;
+    let fontFamily = selectedFontFamily || "Inter";
+    let bold = true;
+    let width = 400;
+    let height = 75;
+
+    if (presetType === "subheading") {
+      text = "Add a Subheading";
+      fontSize = 28;
+      bold = true;
+      width = 320;
+      height = 50;
+    } else if (presetType === "body") {
+      text = "Add body text here";
+      fontSize = 18;
+      bold = false;
+      width = 280;
+      height = 40;
+    } else if (presetType === "script") {
+      text = "Handwritten Text";
+      fontSize = 42;
+      fontFamily = "'Alex Brush', cursive";
+      bold = false;
+      width = 350;
+      height = 65;
+    }
+
+    const layer: TextLayer = {
+      id: uid(), type: "text", name: text.slice(0, 15),
+      text, fontSize, fontFamily,
+      color: textColor, align: "center", bold, italic: false,
+      letterSpacing: 0, x: Math.max(20, (canvasSize.width - width) / 2), y: Math.max(20, (canvasSize.height - height) / 2),
+      width, height, rotation: 0, opacity: 100,
       visible: true, locked: false, flipX: false, flipY: false,
     };
     commit([...layers, layer]);
@@ -579,19 +648,23 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
         ctx.fillText(layer.text, 0, layer.fontSize / 3);
       } else if (layer.type === "shape") {
         ctx.fillStyle = layer.fill;
-        ctx.strokeStyle = layer.stroke;
+        ctx.strokeStyle = layer.stroke === "transparent" ? "transparent" : layer.stroke;
         ctx.lineWidth = layer.strokeWidth;
         const w = layer.width, h = layer.height;
         if (layer.shape === "rect") {
           ctx.beginPath();
-          ctx.roundRect(-w / 2, -h / 2, w, h, layer.borderRadius);
+          if (ctx.roundRect) {
+            ctx.roundRect(-w / 2, -h / 2, w, h, layer.borderRadius || 0);
+          } else {
+            ctx.rect(-w / 2, -h / 2, w, h);
+          }
           ctx.fill();
-          if (layer.strokeWidth > 0 && layer.stroke !== "transparent") ctx.stroke();
+          if (layer.strokeWidth > 0 && layer.stroke && layer.stroke !== "transparent") ctx.stroke();
         } else if (layer.shape === "circle") {
           ctx.beginPath();
-          ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 0, Math.max(1, w / 2), Math.max(1, h / 2), 0, 0, Math.PI * 2);
           ctx.fill();
-          if (layer.strokeWidth > 0 && layer.stroke !== "transparent") ctx.stroke();
+          if (layer.strokeWidth > 0 && layer.stroke && layer.stroke !== "transparent") ctx.stroke();
         } else if (layer.shape === "triangle") {
           ctx.beginPath();
           ctx.moveTo(0, -h / 2);
@@ -599,7 +672,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
           ctx.lineTo(-w / 2, h / 2);
           ctx.closePath();
           ctx.fill();
-          if (layer.strokeWidth > 0 && layer.stroke !== "transparent") ctx.stroke();
+          if (layer.strokeWidth > 0 && layer.stroke && layer.stroke !== "transparent") ctx.stroke();
         } else if (layer.shape === "star") {
           ctx.beginPath();
           ctx.moveTo(0, -h / 2);
@@ -614,13 +687,14 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
           ctx.lineTo(-w * 0.12, -h * 0.12);
           ctx.closePath();
           ctx.fill();
-          if (layer.strokeWidth > 0 && layer.stroke !== "transparent") ctx.stroke();
+          if (layer.strokeWidth > 0 && layer.stroke && layer.stroke !== "transparent") ctx.stroke();
         }
       } else if (layer.type === "sticker") {
-        ctx.font = `${layer.fontSize}px serif`;
+        const size = Math.min(layer.width, layer.height) * 0.75;
+        ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(layer.emoji, 0, 0);
+        ctx.fillText((layer as StickerLayer).emoji, 0, 0);
       }
       ctx.restore();
     }
@@ -637,6 +711,9 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
 
   // ─── Render Layer on Canvas ─────────────────────────────────────────────────
   const renderLayerContent = (layer: Layer) => {
+    const layerIndex = layers.findIndex(l => l.id === layer.id);
+    const isSelected = selectedId === layer.id;
+
     const style: React.CSSProperties = {
       position: "absolute",
       left: layer.x * zoom,
@@ -648,11 +725,10 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
       cursor: layer.locked ? "default" : "move",
       userSelect: "none",
       touchAction: "none",
+      zIndex: isSelected ? 1000 : layerIndex + 10,
     };
 
     if (!layer.visible) return null;
-
-    const isSelected = selectedId === layer.id;
 
     return (
       <div
@@ -660,7 +736,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
         style={style}
         onMouseDown={e => onLayerMouseDown(e, layer.id)}
         onTouchStart={e => onLayerTouchStart(e, layer.id)}
-        className={`group transition-shadow ${isSelected ? "ring-2 ring-violet-500 ring-offset-1 z-20" : "hover:ring-1 hover:ring-white/40"}`}
+        className={`group transition-shadow ${isSelected ? "ring-2 ring-violet-500 ring-offset-1" : "hover:ring-1 hover:ring-white/40"}`}
       >
         {layer.type === "image" && (
           <img
@@ -672,70 +748,133 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
           />
         )}
         {layer.type === "text" && (
-          <div
-            className="w-full h-full flex items-center justify-center pointer-events-none"
-            style={{
-              fontSize: (layer as TextLayer).fontSize * zoom,
-              fontFamily: (layer as TextLayer).fontFamily,
-              color: (layer as TextLayer).color,
-              textAlign: (layer as TextLayer).align,
-              fontWeight: (layer as TextLayer).bold ? "bold" : "normal",
-              fontStyle: (layer as TextLayer).italic ? "italic" : "normal",
-              whiteSpace: "nowrap",
-              lineHeight: 1.2,
-            }}
-          >
-            {(layer as TextLayer).text}
-          </div>
+          editingTextId === layer.id ? (
+            <textarea
+              autoFocus
+              value={(layer as TextLayer).text}
+              onChange={e => updateLayer(layer.id, { text: e.target.value, name: e.target.value.slice(0, 15) || "Text" } as Partial<TextLayer>)}
+              onBlur={() => setEditingTextId(null)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  setEditingTextId(null);
+                }
+              }}
+              className="w-full h-full bg-black/80 text-white p-1 rounded border-2 border-violet-500 outline-none resize-none z-30"
+              style={{
+                fontSize: `${(layer as TextLayer).fontSize * zoom}px`,
+                fontFamily: (layer as TextLayer).fontFamily,
+                color: (layer as TextLayer).color,
+                textAlign: (layer as TextLayer).align,
+                lineHeight: 1.2,
+              }}
+            />
+          ) : (
+            <div
+              onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(layer.id); }}
+              className="w-full h-full flex items-center justify-center pointer-events-auto cursor-text"
+              style={{
+                fontSize: (layer as TextLayer).fontSize * zoom,
+                fontFamily: (layer as TextLayer).fontFamily,
+                color: (layer as TextLayer).color,
+                textAlign: (layer as TextLayer).align,
+                fontWeight: (layer as TextLayer).bold ? "bold" : "normal",
+                fontStyle: (layer as TextLayer).italic ? "italic" : "normal",
+                whiteSpace: "nowrap",
+                lineHeight: 1.2,
+              }}
+            >
+              {(layer as TextLayer).text}
+            </div>
+          )
         )}
         {layer.type === "shape" && (
-          <svg width="100%" height="100%" viewBox={`0 0 ${layer.width} ${layer.height}`} xmlns="http://www.w3.org/2000/svg" className="pointer-events-none">
+          <svg width="100%" height="100%" viewBox={`0 0 ${layer.width} ${layer.height}`} xmlns="http://www.w3.org/2000/svg" className="pointer-events-none overflow-visible">
             {(layer as ShapeLayer).shape === "rect" && (
-              <rect x="2" y="2" width={layer.width - 4} height={layer.height - 4} rx={(layer as ShapeLayer).borderRadius} fill={(layer as ShapeLayer).fill} stroke={(layer as ShapeLayer).stroke} strokeWidth={(layer as ShapeLayer).strokeWidth} />
+              <rect
+                x={Math.max(1, (layer as ShapeLayer).strokeWidth / 2)}
+                y={Math.max(1, (layer as ShapeLayer).strokeWidth / 2)}
+                width={Math.max(1, layer.width - Math.max(2, (layer as ShapeLayer).strokeWidth))}
+                height={Math.max(1, layer.height - Math.max(2, (layer as ShapeLayer).strokeWidth))}
+                rx={(layer as ShapeLayer).borderRadius || 0}
+                fill={(layer as ShapeLayer).fill}
+                stroke={(layer as ShapeLayer).stroke === "transparent" ? "none" : (layer as ShapeLayer).stroke}
+                strokeWidth={(layer as ShapeLayer).strokeWidth}
+              />
             )}
             {(layer as ShapeLayer).shape === "circle" && (
-              <ellipse cx={layer.width / 2} cy={layer.height / 2} rx={layer.width / 2 - 2} ry={layer.height / 2 - 2} fill={(layer as ShapeLayer).fill} stroke={(layer as ShapeLayer).stroke} strokeWidth={(layer as ShapeLayer).strokeWidth} />
+              <ellipse
+                cx={layer.width / 2}
+                cy={layer.height / 2}
+                rx={Math.max(1, layer.width / 2 - Math.max(1, (layer as ShapeLayer).strokeWidth / 2))}
+                ry={Math.max(1, layer.height / 2 - Math.max(1, (layer as ShapeLayer).strokeWidth / 2))}
+                fill={(layer as ShapeLayer).fill}
+                stroke={(layer as ShapeLayer).stroke === "transparent" ? "none" : (layer as ShapeLayer).stroke}
+                strokeWidth={(layer as ShapeLayer).strokeWidth}
+              />
             )}
             {(layer as ShapeLayer).shape === "triangle" && (
-              <polygon points={`${layer.width / 2},2 ${layer.width - 2},${layer.height - 2} 2,${layer.height - 2}`} fill={(layer as ShapeLayer).fill} stroke={(layer as ShapeLayer).stroke} strokeWidth={(layer as ShapeLayer).strokeWidth} />
+              <polygon
+                points={`${layer.width / 2},2 ${layer.width - 2},${layer.height - 2} 2,${layer.height - 2}`}
+                fill={(layer as ShapeLayer).fill}
+                stroke={(layer as ShapeLayer).stroke === "transparent" ? "none" : (layer as ShapeLayer).stroke}
+                strokeWidth={(layer as ShapeLayer).strokeWidth}
+              />
             )}
             {(layer as ShapeLayer).shape === "star" && (
-              <polygon points={`${layer.width / 2},4 ${layer.width * 0.62},${layer.height * 0.38} ${layer.width - 4},${layer.height * 0.38} ${layer.width * 0.72},${layer.height * 0.62} ${layer.width * 0.82},${layer.height - 4} ${layer.width / 2},${layer.height * 0.76} ${layer.width * 0.18},${layer.height - 4} ${layer.width * 0.28},${layer.height * 0.62} 4,${layer.height * 0.38} ${layer.width * 0.38},${layer.height * 0.38}`} fill={(layer as ShapeLayer).fill} stroke={(layer as ShapeLayer).stroke} strokeWidth={(layer as ShapeLayer).strokeWidth} />
+              <polygon
+                points={`${layer.width / 2},4 ${layer.width * 0.62},${layer.height * 0.38} ${layer.width - 4},${layer.height * 0.38} ${layer.width * 0.72},${layer.height * 0.62} ${layer.width * 0.82},${layer.height - 4} ${layer.width / 2},${layer.height * 0.76} ${layer.width * 0.18},${layer.height - 4} ${layer.width * 0.28},${layer.height * 0.62} 4,${layer.height * 0.38} ${layer.width * 0.38},${layer.height * 0.38}`}
+                fill={(layer as ShapeLayer).fill}
+                stroke={(layer as ShapeLayer).stroke === "transparent" ? "none" : (layer as ShapeLayer).stroke}
+                strokeWidth={(layer as ShapeLayer).strokeWidth}
+              />
             )}
           </svg>
         )}
         {layer.type === "sticker" && (
-          <div style={{ fontSize: (layer as StickerLayer).fontSize * zoom, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }} className="pointer-events-none">
+          <div
+            style={{
+              fontSize: `${Math.min(layer.width, layer.height) * 0.75 * zoom}px`,
+              lineHeight: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              height: "100%",
+              fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+            }}
+            className="pointer-events-none select-none"
+          >
             {(layer as StickerLayer).emoji}
           </div>
         )}
 
         {/* Resizing handles with enlarged touch hitboxes */}
         {isSelected && !layer.locked && (
-          <div className="absolute -inset-2 pointer-events-none">
+          <div className="absolute -inset-3 pointer-events-none">
             {/* SE handle */}
             <div
               onMouseDown={e => { e.stopPropagation(); startResize(e.clientX, e.clientY, "se"); }}
               onTouchStart={e => { e.stopPropagation(); if (e.touches[0]) startResize(e.touches[0].clientX, e.touches[0].clientY, "se"); }}
-              className="pointer-events-auto absolute -right-3 -bottom-3 w-7 h-7 bg-violet-600 rounded-full border-2 border-white cursor-se-resize shadow-lg flex items-center justify-center"
+              className="pointer-events-auto absolute -right-4 -bottom-4 w-9 h-9 sm:w-7 sm:h-7 bg-violet-600 rounded-full border-2 border-white cursor-se-resize shadow-xl flex items-center justify-center ring-4 ring-violet-500/30"
             />
             {/* NE handle */}
             <div
               onMouseDown={e => { e.stopPropagation(); startResize(e.clientX, e.clientY, "ne"); }}
               onTouchStart={e => { e.stopPropagation(); if (e.touches[0]) startResize(e.touches[0].clientX, e.touches[0].clientY, "ne"); }}
-              className="pointer-events-auto absolute -right-3 -top-3 w-7 h-7 bg-violet-600 rounded-full border-2 border-white cursor-ne-resize shadow-lg flex items-center justify-center"
+              className="pointer-events-auto absolute -right-4 -top-4 w-9 h-9 sm:w-7 sm:h-7 bg-violet-600 rounded-full border-2 border-white cursor-ne-resize shadow-xl flex items-center justify-center ring-4 ring-violet-500/30"
             />
             {/* SW handle */}
             <div
               onMouseDown={e => { e.stopPropagation(); startResize(e.clientX, e.clientY, "sw"); }}
               onTouchStart={e => { e.stopPropagation(); if (e.touches[0]) startResize(e.touches[0].clientX, e.touches[0].clientY, "sw"); }}
-              className="pointer-events-auto absolute -left-3 -bottom-3 w-7 h-7 bg-violet-600 rounded-full border-2 border-white cursor-sw-resize shadow-lg flex items-center justify-center"
+              className="pointer-events-auto absolute -left-4 -bottom-4 w-9 h-9 sm:w-7 sm:h-7 bg-violet-600 rounded-full border-2 border-white cursor-sw-resize shadow-xl flex items-center justify-center ring-4 ring-violet-500/30"
             />
             {/* NW handle */}
             <div
               onMouseDown={e => { e.stopPropagation(); startResize(e.clientX, e.clientY, "nw"); }}
               onTouchStart={e => { e.stopPropagation(); if (e.touches[0]) startResize(e.touches[0].clientX, e.touches[0].clientY, "nw"); }}
-              className="pointer-events-auto absolute -left-3 -top-3 w-7 h-7 bg-violet-600 rounded-full border-2 border-white cursor-nw-resize shadow-lg flex items-center justify-center"
+              className="pointer-events-auto absolute -left-4 -top-4 w-9 h-9 sm:w-7 sm:h-7 bg-violet-600 rounded-full border-2 border-white cursor-nw-resize shadow-xl flex items-center justify-center ring-4 ring-violet-500/30"
             />
           </div>
         )}
@@ -747,8 +886,8 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
   const renderSidebar = () => {
     return (
       <div className="flex flex-col h-full bg-zinc-900 border-r border-zinc-800">
-        {/* Sidebar Tab Icons */}
-        <div className="grid grid-cols-6 lg:flex lg:flex-col gap-1 p-2 border-b border-zinc-800 shrink-0">
+        {/* Sidebar Tab Icons - Horizontal scrollable pills on mobile */}
+        <div className="flex lg:flex-col gap-1.5 p-2 border-b border-zinc-800 shrink-0 overflow-x-auto scrollbar-none">
           {([
             { id: "uploads", icon: Upload, label: "Upload" },
             { id: "text", icon: Type, label: "Text" },
@@ -760,12 +899,12 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
             <button
               key={id}
               onClick={() => setSidebarTab(id)}
-              className={`flex flex-col items-center justify-center gap-1 rounded-lg p-2 text-[10px] font-medium transition ${
-                sidebarTab === id ? "bg-violet-600 text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              className={`flex items-center lg:flex-col justify-center gap-1.5 rounded-xl px-3 py-2 lg:p-2 text-xs lg:text-[10px] font-semibold transition shrink-0 whitespace-nowrap ${
+                sidebarTab === id ? "bg-violet-600 text-white shadow-md shadow-violet-600/30" : "bg-zinc-800/80 lg:bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate max-w-full">{label}</span>
+              <span>{label}</span>
             </button>
           ))}
         </div>
@@ -814,22 +953,91 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
           )}
 
           {sidebarTab === "text" && (
-            <>
-              <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Add Text Layer</div>
-              <textarea
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm p-2.5 resize-none focus:outline-none focus:border-violet-500"
-                rows={2}
-                value={textInput}
-                onChange={e => setTextInput(e.target.value)}
-                placeholder="Enter text..."
-              />
-              <div className="flex gap-2">
-                <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-10 h-9 rounded cursor-pointer bg-transparent border-0" />
-                <button onClick={addTextLayer} className="flex-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold py-2 transition">
-                  + Add Text
+            <div className="space-y-4">
+              <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Quick Text Presets</div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => addPresetText("heading")}
+                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-violet-500 p-3 text-left transition flex items-center justify-between group"
+                >
+                  <span className="text-base font-bold text-white group-hover:text-violet-400">Add a Heading</span>
+                  <Plus className="h-4 w-4 text-zinc-400 group-hover:text-white" />
+                </button>
+                <button
+                  onClick={() => addPresetText("subheading")}
+                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-violet-500 p-2.5 text-left transition flex items-center justify-between group"
+                >
+                  <span className="text-sm font-semibold text-zinc-200 group-hover:text-violet-400">Add a Subheading</span>
+                  <Plus className="h-4 w-4 text-zinc-400 group-hover:text-white" />
+                </button>
+                <button
+                  onClick={() => addPresetText("body")}
+                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-violet-500 p-2 text-left transition flex items-center justify-between group"
+                >
+                  <span className="text-xs text-zinc-300 group-hover:text-violet-400">Add body text</span>
+                  <Plus className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white" />
+                </button>
+                <button
+                  onClick={() => addPresetText("script")}
+                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-violet-500 p-2.5 text-left transition flex items-center justify-between group"
+                >
+                  <span className="text-base font-normal text-violet-300 group-hover:text-white" style={{ fontFamily: "'Alex Brush', cursive" }}>
+                    Signature / Script
+                  </span>
+                  <Plus className="h-4 w-4 text-zinc-400 group-hover:text-white" />
                 </button>
               </div>
-            </>
+
+              <div className="border-t border-zinc-800 pt-3">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-2">Custom Text & Font</div>
+                <textarea
+                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 text-white text-xs p-2.5 resize-none focus:outline-none focus:border-violet-500"
+                  rows={2}
+                  value={textInput}
+                  onChange={e => setTextInput(e.target.value)}
+                  placeholder="Type custom text..."
+                />
+                
+                <div className="text-[10px] text-zinc-400 mt-2 mb-1">Font Style</div>
+                <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {FONT_PRESETS.map(f => (
+                    <button
+                      key={f.name}
+                      onClick={() => setSelectedFontFamily(f.font)}
+                      className={`p-2 rounded-lg border text-xs text-center transition truncate ${
+                        selectedFontFamily === f.font
+                          ? "bg-violet-600 border-violet-500 text-white font-semibold shadow-md"
+                          : "bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                      }`}
+                      style={{ fontFamily: f.style }}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-[10px] text-zinc-400 mt-3 mb-1">Text Color</div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setTextColor(c)}
+                      className={`w-5 h-5 rounded-full border transition ${
+                        textColor === c ? "border-violet-500 scale-110" : "border-transparent hover:border-zinc-600"
+                      }`}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="w-9 h-8 rounded cursor-pointer bg-transparent border-0" />
+                  <button onClick={addTextLayer} className="flex-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold py-2 transition flex items-center justify-center gap-1.5 shadow-md shadow-violet-600/30">
+                    <Plus className="h-3.5 w-3.5" /> Add Text
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {sidebarTab === "shapes" && (
@@ -1112,6 +1320,92 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
             </div>
           )}
 
+          {/* Shape Styling details */}
+          {selectedLayer.type === "shape" && (
+            <div className="space-y-3 border-t border-zinc-800 pt-3">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Shape Styling</p>
+              <div>
+                <label className="text-[10px] text-zinc-400 block mb-1">Fill Color</label>
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => updateLayer(selectedLayer.id, { fill: c } as Partial<ShapeLayer>)}
+                      className={`w-5 h-5 rounded-full border transition ${
+                        (selectedLayer as ShapeLayer).fill === c ? "border-violet-500 scale-110" : "border-transparent"
+                      }`}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+                <input
+                  type="color"
+                  value={(selectedLayer as ShapeLayer).fill || "#3b82f6"}
+                  onChange={e => updateLayer(selectedLayer.id, { fill: e.target.value } as Partial<ShapeLayer>)}
+                  className="w-10 h-7 rounded cursor-pointer bg-transparent border-0"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 block mb-1">Stroke Color & Width</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={(selectedLayer as ShapeLayer).stroke === "transparent" ? "#000000" : (selectedLayer as ShapeLayer).stroke || "#000000"}
+                    onChange={e => updateLayer(selectedLayer.id, { stroke: e.target.value } as Partial<ShapeLayer>)}
+                    className="w-8 h-7 rounded cursor-pointer bg-transparent border-0"
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={20}
+                    value={(selectedLayer as ShapeLayer).strokeWidth || 0}
+                    onChange={e => updateLayer(selectedLayer.id, { strokeWidth: +e.target.value } as Partial<ShapeLayer>)}
+                    className="flex-1 accent-violet-500"
+                  />
+                  <span className="text-xs text-zinc-400 w-6">{(selectedLayer as ShapeLayer).strokeWidth || 0}px</span>
+                </div>
+              </div>
+
+              {(selectedLayer as ShapeLayer).shape === "rect" && (
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[10px] text-zinc-400">Corner Radius</span>
+                    <span className="text-[10px] text-zinc-500">{(selectedLayer as ShapeLayer).borderRadius || 0}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.min(selectedLayer.width, selectedLayer.height) / 2}
+                    value={(selectedLayer as ShapeLayer).borderRadius || 0}
+                    onChange={e => updateLayer(selectedLayer.id, { borderRadius: +e.target.value } as Partial<ShapeLayer>)}
+                    className="w-full accent-violet-500"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sticker Emoji Swap details */}
+          {selectedLayer.type === "sticker" && (
+            <div className="space-y-3 border-t border-zinc-800 pt-3">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Change Emoji</p>
+              <div className="flex flex-wrap gap-1.5">
+                {STICKERS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => updateLayer(selectedLayer.id, { emoji, name: emoji } as Partial<StickerLayer>)}
+                    className={`p-1.5 text-xl rounded-lg bg-zinc-800 hover:bg-zinc-700 transition ${
+                      (selectedLayer as StickerLayer).emoji === emoji ? "ring-2 ring-violet-500" : ""
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rotation */}
           <div>
             <div className="flex justify-between mb-1">
@@ -1172,29 +1466,29 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
     </div>
   );
 
-  // ─── Main Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-white overflow-hidden select-none">
-      {/* Top Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0 gap-2 overflow-x-auto z-30">
-        <div className="flex items-center gap-2 shrink-0">
+    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 text-white overflow-hidden select-none touch-none">
+      {/* Top Toolbar - Fully Responsive */}
+      <div className="flex items-center justify-between px-2.5 sm:px-4 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0 z-30 gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Link
             href="/#image"
-            className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 px-2.5 py-1 text-xs font-semibold text-zinc-400 hover:text-white transition shadow-sm cursor-pointer"
+            className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-800/80 hover:bg-zinc-700 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition shadow-sm cursor-pointer"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Back</span>
           </Link>
-          <div className="w-px h-5 bg-zinc-800" />
-          <button onClick={undo} disabled={historyIndex === 0} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition" title="Undo">
+          <div className="w-px h-5 bg-zinc-800 mx-0.5" />
+          <button onClick={undo} disabled={historyIndex === 0} className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition" title="Undo">
             <Undo2 className="h-4 w-4" />
           </button>
-          <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition" title="Redo">
+          <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition" title="Redo">
             <Redo2 className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Zoom controls - hidden on small mobile screens to guarantee Export button visibility */}
+        <div className="hidden sm:flex items-center gap-1 shrink-0">
           <button onClick={() => setZoom(z => Math.max(0.08, z - 0.05))} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition">
             <ZoomOut className="h-4 w-4" />
           </button>
@@ -1207,12 +1501,13 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Always visible prominent Export Button */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
           <button
             onClick={() => setShowExport(true)}
-            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shrink-0 shadow-md shadow-violet-600/30"
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition shrink-0 shadow-lg shadow-violet-600/40 active:scale-95"
           >
-            <Download className="h-3.5 w-3.5" /> Export
+            <Download className="h-4 w-4" /> Export
           </button>
         </div>
       </div>
@@ -1227,7 +1522,7 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
         {/* Canvas Area (100% visible preview view) */}
         <div
           ref={canvasAreaRef}
-          className="flex-1 overflow-auto bg-[radial-gradient(circle_at_50%_50%,_#18181b_0%,_#09090b_100%)] relative flex items-center justify-center p-3 sm:p-6"
+          className="flex-1 overflow-auto bg-[radial-gradient(circle_at_50%_50%,_#18181b_0%,_#09090b_100%)] relative flex items-center justify-center p-2 sm:p-6"
           style={{ backgroundImage: "radial-gradient(circle, #27272a 1px, transparent 1px)", backgroundSize: "20px 20px" }}
           onMouseDown={() => setSelectedId(null)}
           onTouchStart={() => setSelectedId(null)}
@@ -1268,23 +1563,23 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
 
         {/* Mobile Slide-Over Bottom Sheet for Tools / Layers / Edit */}
         {activeMobileView !== "canvas" && (
-          <div className="fixed inset-0 z-40 bg-black/60 lg:hidden flex flex-col justify-end">
-            <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl max-h-[65dvh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="fixed inset-0 z-40 bg-black/70 lg:hidden flex flex-col justify-end">
+            <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl max-h-[75dvh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0 bg-zinc-900">
                 <div className="flex items-center gap-2">
-                  <span className="w-8 h-1 rounded-full bg-zinc-700 mx-auto block mb-1" />
+                  <span className="w-8 h-1 rounded-full bg-zinc-700 block" />
                   <span className="text-sm font-bold text-white capitalize">
-                    {activeMobileView === "tools" ? "Tools & Elements" : activeMobileView === "layers" ? "Layer Stack" : "Edit Selected Layer"}
+                    {activeMobileView === "tools" ? "Tools & Elements" : activeMobileView === "layers" ? "Layer Stack" : "Edit Properties"}
                   </span>
                 </div>
                 <button
                   onClick={() => setActiveMobileView("canvas")}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white bg-zinc-800"
+                  className="px-2.5 py-1 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-800 flex items-center gap-1"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" /> Close
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto p-2">
                 {activeMobileView === "tools" && renderSidebar()}
                 {(activeMobileView === "layers" || activeMobileView === "edit_layer") && renderPropertiesPanel()}
               </div>
@@ -1295,88 +1590,84 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
 
       {/* Selected Layer Quick Touch Bar for Mobile */}
       {selectedLayer && activeMobileView === "canvas" && (
-        <div className="lg:hidden flex items-center justify-between px-3 py-1.5 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 shrink-0 z-30 gap-1 overflow-x-auto text-xs">
-          <span className="font-semibold text-violet-400 truncate max-w-[90px]">{selectedLayer.name}</span>
-          <div className="flex items-center gap-1">
+        <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 shrink-0 z-30 gap-1.5 overflow-x-auto scrollbar-none text-xs">
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-violet-500" />
+            <span className="font-bold text-violet-400 truncate max-w-[100px]">{selectedLayer.name}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => nudgeLayer(-5, 0)}
-              className="p-1.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              title="Move Left"
+              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 active:bg-violet-600 active:text-white"
+              title="Left"
             >
-              <ArrowLeftIcon className="h-3.5 w-3.5" />
+              <ArrowLeftIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => nudgeLayer(5, 0)}
-              className="p-1.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              title="Move Right"
+              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 active:bg-violet-600 active:text-white"
+              title="Right"
             >
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => scaleLayerBy(0.9)}
-              className="px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-bold text-[11px]"
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 font-bold text-xs"
             >
-              -
+              -10%
             </button>
             <button
               onClick={() => scaleLayerBy(1.1)}
-              className="px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 font-bold text-[11px]"
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 font-bold text-xs"
             >
-              +
+              +10%
             </button>
             <button
               onClick={() => updateLayer(selectedLayer.id, { rotation: selectedLayer.rotation + 90 })}
-              className="p-1.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 active:bg-violet-600 active:text-white"
               title="Rotate"
             >
-              <RotateCw className="h-3.5 w-3.5" />
+              <RotateCw className="h-4 w-4" />
             </button>
             <button
               onClick={duplicateLayer}
-              className="p-1.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 active:bg-violet-600 active:text-white"
               title="Duplicate"
             >
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className="h-4 w-4" />
             </button>
             <button
               onClick={deleteLayer}
-              className="p-1.5 rounded bg-red-950/60 text-red-400 hover:bg-red-900"
+              className="p-2 rounded-lg bg-red-950/70 text-red-400 active:bg-red-900"
               title="Delete"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </button>
             <button
               onClick={() => setActiveMobileView("edit_layer")}
-              className="px-2 py-1 rounded bg-violet-600 text-white font-medium text-[11px]"
+              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white font-bold text-xs shadow-sm flex items-center gap-1"
             >
-              Props
+              <Sliders className="h-3.5 w-3.5" /> Edit
             </button>
           </div>
         </div>
       )}
 
-      {/* Mobile Floating Bottom Bar */}
-      <div className="lg:hidden flex items-center justify-around p-2 bg-zinc-900 border-t border-zinc-800 shrink-0 z-30">
+      {/* Mobile Floating Bottom Bar - 4 Touch Tabs */}
+      <div className="lg:hidden grid grid-cols-4 gap-1 p-2 bg-zinc-900 border-t border-zinc-800 shrink-0 z-30">
         <button
           onClick={() => setActiveMobileView(activeMobileView === "tools" ? "canvas" : "tools")}
-          className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-[11px] font-semibold transition ${
-            activeMobileView === "tools" ? "bg-violet-600 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold transition ${
+            activeMobileView === "tools" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "bg-zinc-800/80 text-zinc-300 active:bg-zinc-700"
           }`}
         >
           <Palette className="h-4 w-4" /> Tools
         </button>
 
         <button
-          onClick={autoFitZoom}
-          className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-[11px] font-semibold"
-        >
-          <Maximize2 className="h-4 w-4" /> Fit
-        </button>
-
-        <button
           onClick={() => setActiveMobileView(activeMobileView === "layers" ? "canvas" : "layers")}
-          className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-[11px] font-semibold transition relative ${
-            activeMobileView === "layers" || activeMobileView === "edit_layer" ? "bg-violet-600 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold transition relative ${
+            activeMobileView === "layers" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "bg-zinc-800/80 text-zinc-300 active:bg-zinc-700"
           }`}
         >
           <div className="relative">
@@ -1388,6 +1679,22 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
             )}
           </div>
           Layers
+        </button>
+
+        <button
+          onClick={() => setActiveMobileView(activeMobileView === "edit_layer" ? "canvas" : "edit_layer")}
+          className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold transition ${
+            activeMobileView === "edit_layer" ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" : "bg-zinc-800/80 text-zinc-300 active:bg-zinc-700"
+          }`}
+        >
+          <Sliders className="h-4 w-4" /> Props
+        </button>
+
+        <button
+          onClick={autoFitZoom}
+          className="flex flex-col items-center justify-center gap-1 py-2 rounded-xl bg-zinc-800/80 text-zinc-300 active:bg-zinc-700 text-xs font-bold"
+        >
+          <Maximize2 className="h-4 w-4" /> Fit
         </button>
       </div>
 
