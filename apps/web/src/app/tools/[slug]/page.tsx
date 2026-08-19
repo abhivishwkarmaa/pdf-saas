@@ -15,6 +15,11 @@ import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace"
 import { SignPdfWorkspace } from "@/components/tools/SignPdfWorkspace";
 import { ComparePdfWorkspace } from "@/components/tools/ComparePdfWorkspace";
 import { MergePdfWorkspace } from "@/components/tools/MergePdfWorkspace";
+import { SplitPdfWorkspace } from "@/components/tools/SplitPdfWorkspace";
+import { RemovePagesWorkspace } from "@/components/tools/RemovePagesWorkspace";
+import { ExtractPagesWorkspace } from "@/components/tools/ExtractPagesWorkspace";
+import { OrganizePdfWorkspace } from "@/components/tools/OrganizePdfWorkspace";
+import { RotatePdfWorkspace } from "@/components/tools/RotatePdfWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -94,6 +99,46 @@ export default async function ToolPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
         <MergePdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "split-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <SplitPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "remove-pages") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <RemovePagesWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "extract-pages") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <ExtractPagesWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "organize-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <OrganizePdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "rotate-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <RotatePdfWorkspace tool={tool} />
       </div>
     );
   }

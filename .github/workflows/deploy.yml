@@ -1,0 +1,54 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    name: Auto Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            # Navigate to project directory
+            DEPLOY_PATH="${{ secrets.VPS_DEPLOY_PATH || '/var/www/pdf-saas' }}"
+            
+            echo "🚀 Starting Deployment in $DEPLOY_PATH..."
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "❌ Error: Deployment directory $DEPLOY_PATH does not exist on VPS!"
+              exit 1
+            fi
+
+            cd "$DEPLOY_PATH"
+
+            # Fetch and reset to latest commit
+            echo "📦 Pulling latest changes from Git..."
+            git fetch origin
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            git reset --hard origin/$CURRENT_BRANCH
+
+            # Ensure scripts have execute permissions
+            chmod +x scripts/*.sh 2>/dev/null || true
+
+            # Build and deploy with Docker Compose
+            echo "🐳 Building and starting Docker container..."
+            docker compose build --pull
+            docker compose up -d --remove-orphans
+
+            # Clean up old unused Docker images to save VPS disk space
+            echo "🧹 Cleaning up old unused Docker images..."
+            docker image prune -f
+
+            echo "✅ Deployment completed successfully!"
