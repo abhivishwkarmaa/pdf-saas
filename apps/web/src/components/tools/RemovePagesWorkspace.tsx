@@ -535,7 +535,7 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
                                 e.stopPropagation();
                                 setPreviewModalPage(p.pageNumber);
                               }}
-                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/80 shadow-sm"
+                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white sm:opacity-0 transition sm:group-hover:opacity-100 hover:bg-black/80 shadow-sm"
                               title="Zoom Preview"
                             >
                               <ZoomIn className="h-3.5 w-3.5" />

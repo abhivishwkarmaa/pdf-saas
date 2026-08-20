@@ -506,12 +506,11 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                             <div className="absolute top-2 left-2 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900/80 text-[10px] font-bold text-white shadow-sm">
                               {idx + 1}
                             </div>
-
                             {/* Zoom Preview Button */}
                             <button
                               type="button"
                               onClick={() => setPreviewModalPage(p)}
-                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/80 shadow-sm"
+                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white sm:opacity-0 transition sm:group-hover:opacity-100 hover:bg-black/80 shadow-sm"
                               title="Zoom Preview"
                             >
                               <ZoomIn className="h-3.5 w-3.5" />
@@ -528,7 +527,7 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                               {/* Rotate */}
                               <button
                                 onClick={() => rotatePage(p.id)}
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                className="flex h-6.5 w-6.5 items-center justify-center rounded text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 title="Rotate 90°"
                               >
                                 <RotateCw className="h-3 w-3" />
@@ -538,7 +537,7 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                               <button
                                 disabled={idx === 0}
                                 onClick={() => movePage(idx, "left")}
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-200 disabled:opacity-20 dark:hover:bg-zinc-800"
+                                className="flex h-6.5 w-6.5 items-center justify-center rounded text-zinc-600 hover:bg-zinc-200 disabled:opacity-20 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 title="Move Left"
                               >
                                 <ArrowLeft className="h-3 w-3" />
@@ -548,7 +547,7 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                               <button
                                 disabled={idx === pages.length - 1}
                                 onClick={() => movePage(idx, "right")}
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-200 disabled:opacity-20 dark:hover:bg-zinc-800"
+                                className="flex h-6.5 w-6.5 items-center justify-center rounded text-zinc-600 hover:bg-zinc-200 disabled:opacity-20 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 title="Move Right"
                               >
                                 <ArrowRight className="h-3 w-3" />
@@ -558,14 +557,14 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                               <button
                                 onClick={() => toggleDeletePage(p.id)}
                                 className={cn(
-                                  "rounded p-1 transition",
+                                  "flex h-6.5 w-6.5 items-center justify-center rounded transition",
                                   p.deleted
-                                    ? "text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                    ? "text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
                                     : "text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
                                 )}
-                                title={p.deleted ? "Restore" : "Remove"}
+                                title={p.deleted ? "Restore Page" : "Delete Page"}
                               >
-                                {p.deleted ? <Undo2 className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />}
+                                <Trash2 className="h-3 w-3" />
                               </button>
                             </div>
                           </div>

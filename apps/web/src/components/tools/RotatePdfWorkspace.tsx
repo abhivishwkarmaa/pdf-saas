@@ -484,7 +484,7 @@ export function RotatePdfWorkspace({ tool }: RotatePdfWorkspaceProps) {
                             <button
                               type="button"
                               onClick={() => setPreviewModalPage(p)}
-                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/80 shadow-sm"
+                              className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white sm:opacity-0 transition sm:group-hover:opacity-100 hover:bg-black/80 shadow-sm"
                               title="Zoom Preview"
                             >
                               <ZoomIn className="h-3.5 w-3.5" />
@@ -500,17 +500,17 @@ export function RotatePdfWorkspace({ tool }: RotatePdfWorkspaceProps) {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => rotatePageCCW(p.pageNumber)}
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 title="Rotate Left 90°"
                               >
-                                <RotateCcw className="h-3 w-3" />
+                                <RotateCcw className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => rotatePageCW(p.pageNumber)}
-                                className="rounded p-1 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 title="Rotate Right 90°"
                               >
-                                <RotateCw className="h-3 w-3" />
+                                <RotateCw className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </div>

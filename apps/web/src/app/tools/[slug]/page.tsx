@@ -20,6 +20,8 @@ import { RemovePagesWorkspace } from "@/components/tools/RemovePagesWorkspace";
 import { ExtractPagesWorkspace } from "@/components/tools/ExtractPagesWorkspace";
 import { OrganizePdfWorkspace } from "@/components/tools/OrganizePdfWorkspace";
 import { RotatePdfWorkspace } from "@/components/tools/RotatePdfWorkspace";
+import { PdfToImageWorkspace } from "@/components/tools/PdfToImageWorkspace";
+import { ImageToPdfWorkspace } from "@/components/tools/ImageToPdfWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -97,7 +99,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "merge-pdf") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <MergePdfWorkspace tool={tool} />
       </div>
     );
@@ -105,7 +107,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "split-pdf") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <SplitPdfWorkspace tool={tool} />
       </div>
     );
@@ -113,7 +115,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "remove-pages") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <RemovePagesWorkspace tool={tool} />
       </div>
     );
@@ -121,7 +123,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "extract-pages") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <ExtractPagesWorkspace tool={tool} />
       </div>
     );
@@ -129,7 +131,7 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "organize-pdf") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <OrganizePdfWorkspace tool={tool} />
       </div>
     );
@@ -137,8 +139,24 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "rotate-pdf") {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <RotatePdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-jpg" || slug === "pdf-to-png" || slug === "pdf-to-image") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToImageWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "jpg-to-pdf" || slug === "png-to-pdf" || slug === "image-to-pdf" || slug === "scan-to-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <ImageToPdfWorkspace tool={tool} />
       </div>
     );
   }
