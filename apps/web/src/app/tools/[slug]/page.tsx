@@ -23,6 +23,11 @@ import { RotatePdfWorkspace } from "@/components/tools/RotatePdfWorkspace";
 import { PdfToImageWorkspace } from "@/components/tools/PdfToImageWorkspace";
 import { ImageToPdfWorkspace } from "@/components/tools/ImageToPdfWorkspace";
 import { CompressPdfWorkspace } from "@/components/tools/CompressPdfWorkspace";
+import { PdfToPdfaWorkspace } from "@/components/tools/PdfToPdfaWorkspace";
+import { RepairPdfWorkspace } from "@/components/tools/RepairPdfWorkspace";
+import { PdfToWordWorkspace } from "@/components/tools/PdfToWordWorkspace";
+import { PdfToPowerPointWorkspace } from "@/components/tools/PdfToPowerPointWorkspace";
+import { PdfToExcelWorkspace } from "@/components/tools/PdfToExcelWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -166,6 +171,46 @@ export default async function ToolPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <CompressPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-pdfa") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToPdfaWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "repair-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <RepairPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-word") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToWordWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-powerpoint") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToPowerPointWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-excel") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToExcelWorkspace tool={tool} />
       </div>
     );
   }

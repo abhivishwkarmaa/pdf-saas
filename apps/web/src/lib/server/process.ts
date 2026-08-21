@@ -40,9 +40,10 @@ export async function processOnServer(
       return { buffer: out, mimeType: "application/pdf", fileName: `${baseName}_compressed.pdf` };
     }
     case "pdf-to-pdfa": {
-      const out = await pdfToPdfA(buffers[0]);
-      const baseName = originalFileName ? getBaseName(originalFileName) : "pdfa";
-      return { buffer: out, mimeType: "application/pdf", fileName: `${baseName}.pdf` };
+      const profile = String(options.conformance || options.profile || "2b");
+      const out = await pdfToPdfA(buffers[0], profile);
+      const baseName = originalFileName ? getBaseName(originalFileName) : "archived";
+      return { buffer: out, mimeType: "application/pdf", fileName: `${baseName}_pdfa.pdf` };
     }
     case "repair-pdf": {
       const out = await repairPdf(buffers[0]);

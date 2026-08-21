@@ -899,7 +899,10 @@ except Exception as e:
   }
 }
 
-export async function pdfToExcel(buffer: Buffer): Promise<Buffer> {
+export async function pdfToExcel(
+  buffer: Buffer,
+  options?: Record<string, unknown>
+): Promise<Buffer> {
   const dir = await mkdtemp(join(tmpdir(), "pdf-excel-"));
   const input = join(dir, "input.pdf");
   const outputTxt = join(dir, "text.txt");
@@ -907,45 +910,104 @@ export async function pdfToExcel(buffer: Buffer): Promise<Buffer> {
   const xlsxFile = join(dir, "table.xlsx");
   try {
     await writeFile(input, buffer);
-    let text = "";
-    if (await exists("pdftotext")) {
+
+    const hasPython = (await exists("python3")) || (await exists("python"));
+    if (hasPython) {
+      const pythonBin = (await exists("python3")) ? "python3" : "python";
+      const pyScript = `
+import fitz
+import sys
+import csv
+
+doc = fitz.open("${input.replace(/\\/g, "/")}")
+rows = []
+for page in doc:
+    # Try finding tables first if pymupdf table feature exists
+    try:
+        tabs = page.find_tables()
+        if tabs.tables:
+            for t in tabs.tables:
+                for row in t.extract():
+                    rows.append([cell if cell is not None else "" for cell in row])
+                rows.append([])
+            continue
+    except Exception:
+        pass
+    
+    # Fallback to layout block / line parsing
+    blocks = page.get_text("blocks")
+    blocks.sort(key=lambda b: (b[1], b[0]))
+    for b in blocks:
+        lines = b[4].splitlines()
+        for line in lines:
+            cols = [c.strip() for c in line.split("  ") if c.strip()]
+            if cols:
+                rows.append(cols)
+
+with open("${csvFile.replace(/\\/g, "/")}", "w", newline="", encoding="utf-8-sig") as f:
+    writer = csv.writer(f)
+    for r in rows:
+        writer.writerow(r)
+`;
       try {
-        await run("pdftotext", ["-layout", input, outputTxt], dir);
-        text = await readFile(outputTxt, "utf-8");
-      } catch (err) {
-        console.error("pdftotext error:", err);
+        await run(pythonBin, ["-c", pyScript], dir);
+      } catch (pyErr) {
+        console.warn("Python table extraction fallback to pdftotext:", pyErr);
       }
     }
 
-    const lines = text.split("\n");
-    const csvRows = lines.map((line) => {
-      const cols = line.trim().split(/\s{2,}/);
-      const escapedCols = cols.map((col) => {
-        const val = col.replace(/"/g, '""');
-        return `"${val}"`;
-      });
-      return escapedCols.join(",");
-    });
+    // Fallback if csv wasn't created by python
+    let csvExists = false;
+    try {
+      await readFile(csvFile);
+      csvExists = true;
+    } catch {}
 
-    await writeFile(csvFile, csvRows.join("\n"), "utf-8");
+    if (!csvExists) {
+      let text = "";
+      if (await exists("pdftotext")) {
+        try {
+          await run("pdftotext", ["-layout", input, outputTxt], dir);
+          text = await readFile(outputTxt, "utf-8");
+        } catch (err) {
+          console.error("pdftotext error:", err);
+        }
+      }
+
+      const lines = text.split("\n");
+      const csvRows = lines.map((line) => {
+        const cols = line.trim().split(/\s{2,}/);
+        const escapedCols = cols.map((col) => {
+          const val = col.replace(/"/g, '""');
+          return `"${val}"`;
+        });
+        return escapedCols.join(",");
+      });
+
+      await writeFile(csvFile, "\ufeff" + csvRows.join("\n"), "utf-8");
+    }
 
     if (await exists("soffice")) {
-      await run(
-        "soffice",
-        [
-          "--headless",
-          "--norestore",
-          "--nofirststartwizard",
-          `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
-          "--convert-to",
-          "xlsx",
-          "--outdir",
-          dir,
-          csvFile,
-        ],
-        dir
-      );
-      return await readFile(xlsxFile);
+      try {
+        await run(
+          "soffice",
+          [
+            "--headless",
+            "--norestore",
+            "--nofirststartwizard",
+            `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
+            "--convert-to",
+            "xlsx",
+            "--outdir",
+            dir,
+            csvFile,
+          ],
+          dir
+        );
+        return await readFile(xlsxFile);
+      } catch (sofficeErr) {
+        console.warn("soffice csv to xlsx conversion error:", sofficeErr);
+      }
     }
 
     return await readFile(csvFile);
@@ -954,7 +1016,10 @@ export async function pdfToExcel(buffer: Buffer): Promise<Buffer> {
   }
 }
 
-export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
+export async function pdfToPowerPoint(
+  buffer: Buffer,
+  options?: Record<string, unknown>
+): Promise<Buffer> {
   const dir = await mkdtemp(join(tmpdir(), "pdf-ppt-"));
   const input = join(dir, "input.pdf");
   const outputTxt = join(dir, "text.txt");
@@ -962,8 +1027,12 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
   try {
     await writeFile(input, buffer);
 
+    const dpi = String(options?.dpi || "150");
+    const layout = String(options?.layout || "16x9");
+    const includeNotes = options?.includeNotes !== false;
+
     let text = "";
-    if (await exists("pdftotext")) {
+    if (includeNotes && (await exists("pdftotext"))) {
       try {
         await run("pdftotext", ["-layout", input, outputTxt], dir);
         text = await readFile(outputTxt, "utf-8");
@@ -975,7 +1044,7 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
 
     let pages: string[] = [];
     if (await exists("pdftoppm")) {
-      await run("pdftoppm", ["-png", "-r", "150", input, prefix], dir);
+      await run("pdftoppm", ["-png", "-r", dpi, input, prefix], dir);
       const files = await readdir(dir);
       pages = files
         .filter((f) => f.startsWith("page") && f.endsWith(".png"))
@@ -987,7 +1056,13 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
     }
 
     const pptx = new pptxgen();
-    pptx.layout = "LAYOUT_16x9";
+    if (layout === "4x3") {
+      pptx.layout = "LAYOUT_4x3";
+    } else if (layout === "wide") {
+      pptx.layout = "LAYOUT_WIDE";
+    } else {
+      pptx.layout = "LAYOUT_16x9";
+    }
 
     const numPages = Math.max(pagesText.length, pages.length);
     for (let i = 0; i < numPages; i++) {
@@ -995,7 +1070,7 @@ export async function pdfToPowerPoint(buffer: Buffer): Promise<Buffer> {
       const pageText = pagesText[i] || "";
       const pageImgFile = pages[i];
 
-      if (pageText.trim()) {
+      if (includeNotes && pageText.trim()) {
         slide.slideNumber = { x: "90%", y: "90%" };
         slide.addNotes(pageText.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, ""));
       }
@@ -1160,11 +1235,11 @@ export async function convertOffice(
       return { buffer: out, mimeType: mimeFor("docx"), fileName: outFileName };
     }
     if (targetFormat === "pptx") {
-      const out = await pdfToPowerPoint(buffer);
+      const out = await pdfToPowerPoint(buffer, options);
       return { buffer: out, mimeType: mimeFor("pptx"), fileName: outFileName };
     }
     if (targetFormat === "xlsx") {
-      const out = await pdfToExcel(buffer);
+      const out = await pdfToExcel(buffer, options);
       return { buffer: out, mimeType: mimeFor("xlsx"), fileName: outFileName };
     }
   }

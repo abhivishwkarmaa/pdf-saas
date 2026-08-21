@@ -4,15 +4,26 @@ import { tmpdir } from "os";
 import { run, exists } from "../exec";
 import { PDFDocument } from "pdf-lib";
 
-export async function pdfToPdfA(buffer: Buffer): Promise<Buffer> {
+export async function pdfToPdfA(
+  buffer: Buffer,
+  profile: string = "2b"
+): Promise<Buffer> {
   if (await exists("gs")) {
     const dir = await mkdtemp(join(tmpdir(), "pdfa-"));
     const input = join(dir, "in.pdf");
     const output = join(dir, "out.pdf");
     try {
       await writeFile(input, buffer);
+      
+      let pdfaVersion = "2";
+      if (profile === "1b" || profile === "1") {
+        pdfaVersion = "1";
+      } else if (profile === "3b" || profile === "3") {
+        pdfaVersion = "3";
+      }
+
       await run("gs", [
-        "-dPDFA=2",
+        `-dPDFA=${pdfaVersion}`,
         "-dBATCH",
         "-dNOPAUSE",
         "-sProcessColorModel=DeviceRGB",
