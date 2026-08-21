@@ -22,6 +22,7 @@ import { OrganizePdfWorkspace } from "@/components/tools/OrganizePdfWorkspace";
 import { RotatePdfWorkspace } from "@/components/tools/RotatePdfWorkspace";
 import { PdfToImageWorkspace } from "@/components/tools/PdfToImageWorkspace";
 import { ImageToPdfWorkspace } from "@/components/tools/ImageToPdfWorkspace";
+import { CompressPdfWorkspace } from "@/components/tools/CompressPdfWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -157,6 +158,14 @@ export default async function ToolPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <ImageToPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "compress-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <CompressPdfWorkspace tool={tool} />
       </div>
     );
   }

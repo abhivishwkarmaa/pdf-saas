@@ -235,13 +235,65 @@ function FilePreviewSection({
   fileUrls: string[];
   textSnippet?: string | null;
 }) {
-  const isImage = tool.category === "image";
-  const isPdf = tool.category === "pdf";
+  const firstFile = files[0];
+  const isActualPdf = Boolean(
+    firstFile &&
+      (firstFile.type === "application/pdf" ||
+        firstFile.name.toLowerCase().endsWith(".pdf"))
+  );
+  const isImage =
+    tool.category === "image" ||
+    Boolean(
+      firstFile &&
+        (firstFile.type.startsWith("image/") ||
+          /\.(jpe?g|png|webp|gif|bmp|svg|avif|heic)$/i.test(firstFile.name))
+    );
+  const isOfficeDoc = Boolean(
+    firstFile &&
+      (/\.(docx?|pptx?|xlsx?|rtf|odt|ods|odp)$/i.test(firstFile.name) ||
+        firstFile.type.includes("word") ||
+        firstFile.type.includes("officedocument") ||
+        firstFile.type.includes("presentation") ||
+        firstFile.type.includes("sheet") ||
+        firstFile.type.includes("excel"))
+  );
   const primaryUrl = fileUrls[0];
+
+  const getDocTypeBadge = (name: string) => {
+    const ext = name.split(".").pop()?.toLowerCase();
+    if (ext === "docx" || ext === "doc") {
+      return {
+        label: "Word Document",
+        ext: "DOCX",
+        color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800",
+      };
+    }
+    if (ext === "pptx" || ext === "ppt") {
+      return {
+        label: "PowerPoint Presentation",
+        ext: "PPTX",
+        color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800",
+      };
+    }
+    if (ext === "xlsx" || ext === "xls") {
+      return {
+        label: "Excel Spreadsheet",
+        ext: "XLSX",
+        color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800",
+      };
+    }
+    return {
+      label: "Office Document",
+      ext: ext?.toUpperCase() || "DOC",
+      color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800",
+    };
+  };
+
+  const docBadge = firstFile ? getDocTypeBadge(firstFile.name) : null;
 
   return (
     <div className="space-y-3">
-      {isPdf && primaryUrl && (
+      {isActualPdf && primaryUrl && (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
           {files.length > 1 && (
             <p className="border-b border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 dark:border-zinc-700">
@@ -253,6 +305,43 @@ function FilePreviewSection({
             src={`${primaryUrl}#toolbar=0&navpanes=0`}
             className="h-[280px] w-full"
           />
+        </div>
+      )}
+
+      {isOfficeDoc && docBadge && (
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
+          <div className="flex items-start gap-3.5">
+            <div
+              className={cn(
+                "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border text-xs font-bold shadow-xs",
+                docBadge.color
+              )}
+            >
+              {docBadge.ext}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+                    docBadge.color
+                  )}
+                >
+                  {docBadge.label}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  {formatBytes(firstFile.size)}
+                </span>
+              </div>
+              <p className="mt-1 truncate text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                {firstFile.name}
+              </p>
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>
+                Ready to convert into PDF format
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -276,7 +365,7 @@ function FilePreviewSection({
         </div>
       )}
 
-      {!isPdf && !isImage && textSnippet && (
+      {!isActualPdf && !isImage && !isOfficeDoc && textSnippet && (
         <div className="max-h-48 overflow-auto rounded-lg border border-violet-200 bg-violet-50/50 p-3 font-mono text-xs leading-relaxed text-zinc-700 dark:border-violet-900 dark:bg-violet-950/30 dark:text-zinc-300">
           <pre className="whitespace-pre-wrap break-words">{textSnippet}</pre>
         </div>

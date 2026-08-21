@@ -5,6 +5,8 @@ import { run, exists, runWithOutput } from "../exec";
 import { ocrPdf } from "./ocr";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import pptxgen from "pptxgenjs";
+import mammoth from "mammoth";
+import { htmlToPdf } from "./html";
 
 const extMap: Record<string, string> = {
   docx: ".docx",
@@ -1034,6 +1036,113 @@ function getBaseName(fileName: string): string {
   return fileName.slice(0, dotIndex);
 }
 
+async function convertDocxToPdfViaMammoth(buffer: Buffer): Promise<Buffer> {
+  const result = await mammoth.convertToHtml({ buffer });
+  const htmlBody = result.value || "<p></p>";
+
+  const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 20mm 15mm 20mm 15mm;
+    }
+    *, *:before, *:after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1a202c;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #111827;
+      font-weight: 700;
+      page-break-after: avoid;
+      margin-top: 1.4em;
+      margin-bottom: 0.5em;
+    }
+    h1 { font-size: 22pt; line-height: 1.2; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 6px; }
+    h2 { font-size: 17pt; line-height: 1.3; }
+    h3 { font-size: 14pt; }
+    h4 { font-size: 12pt; }
+    p {
+      margin-top: 0;
+      margin-bottom: 0.9em;
+      word-wrap: break-word;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.2em 0;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 10pt;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 1em auto;
+    }
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 0.9em;
+      padding-left: 1.75em;
+    }
+    li {
+      margin-bottom: 0.35em;
+    }
+    blockquote {
+      border-left: 4px solid #3b82f6;
+      margin: 1.2em 0;
+      padding: 0.5em 1em;
+      background-color: #f8fafc;
+      color: #4b5563;
+      font-style: italic;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+      background-color: #f1f5f9;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 1.5em 0;
+    }
+  </style>
+</head>
+<body>
+  ${htmlBody}
+</body>
+</html>`;
+
+  return await htmlToPdf(fullHtml, undefined, {
+    pageSize: "A4",
+    orientation: "portrait",
+    margin: "default",
+  });
+}
+
 export async function convertOffice(
   buffer: Buffer,
   targetFormat: string,
@@ -1094,52 +1203,47 @@ export async function convertOffice(
     }
   }
 
-  if (!(await exists("soffice"))) {
-    throw new Error(
-      "LibreOffice is not installed on this server. Install it for office conversions."
-    );
-  }
+  const hasSoffice = await exists("soffice");
+  if (hasSoffice) {
+    const dir = await mkdtemp(join(tmpdir(), "office-"));
+    const input = join(dir, `input${inputExt}`);
+    try {
+      await writeFile(input, buffer);
+      await run(
+        "soffice",
+        [
+          "--headless",
+          "--norestore",
+          "--nofirststartwizard",
+          `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
+          "--convert-to",
+          targetFormat,
+          "--outdir",
+          dir,
+          input,
+        ],
+        dir
+      );
 
-  const dir = await mkdtemp(join(tmpdir(), "office-"));
-  const input = join(dir, `input${inputExt}`);
-  try {
-    await writeFile(input, buffer);
-    await run(
-      "soffice",
-      [
-        "--headless",
-        "--norestore",
-        "--nofirststartwizard",
-        `-env:UserInstallation=file://${join(dir, "profile").replace(/\\/g, "/")}`,
-        "--convert-to",
-        targetFormat,
-        "--outdir",
-        dir,
-        input,
-      ],
-      dir
-    );
+      const files = await readdir(dir);
+      const outFile = files.find(
+        (f) =>
+          f.endsWith(extMap[targetFormat] ?? `.${targetFormat}`) &&
+          f !== `input${inputExt}`
+      );
+      const chosen = outFile ?? files.find((f) => f !== `input${inputExt}`);
+      if (chosen) {
+        let out = await readFile(join(dir, chosen));
+        const mime = mimeFor(targetFormat);
 
-    const files = await readdir(dir);
-    const outFile = files.find(
-      (f) =>
-        f.endsWith(extMap[targetFormat] ?? `.${targetFormat}`) &&
-        f !== `input${inputExt}`
-    );
-    const chosen = outFile ?? files.find((f) => f !== `input${inputExt}`);
-    if (!chosen) throw new Error("Conversion produced no output");
-
-    let out = await readFile(join(dir, chosen));
-    const mime = mimeFor(targetFormat);
-
-    // If we converted to PDF, check if it's scanned (no selectable text but has images)
-    // and run OCR if so.
-    if (targetFormat === "pdf") {
-      const hasPython = (await exists("python3")) || (await exists("python"));
-      if (hasPython) {
-        const pythonBin = (await exists("python3")) ? "python3" : "python";
-        const pdfPath = join(dir, chosen);
-        const pyCheckScript = `
+        // If we converted to PDF, check if it's scanned (no selectable text but has images)
+        // and run OCR if so.
+        if (targetFormat === "pdf") {
+          const hasPython = (await exists("python3")) || (await exists("python"));
+          if (hasPython) {
+            const pythonBin = (await exists("python3")) ? "python3" : "python";
+            const pdfPath = join(dir, chosen);
+            const pyCheckScript = `
 import fitz
 import sys
 try:
@@ -1150,22 +1254,42 @@ try:
 except Exception:
     print("false")
 `;
-        try {
-          const stdout = await runWithOutput(pythonBin, ["-c", pyCheckScript]);
-          if (stdout.trim() === "true") {
-            console.log("Converted PDF contains scanned images/photos with no selectable text. Running OCR to make it searchable...");
-            out = await ocrPdf(out as any, "eng") as any;
+            try {
+              const stdout = await runWithOutput(pythonBin, ["-c", pyCheckScript]);
+              if (stdout.trim() === "true") {
+                console.log("Converted PDF contains scanned images/photos with no selectable text. Running OCR to make it searchable...");
+                out = (await ocrPdf(out as any, "eng")) as any;
+              }
+            } catch (err) {
+              console.error("Error checking/OCR-ing converted PDF:", err);
+            }
           }
-        } catch (err) {
-          console.error("Error checking/OCR-ing converted PDF:", err);
         }
-      }
-    }
 
-    return { buffer: out, mimeType: mime, fileName: outFileName };
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+        return { buffer: out, mimeType: mime, fileName: outFileName };
+      }
+    } catch (sofficeErr) {
+      console.error("LibreOffice conversion failed:", sofficeErr);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   }
+
+  // Fallback for DOCX / DOC to PDF using Mammoth + HTML-to-PDF engine (Puppeteer / Edge / Chrome)
+  if (targetFormat === "pdf" && (inputExt === ".docx" || inputExt === ".doc")) {
+    try {
+      console.log("Converting DOCX to PDF via Mammoth + HTML engine...");
+      const out = await convertDocxToPdfViaMammoth(buffer);
+      console.log("DOCX to PDF conversion via Mammoth + HTML engine successful!");
+      return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
+    } catch (mammothErr) {
+      console.error("Mammoth DOCX to PDF fallback failed:", mammothErr);
+    }
+  }
+
+  throw new Error(
+    "LibreOffice is not installed on this server and conversion fallback could not process this file. Please ensure LibreOffice or Chrome/Edge is available."
+  );
 }
 
 function guessInputExt(toolSlug: string, buffer: Buffer, originalFileName?: string): string {

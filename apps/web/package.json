@@ -20,6 +20,7 @@
     "heic-convert": "^2.1.0",
     "ioredis": "^5.5.0",
     "lucide-react": "^0.475.0",
+    "mammoth": "^1.12.1",
     "next": "16.2.6",
     "pdf-lib": "^1.17.1",
     "pixelmatch": "^7.2.0",

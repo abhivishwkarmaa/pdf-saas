@@ -122,7 +122,7 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
           }
         };
 
-        xhr.addEventListener("load", () => {
+        xhr.addEventListener("load", async () => {
           cleanup();
           if (xhr.status >= 200 && xhr.status < 300) {
             const blob = xhr.response as Blob;
@@ -131,12 +131,13 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
             const fileName = match?.[1] ?? "result";
             resolve({ blob, fileName });
           } else {
-            const responseText = xhr.responseText;
             try {
+              const blob = xhr.response as Blob;
+              const responseText = blob ? await blob.text() : "";
               const err = JSON.parse(responseText);
               reject(new Error(err.error ?? "Processing failed"));
-            } catch {
-              reject(new Error("Processing failed"));
+            } catch (parseErr: any) {
+              reject(new Error(parseErr?.message || "Processing failed"));
             }
           }
         });
