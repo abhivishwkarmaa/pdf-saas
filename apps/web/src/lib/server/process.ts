@@ -131,7 +131,7 @@ export async function processOnServer(
       return { buffer: out, mimeType: "application/pdf", fileName: "unlocked.pdf" };
     }
     case "pdf-to-text": {
-      const out = await pdfToText(buffers[0]);
+      const out = await pdfToText(buffers[0], options);
       const baseName = originalFileName ? getBaseName(originalFileName) : "extracted";
       return { buffer: out, mimeType: "text/plain", fileName: `${baseName}.txt` };
     }

@@ -28,6 +28,10 @@ import { RepairPdfWorkspace } from "@/components/tools/RepairPdfWorkspace";
 import { PdfToWordWorkspace } from "@/components/tools/PdfToWordWorkspace";
 import { PdfToPowerPointWorkspace } from "@/components/tools/PdfToPowerPointWorkspace";
 import { PdfToExcelWorkspace } from "@/components/tools/PdfToExcelWorkspace";
+import { WordToPdfWorkspace } from "@/components/tools/WordToPdfWorkspace";
+import { PowerPointToPdfWorkspace } from "@/components/tools/PowerPointToPdfWorkspace";
+import { ExcelToPdfWorkspace } from "@/components/tools/ExcelToPdfWorkspace";
+import { PdfToTextWorkspace } from "@/components/tools/PdfToTextWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
@@ -211,6 +215,38 @@ export default async function ToolPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <PdfToExcelWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "word-to-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <WordToPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "powerpoint-to-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PowerPointToPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "excel-to-pdf") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <ExcelToPdfWorkspace tool={tool} />
+      </div>
+    );
+  }
+
+  if (slug === "pdf-to-text") {
+    return (
+      <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <PdfToTextWorkspace tool={tool} />
       </div>
     );
   }

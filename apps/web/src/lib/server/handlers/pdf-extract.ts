@@ -4,14 +4,18 @@ import { tmpdir } from "os";
 import { run, exists } from "../exec";
 import JSZip from "jszip";
 
-export async function pdfToText(buffer: Buffer): Promise<Buffer> {
+export async function pdfToText(
+  buffer: Buffer,
+  options?: Record<string, unknown>
+): Promise<Buffer> {
   if (await exists("pdftotext")) {
     const dir = await mkdtemp(join(tmpdir(), "pdf-text-"));
     const input = join(dir, "in.pdf");
     const output = join(dir, "out.txt");
     try {
       await writeFile(input, buffer);
-      await run("pdftotext", [input, output], dir);
+      const flags = options?.layout === "flow" ? [input, output] : ["-layout", input, output];
+      await run("pdftotext", flags, dir);
       return await readFile(output);
     } finally {
       await rm(dir, { recursive: true, force: true });
