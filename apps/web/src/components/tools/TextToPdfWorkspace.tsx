@@ -268,7 +268,7 @@ export function TextToPdfWorkspace({ tool }: TextToPdfWorkspaceProps) {
   const isEdited = Boolean(originalFileText && textValue !== originalFileText);
 
   return (
-    <>
+    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
       <Toaster position="top-center" richColors />
 
       {/* Top Back Navigation */}
@@ -772,7 +772,7 @@ export function TextToPdfWorkspace({ tool }: TextToPdfWorkspaceProps) {
 
         </div>
       )}
-    </>
+    </div>
   );
 }
 

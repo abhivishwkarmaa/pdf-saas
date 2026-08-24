@@ -39,6 +39,19 @@ import { OcrPdfWorkspace } from "@/components/tools/OcrPdfWorkspace";
 import { ImageToWordWorkspace } from "@/components/tools/ImageToWordWorkspace";
 import { ScanToPdfWorkspace } from "@/components/tools/ScanToPdfWorkspace";
 import { CompressImageWorkspace } from "@/components/tools/CompressImageWorkspace";
+import { ResizeImageWorkspace } from "@/components/tools/ResizeImageWorkspace";
+import { RotateImageWorkspace } from "@/components/tools/RotateImageWorkspace";
+import { ImageToJpgWorkspace } from "@/components/tools/ImageToJpgWorkspace";
+import { JpgToImageWorkspace } from "@/components/tools/JpgToImageWorkspace";
+import { JpgToPngWorkspace } from "@/components/tools/JpgToPngWorkspace";
+import { PngToJpgWorkspace } from "@/components/tools/PngToJpgWorkspace";
+import { JpgToWebpWorkspace } from "@/components/tools/JpgToWebpWorkspace";
+import { WebpToJpgWorkspace } from "@/components/tools/WebpToJpgWorkspace";
+import { HeicToJpgWorkspace } from "@/components/tools/HeicToJpgWorkspace";
+import { GifToPngWorkspace } from "@/components/tools/GifToPngWorkspace";
+import { BmpToJpgWorkspace } from "@/components/tools/BmpToJpgWorkspace";
+import { AvifToJpgWorkspace } from "@/components/tools/AvifToJpgWorkspace";
+import { SvgToJpgWorkspace } from "@/components/tools/SvgToJpgWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -94,11 +107,7 @@ export default async function ToolPage({ params }: PageProps) {
   }
 
   if (slug === "txt-to-pdf") {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <TextToPdfWorkspace tool={tool} />
-      </div>
-    );
+    return <TextToPdfWorkspace tool={tool} />;
   }
 
   if (slug === "page-numbers") {
@@ -291,6 +300,58 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "compress-image") {
     return <CompressImageWorkspace tool={tool} />;
+  }
+
+  if (slug === "resize-image") {
+    return <ResizeImageWorkspace tool={tool} />;
+  }
+
+  if (slug === "rotate-image") {
+    return <RotateImageWorkspace tool={tool} />;
+  }
+
+  if (slug === "image-to-jpg") {
+    return <ImageToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "jpg-to-image") {
+    return <JpgToImageWorkspace tool={tool} />;
+  }
+
+  if (slug === "jpg-to-png") {
+    return <JpgToPngWorkspace tool={tool} />;
+  }
+
+  if (slug === "png-to-jpg") {
+    return <PngToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "jpg-to-webp") {
+    return <JpgToWebpWorkspace tool={tool} />;
+  }
+
+  if (slug === "webp-to-jpg") {
+    return <WebpToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "heic-to-jpg") {
+    return <HeicToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "gif-to-png") {
+    return <GifToPngWorkspace tool={tool} />;
+  }
+
+  if (slug === "bmp-to-jpg") {
+    return <BmpToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "avif-to-jpg") {
+    return <AvifToJpgWorkspace tool={tool} />;
+  }
+
+  if (slug === "svg-to-jpg") {
+    return <SvgToJpgWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

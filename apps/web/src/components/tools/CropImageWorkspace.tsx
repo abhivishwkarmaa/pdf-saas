@@ -3,27 +3,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
-import { Rnd } from "react-rnd";
 import {
   Upload,
   X,
-  Settings,
   Crop,
-  Info,
   Loader2,
   Image as ImageIcon,
   RotateCw,
   ZoomIn,
   ZoomOut,
-  Lock,
-  Unlock,
   RefreshCw,
-  Layers,
   FileCheck,
   ArrowLeft,
+  Sliders,
+  Maximize2,
+  Check,
+  ShieldCheck,
+  Download,
+  FlipHorizontal,
+  FlipVertical,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import * as img from "@/lib/client/image-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 
@@ -31,46 +33,73 @@ interface CropImageWorkspaceProps {
   tool: ToolDefinition;
 }
 
+interface CropBox {
+  x: number; // Left % (0 - 100)
+  y: number; // Top % (0 - 100)
+  w: number; // Width % (0 - 100)
+  h: number; // Height % (0 - 100)
+}
+
+const ASPECT_PRESETS = [
+  { name: "Freeform", ratio: null, label: "Custom" },
+  { name: "Square", ratio: 1 / 1, label: "1:1" },
+  { name: "Story / Reel", ratio: 9 / 16, label: "9:16" },
+  { name: "YouTube / HD", ratio: 16 / 9, label: "16:9" },
+  { name: "Standard", ratio: 4 / 3, label: "4:3" },
+  { name: "DSLR Photo", ratio: 3 / 2, label: "3:2" },
+];
+
 export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
-  const theme = CATEGORY_THEME[tool.category];
+  const theme = CATEGORY_THEME[tool.category] || {
+    button: "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20",
+    accent: "text-blue-600 dark:text-blue-400",
+    accentBg: "bg-blue-500/10",
+    accentBorder: "border-blue-500/20",
+    icon: Crop,
+  };
+
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Rotation: 0, 90, 180, 270
-  const [rotation, setRotation] = useState<number>(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [naturalWidth, setNaturalWidth] = useState<number>(0);
+  const [naturalHeight, setNaturalHeight] = useState<number>(0);
 
-  // Original and rotated image dimension states (loaded from natural dimensions)
-  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  const [rotatedDimensions, setRotatedDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  // Rotation & Flipping
+  const [rotation, setRotation] = useState<number>(0);
+  const [flipH, setFlipH] = useState(false);
+  const [flipV, setFlipV] = useState(false);
 
-  // Crop coordinates (percentages 0-100)
-  const [cropBox, setCropBox] = useState({ x: 15, y: 15, w: 70, h: 70 });
+  // Crop Coordinates in Percentages
+  const [cropBox, setCropBox] = useState<CropBox>({ x: 10, y: 10, w: 80, h: 80 });
+  const [activeAspect, setActiveAspect] = useState<number | null>(null);
 
-  // Zoom factor (default 1.0, ranges from 0.5 to 2.0)
+  // Zoom & View
   const [zoom, setZoom] = useState(1.0);
+  const [outputFormat, setOutputFormat] = useState<"auto" | "webp" | "jpeg" | "png">("auto");
+  const [quality, setQuality] = useState<number>(92);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setZoom(0.75);
-    }
-  }, []);
+  // Processing state
+  const [processing, setProcessing] = useState(false);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
 
-  // Aspect ratio state
-  const [aspectRatioMode, setAspectRatioMode] = useState<"free" | "1:1" | "4:3" | "16:9">("free");
+  // Canvas & Stage references
+  const stageRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const isResizingRef = useRef<string | null>(null);
+  const dragStartRef = useRef<{ startX: number; startY: number; box: CropBox }>({
+    startX: 0,
+    startY: 0,
+    box: { x: 0, y: 0, w: 0, h: 0 },
+  });
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [baseSize, setBaseSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-
-  // Load preview URL and measure size once
+  // Load preview and natural dimensions
   useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
-      setNaturalDimensions({ width: 0, height: 0 });
-      setBaseSize({ width: 0, height: 0 });
+      setNaturalWidth(0);
+      setNaturalHeight(0);
+      setResultBlob(null);
+      setResultUrl(null);
       return;
     }
 
@@ -78,163 +107,320 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
     const url = URL.createObjectURL(currentFile);
     setPreviewUrl(url);
 
-    const imgEl = new Image();
-    imgEl.onload = () => {
-      setNaturalDimensions({ width: imgEl.naturalWidth, height: imgEl.naturalHeight });
+    const img = new Image();
+    img.onload = () => {
+      setNaturalWidth(img.naturalWidth);
+      setNaturalHeight(img.naturalHeight);
+      setCropBox({ x: 10, y: 10, w: 80, h: 80 });
     };
-    imgEl.src = url;
+    img.src = url;
 
     return () => {
       URL.revokeObjectURL(url);
     };
   }, [file]);
 
-  // Compute rotated dimensions for show
-  useEffect(() => {
-    if (naturalDimensions.width === 0) return;
-    const isSwapped = rotation === 90 || rotation === 270;
-    setRotatedDimensions({
-      width: isSwapped ? naturalDimensions.height : naturalDimensions.width,
-      height: isSwapped ? naturalDimensions.width : naturalDimensions.height,
-    });
-  }, [naturalDimensions, rotation]);
-
-  const isSwapped = rotation === 90 || rotation === 270;
-  const imageSize = {
-    width: isSwapped ? baseSize.height : baseSize.width,
-    height: isSwapped ? baseSize.width : baseSize.height,
-  };
-
-  // Update rendered image size for react-rnd mapping
-  const handleImageLoad = () => {
-    if (imageRef.current) {
-      setBaseSize({
-        width: imageRef.current.clientWidth,
-        height: imageRef.current.clientHeight,
-      });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      if (selected.size > tool.maxMb * 1024 * 1024) {
+        toast.error(`File exceeds maximum size of ${tool.maxMb} MB`);
+        return;
+      }
+      setFile(selected);
+      setRotation(0);
+      setFlipH(false);
+      setFlipV(false);
+      setResultBlob(null);
+      setResultUrl(null);
     }
   };
 
-  useEffect(() => {
-    handleImageLoad();
-  }, [previewUrl, zoom, rotation]);
+  const handleReset = () => {
+    setFile(null);
+    setRotation(0);
+    setFlipH(false);
+    setFlipV(false);
+    setCropBox({ x: 10, y: 10, w: 80, h: 80 });
+    setResultBlob(null);
+    setResultUrl(null);
+  };
 
-  // Helper to convert crop percentages to pixels
-  const getPixelBox = () => {
-    return {
-      x: (cropBox.x / 100) * imageSize.width,
-      y: (cropBox.y / 100) * imageSize.height,
-      width: (cropBox.w / 100) * imageSize.width,
-      height: (cropBox.h / 100) * imageSize.height,
+  // Apply Aspect Ratio Preset
+  const applyAspectRatio = (ratio: number | null) => {
+    setActiveAspect(ratio);
+    if (!ratio) return;
+
+    setCropBox((prev) => {
+      const currentRatio = (prev.w * (naturalWidth || 1)) / (prev.h * (naturalHeight || 1));
+      let newW = prev.w;
+      let newH = prev.h;
+
+      if (currentRatio > ratio) {
+        newW = Math.min(100, Math.max(10, (prev.h * (naturalHeight || 1) * ratio) / (naturalWidth || 1)));
+      } else {
+        newH = Math.min(100, Math.max(10, (prev.w * (naturalWidth || 1)) / (ratio * (naturalHeight || 1))));
+      }
+
+      const newX = Math.min(100 - newW, Math.max(0, prev.x));
+      const newY = Math.min(100 - newH, Math.max(0, prev.y));
+
+      return { x: newX, y: newY, w: newW, h: newH };
+    });
+    toast.success("Applied aspect ratio!");
+  };
+
+  // ----------------------------------------------------
+  // TOUCH & POINTER EVENT HANDLERS (Native Touch Engine)
+  // ----------------------------------------------------
+  const handlePointerDownDrag = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      box: { ...cropBox },
     };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  // Convert pixels back to percentages
-  const handleRndDragStop = (d: { x: number; y: number }) => {
-    if (imageSize.width === 0 || imageSize.height === 0) return;
-    const newX = Math.round((d.x / imageSize.width) * 100);
-    const newY = Math.round((d.y / imageSize.height) * 100);
-    setCropBox((prev) => ({
-      ...prev,
-      x: Math.max(0, Math.min(100 - prev.w, newX)),
-      y: Math.max(0, Math.min(100 - prev.h, newY)),
-    }));
+  const handlePointerDownResize = (handle: string, e: React.PointerEvent) => {
+    e.stopPropagation();
+    isResizingRef.current = handle;
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      box: { ...cropBox },
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const handleRndResizeStop = (
-    ref: HTMLElement,
-    position: { x: number; y: number }
-  ) => {
-    if (imageSize.width === 0 || imageSize.height === 0) return;
-    const newW = Math.round((ref.offsetWidth / imageSize.width) * 100);
-    const newH = Math.round((ref.offsetHeight / imageSize.height) * 100);
-    const newX = Math.round((position.x / imageSize.width) * 100);
-    const newY = Math.round((position.y / imageSize.height) * 100);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!stageRef.current) return;
+    const stageRect = stageRef.current.getBoundingClientRect();
+    if (stageRect.width === 0 || stageRect.height === 0) return;
 
-    setCropBox({
-      x: Math.max(0, Math.min(100, newX)),
-      y: Math.max(0, Math.min(100, newY)),
-      w: Math.max(5, Math.min(100 - newX, newW)),
-      h: Math.max(5, Math.min(100 - newY, newH)),
-    });
-  };
+    const deltaXPercent = ((e.clientX - dragStartRef.current.startX) / stageRect.width) * 100;
+    const deltaYPercent = ((e.clientY - dragStartRef.current.startY) / stageRect.height) * 100;
+    const initial = dragStartRef.current.box;
 
-  // Lock Ratio Resolver
-  const getAspectRatioValue = () => {
-    if (aspectRatioMode === "1:1") return 1;
-    if (aspectRatioMode === "4:3") return 4 / 3;
-    if (aspectRatioMode === "16:9") return 16 / 9;
-    return undefined;
-  };
+    if (isDraggingRef.current) {
+      let newX = Math.max(0, Math.min(100 - initial.w, initial.x + deltaXPercent));
+      let newY = Math.max(0, Math.min(100 - initial.h, initial.y + deltaYPercent));
+      setCropBox({ ...initial, x: newX, y: newY });
+    } else if (isResizingRef.current) {
+      const handle = isResizingRef.current;
+      let newX = initial.x;
+      let newY = initial.y;
+      let newW = initial.w;
+      let newH = initial.h;
 
-  // Apply Ratio presets
-  useEffect(() => {
-    const ratio = getAspectRatioValue();
-    if (ratio) {
-      setCropBox((prev) => {
-        let targetW = prev.w;
-        let targetH = Math.round(prev.w / ratio);
-        if (prev.y + targetH > 100) {
-          targetH = 100 - prev.y;
-          targetW = Math.round(targetH * ratio);
+      if (handle.includes("e")) {
+        newW = Math.max(5, Math.min(100 - initial.x, initial.w + deltaXPercent));
+      }
+      if (handle.includes("s")) {
+        newH = Math.max(5, Math.min(100 - initial.y, initial.h + deltaYPercent));
+      }
+      if (handle.includes("w")) {
+        const potentialW = initial.w - deltaXPercent;
+        if (potentialW >= 5 && initial.x + deltaXPercent >= 0) {
+          newX = initial.x + deltaXPercent;
+          newW = potentialW;
         }
-        return { ...prev, w: targetW, h: targetH };
+      }
+      if (handle.includes("n")) {
+        const potentialH = initial.h - deltaYPercent;
+        if (potentialH >= 5 && initial.y + deltaYPercent >= 0) {
+          newY = initial.y + deltaYPercent;
+          newH = potentialH;
+        }
+      }
+
+      // Maintain aspect ratio if locked
+      if (activeAspect && (naturalWidth > 0 && naturalHeight > 0)) {
+        if (handle.includes("e") || handle.includes("w")) {
+          newH = (newW * naturalWidth) / (activeAspect * naturalHeight);
+          if (newY + newH > 100) {
+            newH = 100 - newY;
+            newW = (newH * activeAspect * naturalHeight) / naturalWidth;
+          }
+        } else if (handle.includes("n") || handle.includes("s")) {
+          newW = (newH * activeAspect * naturalHeight) / naturalWidth;
+          if (newX + newW > 100) {
+            newW = 100 - newX;
+            newH = (newW * naturalWidth) / (activeAspect * naturalHeight);
+          }
+        }
+      }
+
+      setCropBox({
+        x: Math.max(0, Math.min(100, newX)),
+        y: Math.max(0, Math.min(100, newY)),
+        w: Math.max(5, Math.min(100 - newX, newW)),
+        h: Math.max(5, Math.min(100 - newY, newH)),
       });
     }
-  }, [aspectRatioMode]);
-
-  // Rotates current preview
-  const rotateCurrentPage = () => {
-    setRotation((prev) => (prev + 90) % 360);
   };
 
-  const processCrop = async () => {
-    if (!file) return;
+  const handlePointerUp = () => {
+    isDraggingRef.current = false;
+    isResizingRef.current = null;
+  };
+
+  // Perform Client-Side Canvas Cropping
+  const handlePerformCrop = async () => {
+    if (!file || !previewUrl) return;
 
     setProcessing(true);
     try {
-      const croppedBlob = await img.cropImage(file, {
-        xPercent: cropBox.x,
-        yPercent: cropBox.y,
-        widthPercent: cropBox.w,
-        heightPercent: cropBox.h,
-        rotation: rotation,
+      const img = new Image();
+      await new Promise((res) => {
+        img.onload = res;
+        img.src = previewUrl;
       });
 
-      const extension = file.name.split(".").pop() || "png";
-      const baseName = file.name.replace(/\.[^/.]+$/, "");
-      
-      const url = URL.createObjectURL(croppedBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${baseName}_cropped.${extension}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // 1. Calculate actual crop coordinates on the source image
+      const srcX = (cropBox.x / 100) * img.naturalWidth;
+      const srcY = (cropBox.y / 100) * img.naturalHeight;
+      const srcW = (cropBox.w / 100) * img.naturalWidth;
+      const srcH = (cropBox.h / 100) * img.naturalHeight;
 
-      toast.success("Successfully cropped and formatted Image!");
+      // 2. Offscreen canvas for rotated/flipped crop
+      const isRotated90or270 = rotation === 90 || rotation === 270;
+      const targetW = isRotated90or270 ? srcH : srcW;
+      const targetH = isRotated90or270 ? srcW : srcH;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(targetW));
+      canvas.height = Math.max(1, Math.round(targetH));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas context unavailable");
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      // Transform matrix (translation, rotation, flipping)
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+
+      ctx.drawImage(
+        img,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        -srcW / 2,
+        -srcH / 2,
+        srcW,
+        srcH
+      );
+
+      let mimeType = file.type || "image/jpeg";
+      if (outputFormat === "webp") mimeType = "image/webp";
+      else if (outputFormat === "jpeg") mimeType = "image/jpeg";
+      else if (outputFormat === "png") mimeType = "image/png";
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            setResultBlob(blob);
+            const url = URL.createObjectURL(blob);
+            setResultUrl(url);
+
+            // Auto download
+            const a = document.createElement("a");
+            a.href = url;
+            const baseName = file.name.replace(/\.[^/.]+$/, "");
+            const ext =
+              outputFormat === "webp"
+                ? "webp"
+                : outputFormat === "jpeg"
+                ? "jpg"
+                : outputFormat === "png"
+                ? "png"
+                : file.name.split(".").pop() || "jpg";
+            a.download = `${baseName}_cropped.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            toast.success("Image cropped and saved!");
+          } else {
+            toast.error("Failed to export cropped image.");
+          }
+          setProcessing(false);
+        },
+        mimeType,
+        mimeType === "image/png" ? undefined : quality / 100
+      );
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "Failed to process crop operation");
-    } finally {
+      toast.error("Error cropping image.");
       setProcessing(false);
     }
   };
 
-  const pixelBox = getPixelBox();
-  const currentSize = rotatedDimensions.width > 0 ? rotatedDimensions : null;
+  const handleDownloadAgain = () => {
+    if (!resultUrl || !file) return;
+    const a = document.createElement("a");
+    a.href = resultUrl;
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    const ext =
+      outputFormat === "webp"
+        ? "webp"
+        : outputFormat === "jpeg"
+        ? "jpg"
+        : outputFormat === "png"
+        ? "png"
+        : file.name.split(".").pop() || "jpg";
+    a.download = `${baseName}_cropped.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success("Downloaded cropped image!");
+  };
+
+  // Dimensions computation
+  const calcOutputW = naturalWidth > 0 ? Math.round((cropBox.w / 100) * naturalWidth) : 0;
+  const calcOutputH = naturalHeight > 0 ? Math.round((cropBox.h / 100) * naturalHeight) : 0;
+  const originalSizeMb = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
 
   const Icon = theme.icon;
 
   return (
-    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
+    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
       <Toaster position="top-center" richColors />
+
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/#image"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Image Tools
+        </Link>
+
+        {file && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Crop Another Image
+          </button>
+        )}
+      </div>
+
+      {/* Header */}
       {!file && (
         <div className="mb-8 text-center">
           <span
             className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
           >
             <Icon className="h-3.5 w-3.5" />
-            Image Tools
+            Touch-Native Image Trimmer & Framing
           </span>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {tool.name}
@@ -245,404 +431,444 @@ export function CropImageWorkspace({ tool }: CropImageWorkspaceProps) {
         </div>
       )}
 
-      {/* Back Navigation Bar */}
-      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
-        <Link
-          href="/#image"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Image Tools
-        </Link>
-      </div>
+      {/* Upload Dropzone */}
+      {!file && (
+        <label className="upload-dropzone upload-dropzone-image w-full relative group cursor-pointer">
+          <input
+            type="file"
+            accept="image/*"
+            className="absolute inset-0 z-10 cursor-pointer opacity-0"
+            onChange={handleFileChange}
+          />
+          <span className="upload-icon-container group-hover:scale-105 transition-transform">
+            <Crop className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </span>
+          <span className="text-center">
+            <p className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+              Click or drag an image here to crop
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Crop with custom framing, Rule-of-Thirds grid, and social aspect ratios.
+            </p>
+            <p className="mt-2 text-[11px] font-medium text-zinc-400">
+              Max file size: {tool.maxMb} MB · 100% Private in Browser
+            </p>
+          </span>
+        </label>
+      )}
 
-      <div className={cn(
-        "image-workspace-theme-wrapper flex flex-col overflow-hidden bg-workspace-bg text-foreground lg:flex-row border border-workspace-border",
-        !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl shadow-2xl justify-center items-center"
-          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
-      )}>
-        {!file ? (
-          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="upload-dropzone upload-dropzone-image w-full">
-              <span className="upload-icon-container">
-                <Upload />
-              </span>
-              <span className="text-center">
-                <p className="text-sm font-bold text-zinc-650 dark:text-zinc-300">
-                  Upload an Image to begin cropping
-                </p>
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  Max size {tool.maxMb} MB · Local document processing
-                </p>
-              </span>
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files[0]) {
-                    setFile(files[0]);
-                    setRotation(0);
-                  }
-                }}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            {/* LEFT SIDEBAR: Image Preview card */}
-            <div className="w-full bg-workspace-sidebar border-b border-workspace-border lg:w-48 lg:border-b-0 lg:border-r flex flex-col shrink-0 lg:h-full">
-              <div className="p-4 border-b border-workspace-border flex items-center gap-2">
-                <Layers className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
-                  Source Image
-                </span>
-              </div>
-              
-              <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
-                <button
-                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 bg-blue-50 border-blue-500/30 dark:bg-blue-955/5 dark:border-blue-500/50 shadow-md shadow-blue-500/5"
-                >
-                  <span className="text-[10px] font-bold tracking-wider text-blue-600 dark:text-blue-400">
-                    IMAGE
-                  </span>
-                  
-                  <div className="w-20 h-28 bg-zinc-900 rounded border border-zinc-800 flex items-center justify-center overflow-hidden relative">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="Thumbnail"
-                        className="max-w-full max-h-full object-contain"
-                        draggable={false}
-                      />
-                    ) : (
-                      <FileCheck className="h-5 w-5 text-zinc-400 dark:text-zinc-800 animate-pulse" />
-                    )}
-                  </div>
-                </button>
-              </div>
-            </div>
-
-        {/* CENTER VIEWPORT: Large Preview & Rnd Crop Selector */}
-        <div className="flex flex-1 flex-col items-center bg-workspace-sidebar relative lg:h-full overflow-hidden">
-          {/* Grid Backdrop */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
-
-              {/* Header */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-workspace-border z-10 bg-workspace-sidebar/50 backdrop-blur-sm shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <ImageIcon className="h-4 w-4 text-blue-500" />
-                  </div>
-                  <span className="max-w-[200px] truncate text-sm font-bold text-foreground">
-                    {file.name}
-                  </span>
+      {/* Active Workspace */}
+      {file && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Column: Visual Touch Crop Stage */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            {/* Header Details */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 shadow-xs">
+                  <ImageIcon className="h-5 w-5" />
                 </div>
-                
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white max-w-xs truncate">
+                    {file.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
+                      {naturalWidth} × {naturalHeight} px
+                    </span>
+                    <span>•</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-bold font-mono">
+                      Crop: {calcOutputW} × {calcOutputH} px
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rotate & Flip Controls */}
+              <div className="flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-1">
                 <button
-                  onClick={() => {
-                    setFile(null);
-                    setRotation(0);
-                  }}
-                  className="flex items-center gap-2 rounded-lg bg-workspace-card border border-workspace-border px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-red-50 hover:border-red-500/30 hover:text-red-650 transition-all duration-200 shadow-sm cursor-pointer"
+                  type="button"
+                  onClick={() => setRotation((r) => (r + 90) % 360)}
+                  className="p-1.5 rounded text-zinc-700 dark:text-zinc-300 hover:text-blue-600 transition"
+                  title="Rotate 90°"
                 >
-                  <X className="h-4 w-4" /> Clear File
+                  <RotateCw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFlipH((f) => !f)}
+                  className={cn(
+                    "p-1.5 rounded transition",
+                    flipH ? "bg-blue-600 text-white" : "text-zinc-700 dark:text-zinc-300 hover:text-blue-600"
+                  )}
+                  title="Flip Horizontal"
+                >
+                  <FlipHorizontal className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFlipV((f) => !f)}
+                  className={cn(
+                    "p-1.5 rounded transition",
+                    flipV ? "bg-blue-600 text-white" : "text-zinc-700 dark:text-zinc-300 hover:text-blue-600"
+                  )}
+                  title="Flip Vertical"
+                >
+                  <FlipVertical className="h-3.5 w-3.5" />
                 </button>
               </div>
+            </div>
 
-              {/* Viewport Frame (Scrollable Body) */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-2 sm:p-4 lg:p-8">
-                {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Rendering preview canvas...</p>
+            {/* Cropped Success Result Banner */}
+            {resultBlob && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                    <FileCheck className="h-5 w-5" />
                   </div>
-                ) : error ? (
-                  <div className="text-center">
-                    <p className="text-sm text-red-500 font-semibold">{error}</p>
-                    <button
-                       onClick={() => setFile(null)}
-                       className="mt-3 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white underline"
-                    >
-                      Choose another file
-                    </button>
+                  <div>
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      Image Cropped Successfully!
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black text-white uppercase">
+                        Saved
+                      </span>
+                    </h4>
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
+                      Exported at {calcOutputW} × {calcOutputH} px.
+                    </p>
                   </div>
-                ) : (
-                  previewUrl && (
-                    <div
-                      ref={containerRef}
-                      className="relative select-none shadow-2xl rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-900"
-                      style={{
-                        width: imageSize.width || "auto",
-                        height: imageSize.height || "auto",
-                        transform: `scale(${zoom})`,
-                        transition: "transform 0.2s ease-out",
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        ref={imageRef}
-                        src={previewUrl}
-                        alt="Preview"
-                        onLoad={handleImageLoad}
-                        className={cn(
-                          "max-h-[calc(100vh-320px)] lg:max-h-[calc(100vh-280px)] min-h-[300px] w-auto object-contain",
-                          baseSize.width > 0 && "absolute"
-                        )}
-                        style={
-                          baseSize.width > 0
-                            ? {
-                                top: "50%",
-                                left: "50%",
-                                width: baseSize.width,
-                                height: baseSize.height,
-                                transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-                              }
-                            : {}
-                        }
-                        draggable={false}
-                      />
+                </div>
 
-                      {/* Rotate Icon directly on the image */}
-                      {baseSize.width > 0 && (
-                        <button
-                          onClick={rotateCurrentPage}
-                          className="absolute top-3 right-3 z-30 p-2 bg-white/80 hover:bg-blue-650 border border-zinc-200 rounded-full text-zinc-700 hover:text-white transition-all shadow-lg hover:scale-110 active:scale-95 cursor-pointer dark:bg-zinc-950/80 dark:hover:bg-blue-600 dark:border-zinc-800 dark:text-zinc-300"
-                          title="Rotate Image"
-                        >
-                          <RotateCw className="h-4.5 w-4.5 text-blue-500 dark:text-blue-400 hover:text-white" />
-                        </button>
-                      )}
+                <button
+                  onClick={handleDownloadAgain}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-xs font-bold shadow-sm transition active:scale-95 shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download Again
+                </button>
+              </div>
+            )}
 
-                      {/* Dark Overlay Mask */}
-                      <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+            {/* VISUAL CROP CANVAS STAGE */}
+            <div
+              className="rounded-xl border border-zinc-200 bg-zinc-100/70 p-4 sm:p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[420px] flex flex-col items-center justify-center relative overflow-hidden select-none"
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+            >
+              {previewUrl && (
+                <div
+                  ref={stageRef}
+                  style={{
+                    transform: `scale(${zoom})`,
+                    transformOrigin: "center center",
+                    touchAction: "none",
+                  }}
+                  className="relative rounded-lg shadow-2xl border border-zinc-300 bg-white dark:border-zinc-800 overflow-hidden max-w-full max-h-[460px] flex items-center justify-center"
+                >
+                  {/* Image Display */}
+                  <img
+                    src={previewUrl}
+                    alt="Source"
+                    style={{
+                      transform: `rotate(${rotation}deg) scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`,
+                    }}
+                    className="max-w-[320px] sm:max-w-[420px] max-h-[420px] w-auto h-auto object-contain pointer-events-none block"
+                  />
 
-                      {/* Rnd Crop Selector */}
-                      {imageSize.width > 0 && (
-                        <Rnd
-                          bounds="parent"
-                          lockAspectRatio={getAspectRatioValue()}
-                          size={{ width: pixelBox.width, height: pixelBox.height }}
-                          position={{ x: pixelBox.x, y: pixelBox.y }}
-                          onDragStop={(_, d) => handleRndDragStop(d)}
-                          onResizeStop={(_, __, ref, ___, pos) => handleRndResizeStop(ref, pos)}
-                          className="border-2 border-blue-500 bg-blue-500/5 shadow-[0_0_0_9999px_rgba(9,9,11,0.6)] rounded"
-                          style={{
-                            boxShadow: "0 0 20px rgba(59, 130, 246, 0.25), 0 0 0 9999px rgba(9,9,11,0.65)",
-                            touchAction: "none",
-                          }}
-                        >
-                          {/* Inner dashed grid lines */}
-                          <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
-                            <div className="border-r border-b border-white" />
-                            <div className="border-r border-b border-white" />
-                            <div className="border-b border-white" />
-                            <div className="border-r border-b border-white" />
-                            <div className="border-r border-b border-white" />
-                            <div className="border-b border-white" />
-                            <div className="border-r border-white" />
-                            <div className="border-r border-white" />
-                            <div />
-                          </div>
+                  {/* Darkened Semi-Transparent Backdrop Overlay outside crop */}
+                  <div className="absolute inset-0 pointer-events-none bg-black/45" />
 
-                          {/* Interactive corner indicator dots */}
-                          {["top-left", "top-right", "bottom-left", "bottom-right"].map((corner) => {
-                            const cornerClass = {
-                              "top-left": "-left-1.5 -top-1.5",
-                              "top-right": "-right-1.5 -top-1.5",
-                              "bottom-left": "-left-1.5 -bottom-1.5",
-                              "bottom-right": "-right-1.5 -bottom-1.5",
-                            }[corner];
-                            return (
-                              <div
-                                key={corner}
-                                className={cn(
-                                  "absolute h-3 w-3 rounded-full border border-white bg-blue-500 shadow-md ring-2 ring-blue-500/20",
-                                  cornerClass
-                                )}
-                              />
-                            );
-                          })}
-
-                          {/* Dimension tool-tip */}
-                          <div className="absolute bottom-2.5 right-2.5 bg-white/90 dark:bg-zinc-950/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-mono font-bold text-blue-600 dark:text-blue-400 border border-zinc-200 dark:border-zinc-800 pointer-events-none shadow-sm">
-                            {cropBox.w}% × {cropBox.h}%
-                          </div>
-                        </Rnd>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>              {/* Toolbar Zoom & Rotate Controls (Fixed Footer) */}
-              <div className="w-full p-4 border-t border-workspace-border flex items-center justify-center bg-workspace-sidebar/50 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-workspace-card/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-workspace-border shadow-lg">
-                  <div className="flex items-center gap-2 border-r border-workspace-border pr-4">
-                    <button
-                      onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="h-4.5 w-4.5" />
-                    </button>
-                    <span className="text-[10px] font-bold font-mono text-zinc-600 dark:text-zinc-400 w-10 text-center">
-                      {Math.round(zoom * 100)}%
-                    </span>
-                    <button
-                      onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white transition-all cursor-pointer"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="h-4.5 w-4.5" />
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={rotateCurrentPage}
-                    className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
-                    title="Rotate 90° Clockwise"
+                  {/* THE INTERACTIVE CROP BOX */}
+                  <div
+                    style={{
+                      left: `${cropBox.x}%`,
+                      top: `${cropBox.y}%`,
+                      width: `${cropBox.w}%`,
+                      height: `${cropBox.h}%`,
+                      touchAction: "none",
+                    }}
+                    className="absolute border-2 border-blue-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] cursor-move group"
+                    onPointerDown={handlePointerDownDrag}
                   >
-                    <RotateCw className="h-4 w-4 text-blue-500" />
-                    <span>Rotate Image</span>
-                  </button>
+                    {/* Rule-of-Thirds 3x3 Composition Grid Lines */}
+                    <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-60">
+                      <div className="border-r border-b border-white/60" />
+                      <div className="border-r border-b border-white/60" />
+                      <div className="border-b border-white/60" />
+                      <div className="border-r border-b border-white/60" />
+                      <div className="border-r border-b border-white/60" />
+                      <div className="border-b border-white/60" />
+                      <div className="border-r border-white/60" />
+                      <div className="border-r border-white/60" />
+                      <div />
+                    </div>
+
+                    {/* Dimensions Pill Badge in Center */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none bg-black/75 backdrop-blur-sm text-white px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shadow-md">
+                      {calcOutputW} × {calcOutputH} px
+                    </div>
+
+                    {/* OVERSIZED TOUCH RESIZE HANDLERS (36px Touch Areas) */}
+                    {/* Top-Left */}
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("nw", e)}
+                      className="absolute -top-3.5 -left-3.5 w-9 h-9 flex items-center justify-center cursor-nwse-resize z-20"
+                    >
+                      <div className="w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow-md" />
+                    </div>
+
+                    {/* Top-Right */}
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("ne", e)}
+                      className="absolute -top-3.5 -right-3.5 w-9 h-9 flex items-center justify-center cursor-nesw-resize z-20"
+                    >
+                      <div className="w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow-md" />
+                    </div>
+
+                    {/* Bottom-Left */}
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("sw", e)}
+                      className="absolute -bottom-3.5 -left-3.5 w-9 h-9 flex items-center justify-center cursor-nesw-resize z-20"
+                    >
+                      <div className="w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow-md" />
+                    </div>
+
+                    {/* Bottom-Right */}
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("se", e)}
+                      className="absolute -bottom-3.5 -right-3.5 w-9 h-9 flex items-center justify-center cursor-nwse-resize z-20"
+                    >
+                      <div className="w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow-md" />
+                    </div>
+
+                    {/* Middle Edges */}
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("n", e)}
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-6 flex items-center justify-center cursor-ns-resize z-20"
+                    >
+                      <div className="w-4 h-1.5 bg-blue-600 rounded-full border border-white" />
+                    </div>
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("s", e)}
+                      className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-6 flex items-center justify-center cursor-ns-resize z-20"
+                    >
+                      <div className="w-4 h-1.5 bg-blue-600 rounded-full border border-white" />
+                    </div>
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("w", e)}
+                      className="absolute top-1/2 -left-3 -translate-y-1/2 w-6 h-8 flex items-center justify-center cursor-ew-resize z-20"
+                    >
+                      <div className="w-1.5 h-4 bg-blue-600 rounded-full border border-white" />
+                    </div>
+                    <div
+                      onPointerDown={(e) => handlePointerDownResize("e", e)}
+                      className="absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-8 flex items-center justify-center cursor-ew-resize z-20"
+                    >
+                      <div className="w-1.5 h-4 bg-blue-600 rounded-full border border-white" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Zoom Controls Bar */}
+              <div className="flex items-center gap-2 mt-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 shadow-xs text-xs">
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))}
+                  className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+                <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(2.0, z + 0.15))}
+                  className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1.0)}
+                  className="ml-1 text-[11px] text-blue-600 hover:underline font-semibold"
+                >
+                  Reset Fit
+                </button>
               </div>
             </div>
-        </div>
+          </div>
 
-        {/* RIGHT SIDEBAR: Settings & Operations Panel */}
-        <div className="w-full bg-workspace-sidebar border-t border-workspace-border lg:w-80 lg:border-t-0 lg:border-l flex flex-col z-20 lg:h-full overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-            
-            {/* Header */}
-            <div className="flex items-center gap-2 border-b border-workspace-border pb-4">
-              <Settings className="h-4 w-4 text-blue-500" />
-              <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
-                Crop Settings
-              </h2>
-            </div>
+          {/* Right Column: Aspect Ratio Presets & Output Settings */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-1">
+                  <Crop className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  Aspect Ratio Presets
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Select standard photo & social framing ratios.
+                </p>
+              </div>
 
-            {/* Coordinates & Aspect Ratio Presets */}
-            <div className="space-y-4 rounded-2xl border border-workspace-border bg-workspace-muted p-4">
-              
-              {/* Aspect Ratio Lock Presets */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1">
-                  {aspectRatioMode === "free" ? (
-                    <Unlock className="h-3.5 w-3.5 text-zinc-500" />
-                  ) : (
-                    <Lock className="h-3.5 w-3.5 text-blue-500" />
-                  )}
-                  <span>Aspect Ratio</span>
+              {/* Aspect Ratio Cards Grid */}
+              <div className="grid grid-cols-3 gap-1.5 text-xs">
+                {ASPECT_PRESETS.map((pst, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => applyAspectRatio(pst.ratio)}
+                    className={cn(
+                      "p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-0.5",
+                      activeAspect === pst.ratio
+                        ? "border-blue-500 bg-blue-50/60 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 font-bold"
+                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 font-semibold"
+                    )}
+                  >
+                    <span className="text-[11px] truncate">{pst.name}</span>
+                    <span className="text-[10px] text-zinc-400 font-mono font-normal">
+                      {pst.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 4-Side Fine-Tuning Margin Sliders */}
+              <div className="space-y-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-blue-600" />
+                  Fine-Tuning Margin Offsets (%):
                 </span>
-                
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(["free", "1:1", "4:3", "16:9"] as const).map((mode) => (
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-zinc-500 block mb-1">Left ({Math.round(cropBox.x)}%):</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="80"
+                      value={cropBox.x}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCropBox((p) => ({ ...p, x: val, w: Math.min(p.w, 100 - val) }));
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-500 block mb-1">Top ({Math.round(cropBox.y)}%):</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="80"
+                      value={cropBox.y}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCropBox((p) => ({ ...p, y: val, h: Math.min(p.h, 100 - val) }));
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-500 block mb-1">Width ({Math.round(cropBox.w)}%):</span>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={cropBox.w}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCropBox((p) => ({ ...p, w: Math.min(val, 100 - p.x) }));
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-500 block mb-1">Height ({Math.round(cropBox.h)}%):</span>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={cropBox.h}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCropBox((p) => ({ ...p, h: Math.min(val, 100 - p.y) }));
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Output Format Options */}
+              <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">
+                  Output Format:
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 text-xs">
+                  {(["auto", "webp", "jpeg", "png"] as const).map((fmt) => (
                     <button
-                      key={mode}
-                      onClick={() => setAspectRatioMode(mode)}
+                      key={fmt}
+                      type="button"
+                      onClick={() => setOutputFormat(fmt)}
                       className={cn(
-                        "py-1.5 rounded-lg text-[10px] font-bold border transition-all duration-200 cursor-pointer",
-                        aspectRatioMode === mode
-                          ? "bg-blue-50 dark:bg-blue-955/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
-                          : "bg-workspace-card border-workspace-border text-zinc-555 hover:border-zinc-300 dark:text-zinc-500 dark:hover:border-zinc-800 dark:hover:text-zinc-300"
+                        "py-2 rounded-lg border text-center font-semibold uppercase transition text-[11px]",
+                        outputFormat === fmt
+                          ? "border-blue-500 bg-blue-50/60 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
+                          : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
                       )}
                     >
-                      {mode === "free" ? "Free" : mode}
+                      {fmt}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Manual fine-tuning coordinates */}
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-workspace-border">
-                {[
-                  { label: "Left (X)", key: "x" as const },
-                  { label: "Top (Y)", key: "y" as const },
-                  { label: "Width", key: "w" as const },
-                  { label: "Height", key: "h" as const },
-                ].map((coord) => (
-                  <div key={coord.key} className="space-y-1">
-                    <label className="text-[9px] text-zinc-555 dark:text-zinc-500 font-semibold block">{coord.label}</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        disabled={!file}
-                        value={cropBox[coord.key]}
-                        onChange={(e) => {
-                          const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                          setCropBox((prev) => {
-                            const next = { ...prev, [coord.key]: val };
-                            if (coord.key === "x" && next.x + next.w > 100) next.w = 100 - next.x;
-                            if (coord.key === "y" && next.y + next.h > 100) next.h = 100 - next.y;
-                            if (coord.key === "w" && next.x + next.w > 100) next.x = 100 - next.w;
-                            if (coord.key === "h" && next.y + next.h > 100) next.y = 100 - next.h;
-                            return next;
-                          });
-                        }}
-                        className="w-full bg-workspace-card border border-workspace-border rounded-xl pl-2 pr-6 py-2 text-xs text-foreground font-bold font-mono focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/20 focus:outline-none transition-all disabled:opacity-40"
-                      />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-zinc-500 dark:text-zinc-600">%</span>
-                    </div>
-                  </div>
-                ))}
+              {/* Privacy Guarantee */}
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-1 text-[11px] text-zinc-600 dark:text-zinc-400">
+                <span className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  100% Client-Side Privacy:
+                </span>
+                <p>
+                  Images are trimmed and cropped directly in your browser canvas. No photos are uploaded to any server.
+                </p>
               </div>
 
-              {file && currentSize && (
-                <div className="rounded-xl bg-workspace-card p-2.5 border border-workspace-border flex items-start gap-2 text-[10px] text-zinc-650 dark:text-zinc-400">
-                  <Info className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
-                  <div>
-                    Dimensions: <span className="font-mono text-zinc-500">{Math.round(currentSize.width)}×{Math.round(currentSize.height)} px</span>
-                    <br />
-                    Cropped: <span className="font-mono text-blue-600 dark:text-blue-400 font-bold">{Math.round((cropBox.w / 100) * currentSize.width)}×{Math.round((cropBox.h / 100) * currentSize.height)} px</span>
-                  </div>
-                </div>
-              )}
+              {/* Crop & Save Action Button */}
+              <button
+                onClick={() => void handlePerformCrop()}
+                disabled={processing || !file}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-white shadow-md transition-all active:scale-[0.98]",
+                  theme.button,
+                  (processing || !file) && "opacity-75 cursor-not-allowed"
+                )}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Exporting Cropped Image...</span>
+                  </>
+                ) : (
+                  <>
+                    <Crop className="h-4 w-4" />
+                    <span>Crop & Save Image ({calcOutputW} × {calcOutputH} px)</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
-
-          {/* Action Area */}
-          <div className="p-6 border-t border-workspace-border space-y-3 shrink-0">
-            {file && (
-              <button
-                onClick={() => {
-                  setCropBox({ x: 15, y: 15, w: 70, h: 70 });
-                  setAspectRatioMode("free");
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-workspace-border py-3 text-xs font-bold text-zinc-650 dark:text-zinc-300 hover:bg-workspace-muted hover:text-zinc-950 dark:hover:text-white transition-all cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
-                Reset Crop Area
-              </button>
-            )}
-
-            <button
-              onClick={processCrop}
-              disabled={!file || processing}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/10 transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 cursor-pointer",
-                theme.button
-              )}
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing Crop...
-                </>
-              ) : (
-                <>
-                  <Crop className="h-4 w-4" />
-                  Crop Image File
-                </>
-              )}
-            </button>
-          </div>
         </div>
-      </>
-    )}
-      </div>
+      )}
     </div>
   );
 }

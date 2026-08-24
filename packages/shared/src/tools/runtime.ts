@@ -25,6 +25,7 @@ export const SERVER_TOOL_SLUGS = new Set<string>([
   "unlock-pdf",
   "heic-to-jpg",
   "svg-to-png",
+  "svg-to-jpg",
   "avif-to-jpg",
   "pdf-to-jpg",
   "pdf-to-png",

@@ -97,6 +97,11 @@ export async function processOnServer(
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
       return { buffer: out, mimeType: "image/png", fileName: `${baseName}.png` };
     }
+    case "svg-to-jpg": {
+      const out = await sharp(buffers[0]).flatten({ background: "#ffffff" }).jpeg({ quality: 90 }).toBuffer();
+      const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+      return { buffer: out, mimeType: "image/jpeg", fileName: `${baseName}.jpg` };
+    }
     case "heic-to-jpg": {
       let activeBuffer = buffers[0];
       try {
