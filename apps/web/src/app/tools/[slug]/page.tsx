@@ -34,6 +34,11 @@ import { ExcelToPdfWorkspace } from "@/components/tools/ExcelToPdfWorkspace";
 import { PdfToTextWorkspace } from "@/components/tools/PdfToTextWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
 import { ProtectPdfWorkspace } from "@/components/tools/ProtectPdfWorkspace";
+import { UnlockPdfWorkspace } from "@/components/tools/UnlockPdfWorkspace";
+import { OcrPdfWorkspace } from "@/components/tools/OcrPdfWorkspace";
+import { ImageToWordWorkspace } from "@/components/tools/ImageToWordWorkspace";
+import { ScanToPdfWorkspace } from "@/components/tools/ScanToPdfWorkspace";
+import { CompressImageWorkspace } from "@/components/tools/CompressImageWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -164,7 +169,11 @@ export default async function ToolPage({ params }: PageProps) {
     );
   }
 
-  if (slug === "jpg-to-pdf" || slug === "png-to-pdf" || slug === "image-to-pdf" || slug === "scan-to-pdf") {
+  if (slug === "scan-to-pdf") {
+    return <ScanToPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "jpg-to-pdf" || slug === "png-to-pdf" || slug === "image-to-pdf") {
     return (
       <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
         <ImageToPdfWorkspace tool={tool} />
@@ -266,6 +275,22 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "protect-pdf") {
     return <ProtectPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "unlock-pdf") {
+    return <UnlockPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "ocr-pdf") {
+    return <OcrPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "image-to-word") {
+    return <ImageToWordWorkspace tool={tool} />;
+  }
+
+  if (slug === "compress-image") {
+    return <CompressImageWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];
