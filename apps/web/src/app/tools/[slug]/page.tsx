@@ -33,6 +33,7 @@ import { PowerPointToPdfWorkspace } from "@/components/tools/PowerPointToPdfWork
 import { ExcelToPdfWorkspace } from "@/components/tools/ExcelToPdfWorkspace";
 import { PdfToTextWorkspace } from "@/components/tools/PdfToTextWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
+import { ProtectPdfWorkspace } from "@/components/tools/ProtectPdfWorkspace";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface PageProps {
@@ -261,6 +262,10 @@ export default async function ToolPage({ params }: PageProps) {
         <JsonFormatterWorkspace tool={tool} />
       </div>
     );
+  }
+
+  if (slug === "protect-pdf") {
+    return <ProtectPdfWorkspace tool={tool} />;
   }
 
   const theme = CATEGORY_THEME[tool.category];

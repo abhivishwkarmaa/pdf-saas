@@ -1,28 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
-import { Rnd } from "react-rnd";
 import {
   Upload,
   X,
-  Settings,
-  Info,
-  Loader2,
   FileText,
   RotateCw,
   ZoomIn,
   ZoomOut,
-  RefreshCw,
   Layers,
+  ArrowLeft,
+  RefreshCw,
+  Download,
+  ShieldCheck,
+  CheckCircle2,
   FileCheck,
   Search,
   Mail,
   Phone,
   Trash2,
   Plus,
-  ArrowLeft,
+  Edit3,
+  MousePointer,
+  Eye,
+  Loader2,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
@@ -36,70 +43,73 @@ interface RedactPdfWorkspaceProps {
 interface RedactionRegion {
   id: string;
   pageIndex: number; // 0-based
-  xPercent: number;
-  yPercent: number;
-  widthPercent: number;
-  heightPercent: number;
+  xPercent: number;  // 0 to 100
+  yPercent: number;  // 0 to 100
+  widthPercent: number; // 0 to 100
+  heightPercent: number; // 0 to 100
   type: "custom" | "text" | "email" | "phone";
   text?: string;
 }
 
-interface SearchResult {
-  id: string;
-  pageIndex: number;
-  text: string;
-  xPercent: number;
-  yPercent: number;
-  widthPercent: number;
-  heightPercent: number;
-  type: "text" | "email" | "phone";
-}
+type InteractionMode = "draw" | "select";
+type HandleType = "tl" | "tr" | "bl" | "br" | "move";
 
 export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
-  const theme = CATEGORY_THEME[tool.category];
+  const theme = CATEGORY_THEME[tool.category] || {
+    button: "bg-red-600 hover:bg-red-500 text-white shadow-red-600/20",
+    accent: "text-red-600 dark:text-red-400",
+    accentBg: "bg-red-500/10",
+    accentBorder: "border-red-500/20",
+    icon: ShieldAlert,
+  };
+
   const [file, setFile] = useState<File | null>(null);
   const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // PDF Page states
   const [totalPages, setTotalPages] = useState(0);
   const [previewPage, setPreviewPage] = useState(1);
-  const [pageImages, setPageImages] = useState<Record<string, string>>({}); // cache key: "page-rotation"
-  const [pageSizes, setPageSizes] = useState<Record<string, { width: number; height: number }>>({});
-
-  // Rotations map: page index (0-based) -> rotation angle (0, 90, 180, 270)
+  const [pageImages, setPageImages] = useState<Record<string, string>>({});
   const [rotations, setRotations] = useState<Record<number, number>>({});
 
   // Redaction regions
   const [regions, setRegions] = useState<RedactionRegion[]>([]);
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
 
-  // Mouse drag drawing state
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
-  const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
+  // Interaction Mode: "draw" to draw new boxes, "select" to move/resize existing ones
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>("draw");
 
-  // Zoom factor (default 1.0, ranges from 0.5 to 2.0)
-  const [zoom, setZoom] = useState(1.0);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      setZoom(0.75);
-    }
-  }, []);
-
-  // Search panel states
+  // Search & Auto-redact states
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"text" | "email" | "phone">("text");
   const [searchScope, setSearchScope] = useState<"all" | "current">("all");
   const [searching, setSearching] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  // Zoom factor
+  const [zoom, setZoom] = useState(1.0);
 
-  // Dynamic PDFJS injection
+  // Result state
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
+
+  // Refs for drawing & touch handling
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDrawingRef = useRef(false);
+  const drawStartRef = useRef<{ xPercent: number; yPercent: number }>({ xPercent: 0, yPercent: 0 });
+  const [drawingBox, setDrawingBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // Refs for dragging / resizing selected box
+  const isTransformingRef = useRef(false);
+  const transformHandleRef = useRef<HandleType | null>(null);
+  const transformStartRef = useRef<{ clientX: number; clientY: number; region: RedactionRegion }>({
+    clientX: 0,
+    clientY: 0,
+    region: { id: "", pageIndex: 0, xPercent: 0, yPercent: 0, widthPercent: 0, heightPercent: 0, type: "custom" },
+  });
+
+  // PDF.js script loader
   useEffect(() => {
     if (typeof window === "undefined") return;
     if ((window as any).pdfjsLib) {
@@ -116,7 +126,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
     document.body.appendChild(script);
   }, []);
 
-  // Initialize PDF file
+  // Initialize PDF & render first page
   useEffect(() => {
     if (!file || !pdfjsLoaded) return;
     const currentFile = file;
@@ -124,158 +134,264 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
 
     async function loadPdf() {
       setLoading(true);
-      setError(null);
+      setResultBlob(null);
+
       try {
         const arrayBuffer = await currentFile.arrayBuffer();
         const pdfjsLib = (window as any).pdfjsLib;
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const total = pdfDoc.numPages;
-        setTotalPages(total);
-
-        // Pre-render first page with rotation 0
-        const page = await pdfDoc.getPage(1);
-        const userRotation = rotations[0] || 0;
-        const viewport = page.getViewport({ scale: 1.5, rotation: userRotation });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const context = canvas.getContext("2d");
-        await page.render({ canvasContext: context, viewport }).promise;
 
         if (active) {
-          const cacheKey = `1-${userRotation}`;
-          setPageImages({ [cacheKey]: canvas.toDataURL() });
-          setPageSizes({ [cacheKey]: { width: viewport.width, height: viewport.height } });
+          setTotalPages(total);
           setPreviewPage(1);
           setRegions([]);
+          setSelectedRegionId(null);
+
+          // Render Page 1
+          const page = await pdfDoc.getPage(1);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            if (active) {
+              setPageImages({ "1-0": canvas.toDataURL() });
+            }
+          }
         }
       } catch (err) {
-        console.error(err);
-        if (active) setError("Could not load PDF document. Verify it is not encrypted.");
+        console.error("PDF load error:", err);
+        if (active) toast.error("Could not load PDF document.");
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadPdf();
+    void loadPdf();
     return () => {
       active = false;
     };
   }, [file, pdfjsLoaded]);
 
-  // Load target page dynamically when active page or its rotation changes
-  const loadPageImage = async (pageNumber: number, userRotation: number) => {
-    const cacheKey = `${pageNumber}-${userRotation}`;
-    if (pageImages[cacheKey] || !file) return;
+  // Load specific page dynamically
+  const loadPage = useCallback(
+    async (pageNum: number, rotationAngle: number) => {
+      const key = `${pageNum}-${rotationAngle}`;
+      if (pageImages[key] || !file) return;
 
-    const currentFile = file;
-    try {
-      const arrayBuffer = await currentFile.arrayBuffer();
-      const pdfjsLib = (window as any).pdfjsLib;
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const page = await pdfDoc.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.5, rotation: userRotation });
-      const canvas = document.createElement("canvas");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const context = canvas.getContext("2d");
-      await page.render({ canvasContext: context, viewport }).promise;
-
-      setPageImages((prev) => ({ ...prev, [cacheKey]: canvas.toDataURL() }));
-      setPageSizes((prev) => ({ ...prev, [cacheKey]: { width: viewport.width, height: viewport.height } }));
-    } catch (err) {
-      console.error("Error rendering page:", err);
-    }
-  };
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfjsLib = (window as any).pdfjsLib;
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5, rotation: rotationAngle });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          setPageImages((prev) => ({ ...prev, [key]: canvas.toDataURL() }));
+        }
+      } catch (err) {
+        console.error("Error loading page:", err);
+      }
+    },
+    [file, pageImages]
+  );
 
   const currentRotation = rotations[previewPage - 1] || 0;
-  const currentCacheKey = `${previewPage}-${currentRotation}`;
+  const currentKey = `${previewPage}-${currentRotation}`;
 
   useEffect(() => {
     if (file && previewPage > 0) {
-      loadPageImage(previewPage, currentRotation);
+      void loadPage(previewPage, currentRotation);
     }
-  }, [previewPage, currentRotation, file]);
+  }, [file, previewPage, currentRotation, loadPage]);
 
-  // Trigger thumbnail loads for left sidebar
-  useEffect(() => {
-    if (file && totalPages > 0) {
-      for (let i = 1; i <= Math.min(totalPages, 50); i++) {
-        const pageRot = rotations[i - 1] || 0;
-        loadPageImage(i, pageRot);
-      }
-    }
-  }, [file, totalPages, rotations]);
-
-  // Update rendered image size for relative coordinates mapping
-  const handleImageLoad = () => {
-    if (imageRef.current) {
-      setImageSize({
-        width: imageRef.current.clientWidth,
-        height: imageRef.current.clientHeight,
-      });
-    }
-  };
-
-  useEffect(() => {
-    handleImageLoad();
-  }, [pageImages[currentCacheKey], zoom]);
-
-  // Rotates current preview page
+  // Rotate preview page
   const rotateCurrentPage = () => {
-    const currentIdx = previewPage - 1;
-    setRotations((prev) => ({
-      ...prev,
-      [currentIdx]: ((prev[currentIdx] || 0) + 90) % 360,
-    }));
+    const idx = previewPage - 1;
+    const nextRot = ((rotations[idx] || 0) + 90) % 360;
+    setRotations((prev) => ({ ...prev, [idx]: nextRot }));
   };
 
-  // Pointer event handlers for drawing custom rectangles
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.pointerType === "mouse" && e.button !== 0) || !imageRef.current) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+  // ----------------------------------------------------
+  // DRAW NEW REDACTION REGION (Pointer / Touch Event)
+  // ----------------------------------------------------
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    if (interactionMode !== "draw" || !containerRef.current) return;
+    if (e.target !== containerRef.current && !(e.target as HTMLElement).classList.contains("canvas-stage")) {
+      return;
+    }
 
-    setIsDrawing(true);
-    setDrawStart({ x, y });
-    setDrawCurrent({ x, y });
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const xPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const yPercent = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    isDrawingRef.current = true;
+    drawStartRef.current = { xPercent, yPercent };
+    setDrawingBox({ x: xPercent, y: yPercent, w: 0, h: 0 });
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDrawing) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-    setDrawCurrent({ x, y });
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (!isDrawingRef.current || !containerRef.current) return;
+    e.preventDefault();
+
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const curXPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const curYPercent = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+    const startX = drawStartRef.current.xPercent;
+    const startY = drawStartRef.current.yPercent;
+
+    const x = Math.min(startX, curXPercent);
+    const y = Math.min(startY, curYPercent);
+    const w = Math.abs(curXPercent - startX);
+    const h = Math.abs(curYPercent - startY);
+
+    setDrawingBox({
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      w: Math.round(w * 10) / 10,
+      h: Math.round(h * 10) / 10,
+    });
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDrawing) return;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    setIsDrawing(false);
+  const handleCanvasPointerUp = (e: React.PointerEvent) => {
+    if (!isDrawingRef.current) return;
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    isDrawingRef.current = false;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const w = Math.abs(drawCurrent.x - drawStart.x);
-    const h = Math.abs(drawCurrent.y - drawStart.y);
-
-    // Filter clicks / extremely small drags
-    if (w > 6 && h > 6) {
+    if (drawingBox && drawingBox.w > 1.5 && drawingBox.h > 1.5) {
       const newRegion: RedactionRegion = {
         id: Math.random().toString(36).substring(2, 9),
         pageIndex: previewPage - 1,
-        xPercent: Math.round((Math.min(drawStart.x, drawCurrent.x) / rect.width) * 1000) / 10,
-        yPercent: Math.round((Math.min(drawStart.y, drawCurrent.y) / rect.height) * 1000) / 10,
-        widthPercent: Math.round((w / rect.width) * 1000) / 10,
-        heightPercent: Math.round((h / rect.height) * 1000) / 10,
+        xPercent: drawingBox.x,
+        yPercent: drawingBox.y,
+        widthPercent: drawingBox.w,
+        heightPercent: drawingBox.h,
         type: "custom",
       };
       setRegions((prev) => [...prev, newRegion]);
+      setSelectedRegionId(newRegion.id);
+      setInteractionMode("select");
+      toast.success("Redaction area added!");
+    }
+    setDrawingBox(null);
+  };
+
+  // ----------------------------------------------------
+  // TRANSFORM / RESIZE / MOVE SELECTED REGION (Pointer / Touch)
+  // ----------------------------------------------------
+  const handleHandlePointerDown = (e: React.PointerEvent, region: RedactionRegion, handle: HandleType) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    isTransformingRef.current = true;
+    transformHandleRef.current = handle;
+    setSelectedRegionId(region.id);
+    transformStartRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      region: { ...region },
+    };
+  };
+
+  const handleHandlePointerMove = (e: React.PointerEvent) => {
+    if (!isTransformingRef.current || !containerRef.current) return;
+    e.preventDefault();
+
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const deltaXPercent = ((e.clientX - transformStartRef.current.clientX) / rect.width) * 100;
+    const deltaYPercent = ((e.clientY - transformStartRef.current.clientY) / rect.height) * 100;
+    const init = transformStartRef.current.region;
+    const handle = transformHandleRef.current;
+
+    let newX = init.xPercent;
+    let newY = init.yPercent;
+    let newW = init.widthPercent;
+    let newH = init.heightPercent;
+    const minSize = 2; // min 2%
+
+    if (handle === "move") {
+      newX = Math.max(0, Math.min(100 - init.widthPercent, init.xPercent + deltaXPercent));
+      newY = Math.max(0, Math.min(100 - init.heightPercent, init.yPercent + deltaYPercent));
+    } else {
+      if (handle === "tl" || handle === "tr") {
+        const proposedY = Math.max(0, Math.min(init.yPercent + init.heightPercent - minSize, init.yPercent + deltaYPercent));
+        newH = init.yPercent + init.heightPercent - proposedY;
+        newY = proposedY;
+      }
+      if (handle === "bl" || handle === "br") {
+        newH = Math.max(minSize, Math.min(100 - init.yPercent, init.heightPercent + deltaYPercent));
+      }
+      if (handle === "tl" || handle === "bl") {
+        const proposedX = Math.max(0, Math.min(init.xPercent + init.widthPercent - minSize, init.xPercent + deltaXPercent));
+        newW = init.xPercent + init.widthPercent - proposedX;
+        newX = proposedX;
+      }
+      if (handle === "tr" || handle === "br") {
+        newW = Math.max(minSize, Math.min(100 - init.xPercent, init.widthPercent + deltaXPercent));
+      }
+    }
+
+    setRegions((prev) =>
+      prev.map((r) =>
+        r.id === init.id
+          ? {
+              ...r,
+              xPercent: Math.round(newX * 10) / 10,
+              yPercent: Math.round(newY * 10) / 10,
+              widthPercent: Math.round(newW * 10) / 10,
+              heightPercent: Math.round(newH * 10) / 10,
+            }
+          : r
+      )
+    );
+  };
+
+  const handleHandlePointerUp = (e: React.PointerEvent) => {
+    if (isTransformingRef.current) {
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+      isTransformingRef.current = false;
+      transformHandleRef.current = null;
     }
   };
 
-  // Perform PDF text search and automatically add word-only overlays
+  // Add standard centered box (1-click helper)
+  const addCenterBox = () => {
+    const newRegion: RedactionRegion = {
+      id: Math.random().toString(36).substring(2, 9),
+      pageIndex: previewPage - 1,
+      xPercent: 35,
+      yPercent: 45,
+      widthPercent: 30,
+      heightPercent: 10,
+      type: "custom",
+    };
+    setRegions((prev) => [...prev, newRegion]);
+    setSelectedRegionId(newRegion.id);
+    setInteractionMode("select");
+    toast.success("Added redaction box! Drag handles to reposition.");
+  };
+
+  // Auto-search and overlay redaction regions
   const performSearch = async () => {
     if (!file || (searchMode === "text" && !searchQuery.trim())) return;
     setSearching(true);
@@ -328,7 +444,6 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
           }
 
           for (const m of matches) {
-            // Estimate character positions for proportional text metrics
             const charWidth = item.width / item.str.length;
             const matchXOffset = m.index * charWidth;
             const matchWidth = m.length * charWidth;
@@ -338,7 +453,6 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
             const [vx, vy] = viewport.convertToViewportPoint(tx, ty);
             const h = item.height || Math.abs(item.transform[3]) || 12;
 
-            // vy is the baseline of the text, so the top is vy - h
             const xPercent = (vx / width) * 100;
             const yPercent = ((vy - h) / height) * 100;
             const widthPercent = (matchWidth / width) * 100;
@@ -349,8 +463,8 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
               pageIndex: i - 1,
               xPercent: Math.max(0, Math.min(100, Math.round(xPercent * 10) / 10)),
               yPercent: Math.max(0, Math.min(100, Math.round(yPercent * 10) / 10)),
-              widthPercent: Math.max(0.1, Math.min(100, Math.round(widthPercent * 10) / 10)),
-              heightPercent: Math.max(0.1, Math.min(100, Math.round(heightPercent * 10) / 10)),
+              widthPercent: Math.max(0.2, Math.min(100, Math.round(widthPercent * 10) / 10)),
+              heightPercent: Math.max(0.2, Math.min(100, Math.round(heightPercent * 10) / 10)),
               type: searchMode,
               text: m.text,
             });
@@ -377,33 +491,38 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
             }
           }
           if (addedCount > 0) {
-            toast.success(`Successfully added ${addedCount} new redaction overlays!`);
+            toast.success(`Added ${addedCount} automated redactions!`);
           } else {
-            toast.info("Redaction regions already exist for all matches.");
+            toast.info("Redactions already exist for matches.");
           }
           return updated;
         });
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to search and redact PDF text content.");
+      toast.error("Failed to search PDF content.");
     } finally {
       setSearching(false);
     }
   };
 
-  const processRedact = async () => {
+  const handleProcessRedact = async () => {
     if (!file) return;
     if (regions.length === 0) {
-      toast.error("Please add at least one redaction region before processing.");
+      toast.error("Please add at least one redaction box.");
       return;
     }
 
     setProcessing(true);
     try {
-      const redactedBlob = await pdf.redactPdf(file, regions);
-      pdf.downloadBlob(redactedBlob, `${file.name.replace(/\.[^/.]+$/, "")}_redacted.pdf`);
-      toast.success("Successfully redacted and saved PDF document!");
+      const outBlob = await pdf.redactPdf(file, regions);
+      const outName = `${file.name.replace(/\.[^/.]+$/, "")}_redacted.pdf`;
+      setResultBlob(outBlob);
+      setResultFileName(outName);
+
+      // Download
+      pdf.downloadBlob(outBlob, outName);
+      toast.success("PDF redacted & sanitized permanently!");
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to redact PDF");
@@ -412,18 +531,71 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
     }
   };
 
+  const handleDownloadAgain = () => {
+    if (!resultBlob || !resultFileName) return;
+    pdf.downloadBlob(resultBlob, resultFileName);
+    toast.success("Downloaded redacted PDF!");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      if (selected.size > tool.maxMb * 1024 * 1024) {
+        toast.error(`File size exceeds limit of ${tool.maxMb} MB`);
+        return;
+      }
+      setFile(selected);
+      setResultBlob(null);
+    }
+  };
+
+  const handleReset = () => {
+    setFile(null);
+    setPageImages({});
+    setRotations({});
+    setRegions([]);
+    setSelectedRegionId(null);
+    setResultBlob(null);
+    setResultFileName("");
+  };
+
+  const currentPageRegions = regions.filter((r) => r.pageIndex === previewPage - 1);
+  const originalSizeMb = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
   const Icon = theme.icon;
 
   return (
-    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
+    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
       <Toaster position="top-center" richColors />
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+
+        {file && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Redact Another File
+          </button>
+        )}
+      </div>
+
+      {/* Header */}
       {!file && (
         <div className="mb-8 text-center">
           <span
             className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
           >
             <Icon className="h-3.5 w-3.5" />
-            PDF Tools
+            Privacy & Sanitization
           </span>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {tool.name}
@@ -434,491 +606,552 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
         </div>
       )}
 
-      {/* Back Navigation Bar */}
-      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
-        <Link
-          href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-workspace-border bg-workspace-card px-3 py-1.5 text-xs font-semibold text-zinc-650 shadow-sm transition hover:bg-workspace-muted text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to PDF Tools
-        </Link>
-      </div>
+      {/* Upload Dropzone */}
+      {!file && (
+        <label className="upload-dropzone upload-dropzone-pdf w-full relative group cursor-pointer">
+          <input
+            type="file"
+            accept=".pdf"
+            className="absolute inset-0 z-10 cursor-pointer opacity-0"
+            onChange={handleFileChange}
+          />
+          <span className="upload-icon-container group-hover:scale-105 transition-transform">
+            <ShieldAlert className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </span>
+          <span className="text-center">
+            <p className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+              Click or drag a PDF document here to redact
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Permanently blackout sensitive text, signatures, emails & private information.
+            </p>
+            <p className="mt-2 text-[11px] font-medium text-zinc-400">
+              Max file size: {tool.maxMb} MB
+            </p>
+          </span>
+        </label>
+      )}
 
-      <div className={cn(
-        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-workspace-bg text-foreground lg:flex-row border border-workspace-border",
-        !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl shadow-2xl justify-center items-center"
-          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
-      )}>
-        {!file ? (
-          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="upload-dropzone upload-dropzone-pdf w-full">
-              <span className="upload-icon-container">
-                <Upload />
-              </span>
-              <span className="text-center">
-                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                  Upload PDF file to redact
-                </p>
-                <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-                  Max size {tool.maxMb} MB · Local document processing
-                </p>
-              </span>
-              <input
-                type="file"
-                className="hidden"
-                accept="application/pdf"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files[0]) setFile(files[0]);
-                }}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            {/* LEFT SIDEBAR: Page Thumbnails */}
-            {totalPages > 0 && (
-              <div className="w-full bg-workspace-sidebar border-b border-workspace-border lg:w-44 lg:border-b-0 lg:border-r flex flex-col shrink-0 lg:h-full">
-                <div className="p-4 border-b border-workspace-border flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-red-500" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Pages ({totalPages})
-                  </span>
+      {/* Active Workspace */}
+      {file && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Column: Visual Stage & Interactive Canvas */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            {/* Header Document Card */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 shadow-xs">
+                  <FileText className="h-5 w-5" />
                 </div>
-                
-                <div className="flex flex-row lg:flex-col flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-4 gap-3 max-h-36 lg:max-h-none scrollbar-thin">
-              {Array.from({ length: totalPages }, (_, i) => {
-                const pageRot = rotations[i] || 0;
-                const thumbKey = `${i + 1}-${pageRot}`;
-                const thumbUrl = pageImages[thumbKey];
-                const isSelected = previewPage === i + 1;
-                const countOnPage = regions.filter((r) => r.pageIndex === i).length;
-
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setPreviewPage(i + 1)}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 p-2 rounded-xl border shrink-0 transition-all duration-200 relative",
-                      isSelected
-                        ? "bg-red-500/5 border-red-500/50 shadow-md shadow-red-500/5"
-                        : "bg-workspace-card border-workspace-border hover:border-zinc-300 dark:hover:border-zinc-800 hover:bg-workspace-muted"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-[10px] font-bold tracking-wider transition-colors",
-                      isSelected ? "text-red-400" : "text-zinc-500"
-                    )}>
-                      PAGE {i + 1}
-                    </span>
-                    
-                    <div className="w-20 h-28 bg-zinc-900 rounded border border-zinc-800 flex items-center justify-center overflow-hidden relative">
-                      {thumbUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={thumbUrl}
-                          alt={`Thumb ${i + 1}`}
-                          className="max-w-full max-h-full object-contain"
-                          draggable={false}
-                        />
-                      ) : (
-                        <FileCheck className="h-5 w-5 text-zinc-800 animate-pulse" />
-                      )}
-                    </div>
-
-                    {countOnPage > 0 && (
-                      <span className="absolute top-1 right-1 bg-red-600 text-[8px] font-extrabold text-white px-1.5 py-0.5 rounded-full shadow border border-red-700">
-                        {countOnPage}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* CENTER VIEWPORT PANEL */}
-        <div className="flex flex-1 flex-col items-center bg-workspace-sidebar relative lg:h-full overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
-
-          {!file ? (
-            <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto min-h-[400px]">
-              <label className="group flex w-full cursor-pointer flex-col items-center gap-6 rounded-3xl border border-workspace-border bg-workspace-bg/10 backdrop-blur-md px-6 py-20 transition-all duration-300 hover:border-red-500/30 hover:bg-workspace-muted/30">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-workspace-muted border border-workspace-border transition-all duration-300 group-hover:scale-110 group-hover:border-red-500/20">
-                  <Upload className="h-7 w-7 text-zinc-400 dark:text-zinc-500 group-hover:text-red-500 transition-colors" />
-                </span>
-                <span className="text-center">
-                  <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-red-400 transition-colors">
-                    Upload PDF file to redact
-                  </p>
-                  <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-                    Max size {tool.maxMb} MB · Local document processing
-                  </p>
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files[0]) setFile(files[0]);
-                  }}
-                />
-              </label>
-            </div>
-          ) : (
-            <>
-              {/* Header */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-workspace-border z-10 bg-workspace-sidebar/50 backdrop-blur-sm shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20">
-                    <FileText className="h-4 w-4 text-red-500" />
-                  </div>
-                  <span className="max-w-[200px] truncate text-sm font-bold text-foreground">
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white max-w-xs truncate">
                     {file.name}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-650 dark:text-zinc-400 font-bold bg-workspace-card border border-workspace-border px-2 py-1 rounded">
-                    Drag mouse to select redaction region
-                  </span>
-                  <button
-                    onClick={() => {
-                      setFile(null);
-                      setRotations({});
-                      setRegions([]);
-                    }}
-                    className="flex items-center gap-2 rounded-lg bg-workspace-card border border-workspace-border px-3.5 py-1.5 text-xs font-bold text-foreground hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
-                  >
-                    <X className="h-4 w-4" /> Clear File
-                  </button>
-                </div>
-              </div>
-
-              {/* Viewport Frame */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-2 sm:p-4 lg:p-8">
-                {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-red-500" />
-                    <p className="text-xs text-zinc-400">Rendering preview canvas...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center">
-                    <p className="text-sm text-red-500 font-semibold">{error}</p>
-                    <button
-                      onClick={() => setFile(null)}
-                      className="mt-3 text-xs text-zinc-400 hover:text-white underline"
-                    >
-                      Choose another file
-                    </button>
-                  </div>
-                ) : (
-                  pageImages[currentCacheKey] && (
-                    <div
-                      ref={containerRef}
-                      onPointerDown={handlePointerDown}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={handlePointerUp}
-                      className="relative select-none shadow-2xl rounded-lg overflow-hidden border border-zinc-900 cursor-crosshair"
-                      style={{
-                        width: imageSize.width || "auto",
-                        height: imageSize.height || "auto",
-                        transform: `scale(${zoom})`,
-                        transformOrigin: "center center",
-                        transition: "transform 0.2s ease-out",
-                        touchAction: "none",
-                      }}
-                    >
-                      {/* Base Image */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        ref={imageRef}
-                        src={pageImages[currentCacheKey]}
-                        alt={`Preview Page ${previewPage}`}
-                        onLoad={handleImageLoad}
-                         className="max-h-[calc(100vh-320px)] lg:max-h-[calc(100vh-280px)] min-h-[300px] w-auto object-contain"
-                        draggable={false}
-                      />
-
-                      {/* Semi-transparent Overlay for Regions preview */}
-                      {regions
-                        .filter((r) => r.pageIndex === previewPage - 1)
-                        .map((region) => {
-                          const pxX = (region.xPercent / 100) * imageSize.width;
-                          const pxY = (region.yPercent / 100) * imageSize.height;
-                          const pxW = (region.widthPercent / 100) * imageSize.width;
-                          const pxH = (region.heightPercent / 100) * imageSize.height;
-
-                          return (
-                            <Rnd
-                              key={region.id}
-                              bounds="parent"
-                              size={{ width: pxW, height: pxH }}
-                              position={{ x: pxX, y: pxY }}
-                              onPointerDown={(e: any) => e.stopPropagation()} // Stop drawing from triggering
-                              onDragStop={(_, d) => {
-                                const newX = Math.round((d.x / imageSize.width) * 1000) / 10;
-                                const newY = Math.round((d.y / imageSize.height) * 1000) / 10;
-                                setRegions((prev) =>
-                                  prev.map((r) =>
-                                    r.id === region.id
-                                      ? {
-                                          ...r,
-                                          xPercent: Math.max(0, Math.min(100 - r.widthPercent, newX)),
-                                          yPercent: Math.max(0, Math.min(100 - r.heightPercent, newY)),
-                                        }
-                                      : r
-                                  )
-                                );
-                              }}
-                              onResizeStop={(_, __, ref, ___, pos) => {
-                                const newW = Math.round((ref.offsetWidth / imageSize.width) * 1000) / 10;
-                                const newH = Math.round((ref.offsetHeight / imageSize.height) * 1000) / 10;
-                                const newX = Math.round((pos.x / imageSize.width) * 1000) / 10;
-                                const newY = Math.round((pos.y / imageSize.height) * 1000) / 10;
-                                setRegions((prev) =>
-                                  prev.map((r) =>
-                                    r.id === region.id
-                                      ? {
-                                          ...r,
-                                          xPercent: Math.max(0, Math.min(100, newX)),
-                                          yPercent: Math.max(0, Math.min(100, newY)),
-                                          widthPercent: Math.max(1, Math.min(100 - newX, newW)),
-                                          heightPercent: Math.max(1, Math.min(100 - newY, newH)),
-                                        }
-                                      : r
-                                  )
-                                );
-                              }}
-                              className="border border-red-500 bg-black/75 flex items-center justify-center group z-20 shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-                              style={{ touchAction: "none" }}
-                              enableUserSelectHack={false}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRegions((prev) => prev.filter((r) => r.id !== region.id));
-                                }}
-                                onPointerDown={(e: any) => e.stopPropagation()}
-                                className="absolute -top-2.5 -right-2.5 bg-red-600 hover:bg-red-500 text-white rounded-full p-0.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer border border-zinc-800"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                              
-                              <span className="text-[7px] text-zinc-400 font-mono tracking-tight font-extrabold max-w-full truncate px-1 select-none pointer-events-none">
-                                {region.type === "custom" ? "REDACT" : region.type.toUpperCase()}
-                              </span>
-                            </Rnd>
-                          );
-                        })}
-
-                      {/* Temporary box drawn during drag */}
-                      {isDrawing && (
-                        <div
-                          className="absolute border-2 border-dashed border-red-500 bg-red-500/10 pointer-events-none z-30"
-                          style={{
-                            left: Math.min(drawStart.x, drawCurrent.x),
-                            top: Math.min(drawStart.y, drawCurrent.y),
-                            width: Math.abs(drawCurrent.x - drawStart.x),
-                            height: Math.abs(drawCurrent.y - drawStart.y),
-                          }}
-                        />
-                      )}
-                    </div>
-                  )
-                )}
-              </div>              {/* Zoom & Rotate Toolbar */}
-              <div className="w-full p-4 border-t border-workspace-border flex items-center justify-center bg-workspace-sidebar/50 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-workspace-card/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-workspace-border shadow-lg">
-                  <div className="flex items-center gap-2 border-r border-workspace-border pr-4">
-                    <button
-                      onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="h-4.5 w-4.5" />
-                    </button>
-                    <span className="text-[10px] font-bold font-mono text-zinc-650 dark:text-zinc-400 w-10 text-center">
-                      {Math.round(zoom * 100)}%
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      {originalSizeMb} MB
                     </span>
-                    <button
-                      onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                      className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="h-4.5 w-4.5" />
-                    </button>
+                    <span>•</span>
+                    <span>{totalPages} Pages</span>
+                    <span>•</span>
+                    <span className="text-red-600 dark:text-red-400 font-semibold font-mono">
+                      {regions.length} Total Redaction{regions.length === 1 ? "" : "s"}
+                    </span>
                   </div>
+                </div>
+              </div>
 
+              {/* Action Toolbar */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={rotateCurrentPage}
+                  className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition"
+                  title="Rotate Current Page 90°"
+                >
+                  <RotateCw className="h-3.5 w-3.5 text-red-600" />
+                  <span>Rotate</span>
+                </button>
+
+                <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900 text-xs">
                   <button
-                    onClick={rotateCurrentPage}
-                    className="p-1.5 rounded-lg hover:bg-workspace-muted text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
-                    title="Rotate Page"
+                    type="button"
+                    onClick={() => setZoom((z) => Math.max(0.7, z - 0.1))}
+                    className="rounded p-1 text-zinc-600 hover:bg-white hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white transition"
+                    title="Zoom Out"
                   >
-                    <RotateCw className="h-4 w-4 text-red-500" />
-                    <span>Rotate Page</span>
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="px-1.5 font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
+                    className="rounded p-1 text-zinc-600 hover:bg-white hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white transition"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* RIGHT SIDEBAR: Manual Regions List & Auto Redact Search */}
-        <div className="w-full bg-workspace-sidebar border-t border-workspace-border lg:w-80 lg:border-t-0 lg:border-l flex flex-col z-20 lg:h-full overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
-            
-            {/* Action 1: Search & Auto Redact */}
-            <div className="space-y-3.5 rounded-2xl border border-workspace-border bg-workspace-muted p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                <Search className="h-3.5 w-3.5 text-red-500" />
-                <span>Search & Auto Redact</span>
-              </span>
+            {/* Mode Controls Bar (Draw Box vs Select & Move) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setInteractionMode("draw")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                    interactionMode === "draw"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  )}
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  <span>Draw Box Mode</span>
+                </button>
 
-              {/* Mode Selectors */}
-              <div className="grid grid-cols-3 gap-1">
-                {[
-                  { mode: "text" as const, label: "Text", icon: Search },
-                  { mode: "email" as const, label: "Email", icon: Mail },
-                  { mode: "phone" as const, label: "Phone", icon: Phone },
-                ].map((item) => (
-                  <button
-                    key={item.mode}
-                    onClick={() => {
-                      setSearchMode(item.mode);
-                    }}
-                    className={cn(
-                      "py-1.5 rounded-lg text-[9px] font-bold border flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer",
-                      searchMode === item.mode
-                        ? "bg-zinc-900 dark:bg-red-500/10 border-zinc-900 dark:border-red-500/30 text-white dark:text-red-400 shadow-sm"
-                        : "bg-workspace-card border-workspace-border text-zinc-555 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
-                    )}
-                  >
-                    <item.icon className="h-3 w-3" />
-                    {item.label}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setInteractionMode("select")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                    interactionMode === "select"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  )}
+                >
+                  <MousePointer className="h-3.5 w-3.5" />
+                  <span>Select / Move</span>
+                </button>
               </div>
 
-              {/* Query Field (Only for Text query mode) */}
-              {searchMode === "text" && (
-                <div className="space-y-1">
-                  <input
-                    type="text"
-                    placeholder="Enter query text..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-workspace-card border border-workspace-border rounded-xl px-3 py-2 text-xs text-foreground font-bold focus:border-zinc-400 dark:focus:border-red-500 focus:outline-none transition"
-                  />
-                </div>
-              )}
-
-              {/* Search Trigger */}
               <button
-                onClick={performSearch}
-                disabled={!file || (searchMode === "text" && !searchQuery.trim()) || searching}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border border-zinc-900 dark:border-white py-2 text-xs font-bold shadow-md hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                type="button"
+                onClick={addCenterBox}
+                className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 transition shadow-xs"
               >
-                {searching ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Searching content...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-3.5 w-3.5" />
-                    Find & Overlay Redactions
-                  </>
-                )}
+                <Plus className="h-3.5 w-3.5 text-red-600" />
+                <span>Add Centered Box</span>
               </button>
             </div>
 
-            {/* Action 2: Regions List */}
-            <div className="space-y-3.5 rounded-2xl border border-workspace-border bg-workspace-muted p-4 flex-1 flex flex-col min-h-[220px]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-555 dark:text-zinc-400 flex items-center gap-1.5 shrink-0">
-                <Layers className="h-3.5 w-3.5 text-zinc-450 dark:text-zinc-500" />
-                <span>Selected Regions ({regions.length})</span>
-              </span>
-
-              {regions.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-workspace-border rounded-xl">
-                  <Search className="h-5 w-5 text-zinc-350 dark:text-zinc-650 mb-1.5" />
-                  <p className="text-[9px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">No Regions</p>
-                  <p className="text-[8px] text-zinc-400 dark:text-zinc-600 mt-1 max-w-[150px]">
-                    Drag box on preview or use search above.
-                  </p>
+            {/* Conversion Result Banner (Shown after processing) */}
+            {resultBlob && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                    <FileCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      PDF Redacted Successfully!
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black text-white uppercase">
+                        Sanitized
+                      </span>
+                    </h4>
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
+                      All sensitive regions have been permanently blacked out.
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto space-y-2 max-h-60 pr-1 scrollbar-thin">
-                  {regions.map((region, idx) => (
-                    <div
-                      key={region.id}
-                      className="flex items-center justify-between p-2 bg-workspace-card border border-workspace-border rounded-xl hover:border-red-500/25 transition-all text-[9px] group"
-                    >
-                      <div className="flex flex-col gap-0.5 max-w-[140px] truncate">
-                        <span className="font-bold text-zinc-850 dark:text-zinc-300 capitalize">
-                          {idx + 1}. Page {region.pageIndex + 1}
-                        </span>
-                        <span className="text-zinc-450 dark:text-zinc-500 font-mono">
-                          Type: {region.type} ({Math.round(region.widthPercent)}% w)
-                        </span>
-                      </div>
 
-                      <button
-                        onClick={() => setRegions((prev) => prev.filter((r) => r.id !== region.id))}
-                        className="text-zinc-400 dark:text-zinc-650 hover:text-red-500 p-1 rounded-lg hover:bg-red-500/5 transition cursor-pointer"
-                        title="Remove Region"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Action Area */}
-          <div className="p-5 border-t border-workspace-border bg-workspace-sidebar space-y-3 shrink-0">
-            {file && regions.length > 0 && (
-              <button
-                onClick={() => setRegions([])}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-workspace-border py-3 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-workspace-muted hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                Clear All Regions
-              </button>
+                <button
+                  onClick={handleDownloadAgain}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-bold shadow-sm transition active:scale-95 shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download Again
+                </button>
+              </div>
             )}
 
-            <button
-              onClick={processRedact}
-              disabled={!file || regions.length === 0 || processing}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/10 transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 cursor-pointer",
-                theme.button
-              )}
-            >
-              {processing ? (
+            {/* Live Interactive PDF Canvas Stage */}
+            <div className="rounded-xl border border-zinc-200 bg-zinc-100/70 p-4 sm:p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[440px] flex flex-col items-center justify-center relative overflow-hidden select-none">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-red-600 dark:text-red-400 mb-3" />
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Loading PDF page for redaction...
+                  </p>
+                </div>
+              ) : pageImages[currentKey] ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Redacting PDF...
+                  <div
+                    ref={containerRef}
+                    className={cn(
+                      "canvas-stage relative rounded-lg shadow-2xl border border-zinc-300 bg-white dark:border-zinc-800 overflow-hidden select-none transition-transform",
+                      interactionMode === "draw" ? "cursor-crosshair" : "cursor-default"
+                    )}
+                    style={{
+                      width: `${320 * zoom}px`,
+                      height: `${440 * zoom}px`,
+                      touchAction: "none",
+                    }}
+                    onPointerDown={handleCanvasPointerDown}
+                    onPointerMove={handleCanvasPointerMove}
+                    onPointerUp={handleCanvasPointerUp}
+                    onPointerCancel={handleCanvasPointerUp}
+                  >
+                    {/* PDF Page Canvas Image */}
+                    <img
+                      src={pageImages[currentKey]}
+                      alt={`PDF Page ${previewPage}`}
+                      className="w-full h-full object-contain pointer-events-none absolute inset-0 z-0"
+                      draggable={false}
+                    />
+
+                    {/* Temporary drawing box */}
+                    {drawingBox && (
+                      <div
+                        style={{
+                          left: `${drawingBox.x}%`,
+                          top: `${drawingBox.y}%`,
+                          width: `${drawingBox.w}%`,
+                          height: `${drawingBox.h}%`,
+                        }}
+                        className="absolute z-30 border-2 border-dashed border-red-500 bg-black/75 pointer-events-none"
+                      />
+                    )}
+
+                    {/* Stamped Redaction Regions on Current Page */}
+                    {currentPageRegions.map((region) => {
+                      const isSelected = selectedRegionId === region.id;
+
+                      return (
+                        <div
+                          key={region.id}
+                          style={{
+                            left: `${region.xPercent}%`,
+                            top: `${region.yPercent}%`,
+                            width: `${region.widthPercent}%`,
+                            height: `${region.heightPercent}%`,
+                          }}
+                          className={cn(
+                            "absolute z-20 bg-black flex items-center justify-center select-none touch-none transition-shadow",
+                            isSelected
+                              ? "border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)] ring-1 ring-red-500"
+                              : "border border-zinc-900 opacity-95 hover:border-red-400"
+                          )}
+                          onPointerDown={(e) => {
+                            if (interactionMode === "select") {
+                              handleHandlePointerDown(e, region, "move");
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRegionId(region.id);
+                          }}
+                        >
+                          {/* Inner Label */}
+                          <span className="text-[8px] font-mono font-black text-white uppercase tracking-wider truncate px-1 select-none pointer-events-none">
+                            {region.type === "custom" ? "REDACTED" : region.type}
+                          </span>
+
+                          {/* Delete Button (Active on Selection or Hover) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRegions((prev) => prev.filter((r) => r.id !== region.id));
+                              if (selectedRegionId === region.id) setSelectedRegionId(null);
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md border border-white hover:bg-red-500 transition cursor-pointer z-40"
+                            title="Remove Box"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+
+                          {/* 4 Corner Touch Handles for Selected Box */}
+                          {isSelected && (
+                            <>
+                              <div
+                                className="absolute -top-3.5 -left-3.5 w-8 h-8 flex items-center justify-center cursor-nwse-resize touch-none z-30"
+                                onPointerDown={(e) => handleHandlePointerDown(e, region, "tl")}
+                                onPointerMove={handleHandlePointerMove}
+                                onPointerUp={handleHandlePointerUp}
+                              >
+                                <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md" />
+                              </div>
+
+                              <div
+                                className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center cursor-nesw-resize touch-none z-30"
+                                onPointerDown={(e) => handleHandlePointerDown(e, region, "tr")}
+                                onPointerMove={handleHandlePointerMove}
+                                onPointerUp={handleHandlePointerUp}
+                              >
+                                <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md" />
+                              </div>
+
+                              <div
+                                className="absolute -bottom-3.5 -left-3.5 w-8 h-8 flex items-center justify-center cursor-nesw-resize touch-none z-30"
+                                onPointerDown={(e) => handleHandlePointerDown(e, region, "bl")}
+                                onPointerMove={handleHandlePointerMove}
+                                onPointerUp={handleHandlePointerUp}
+                              >
+                                <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md" />
+                              </div>
+
+                              <div
+                                className="absolute -bottom-3.5 -right-3.5 w-8 h-8 flex items-center justify-center cursor-nwse-resize touch-none z-30"
+                                onPointerDown={(e) => handleHandlePointerDown(e, region, "br")}
+                                onPointerMove={handleHandlePointerMove}
+                                onPointerUp={handleHandlePointerUp}
+                              >
+                                <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Multi-Page Navigation Bar */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-2 mt-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 shadow-xs text-xs">
+                      <button
+                        type="button"
+                        disabled={previewPage <= 1}
+                        onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
+                        className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white disabled:opacity-30 transition"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                        Page {previewPage} of {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={previewPage >= totalPages}
+                        onClick={() => setPreviewPage((p) => Math.min(totalPages, p + 1))}
+                        className="p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white disabled:opacity-30 transition"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
-                <>
-                  <Trash2 className="h-4 w-4" />
-                  Redact PDF File
-                </>
+                <p className="text-xs text-zinc-400">Loading page preview...</p>
               )}
-            </button>
+            </div>
+          </div>
+
+          {/* Right Column: Auto-Search Redaction, List & Process Actions */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              {/* Auto Search Redact */}
+              <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <Search className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                  Auto-Detect & Redact:
+                </span>
+
+                {/* Mode Selectors */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { mode: "text" as const, label: "Keywords", icon: Search },
+                    { mode: "email" as const, label: "Emails", icon: Mail },
+                    { mode: "phone" as const, label: "Phones", icon: Phone },
+                  ].map((item) => (
+                    <button
+                      key={item.mode}
+                      type="button"
+                      onClick={() => setSearchMode(item.mode)}
+                      className={cn(
+                        "py-2 rounded-lg text-xs font-semibold border flex flex-col items-center justify-center gap-1 transition",
+                        searchMode === item.mode
+                          ? "bg-red-600 text-white border-red-600 shadow-xs"
+                          : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300"
+                      )}
+                    >
+                      <item.icon className="h-3.5 w-3.5" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search Text Input */}
+                {searchMode === "text" && (
+                  <input
+                    type="text"
+                    placeholder="Enter confidential word or phrase..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-900 focus:border-red-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                  />
+                )}
+
+                {/* Scope selector */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-zinc-500">Search scope:</span>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={searchScope === "all"}
+                        onChange={() => setSearchScope("all")}
+                        className="text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-zinc-700 dark:text-zinc-300">All Pages</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={searchScope === "current"}
+                        onChange={() => setSearchScope("current")}
+                        className="text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-zinc-700 dark:text-zinc-300">Page {previewPage}</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Run Search Button */}
+                <button
+                  type="button"
+                  onClick={performSearch}
+                  disabled={!file || (searchMode === "text" && !searchQuery.trim()) || searching}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 py-2 text-xs font-bold transition shadow-xs disabled:opacity-40"
+                >
+                  {searching ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Scanning Document...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Auto-Find & Blackout</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Redaction Regions List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-zinc-400" />
+                    Active Redactions ({regions.length}):
+                  </span>
+                  {regions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegions([]);
+                        setSelectedRegionId(null);
+                      }}
+                      className="text-[11px] text-red-600 hover:underline font-semibold"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                {regions.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 p-6 text-center">
+                    <p className="text-xs text-zinc-500">No redactions added yet.</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      Draw on the PDF page or use auto-detect above.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                    {regions.map((reg, i) => (
+                      <div
+                        key={reg.id}
+                        onClick={() => {
+                          setPreviewPage(reg.pageIndex + 1);
+                          setSelectedRegionId(reg.id);
+                        }}
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition",
+                          selectedRegionId === reg.id
+                            ? "border-red-500 bg-red-50/50 dark:bg-red-950/20"
+                            : "border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                            #{i + 1}
+                          </span>
+                          <span className="text-zinc-500">
+                            Page {reg.pageIndex + 1} • {reg.type === "custom" ? "Custom Box" : reg.type}
+                          </span>
+                          {reg.text && (
+                            <span className="font-mono text-[10px] text-red-600 truncate max-w-[100px]">
+                              "{reg.text}"
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRegions((prev) => prev.filter((r) => r.id !== reg.id));
+                            if (selectedRegionId === reg.id) setSelectedRegionId(null);
+                          }}
+                          className="text-zinc-400 hover:text-red-600 p-1 transition"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Redaction Guarantee Checklist */}
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-1.5">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Permanent Privacy Guarantee:
+                </span>
+                <div className="grid grid-cols-1 gap-1 text-[11px] text-zinc-600 dark:text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Permanent vector blackout (Cannot be undone in readers)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>100% Client-side local execution & security</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Redact Action Button */}
+              <button
+                onClick={() => void handleProcessRedact()}
+                disabled={processing || regions.length === 0}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-white shadow-md transition-all active:scale-[0.98]",
+                  theme.button,
+                  (processing || regions.length === 0) && "opacity-80 cursor-not-allowed"
+                )}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Sanitizing & Redacting PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Apply Redactions ({regions.length})</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </>
-    )}
-      </div>
+      )}
     </div>
   );
 }
