@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
 import {
   Upload,
   X,
-  Settings,
   FileText,
   Sliders,
   Type,
   Layout,
-  HelpCircle,
   Loader2,
   ZoomIn,
   ZoomOut,
@@ -20,6 +18,14 @@ import {
   RotateCw,
   Image as ImageIcon,
   ArrowLeft,
+  RefreshCw,
+  Download,
+  ShieldCheck,
+  CheckCircle2,
+  FileCheck,
+  Sparkles,
+  Maximize2,
+  AlignJustify,
 } from "lucide-react";
 import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
@@ -30,76 +36,107 @@ interface WatermarkPdfWorkspaceProps {
   tool: ToolDefinition;
 }
 
+type WatermarkType = "text" | "image";
+type PositionType =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "middle-center"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+type LayerType = "over" | "under";
+type PageRangeType = "all" | "odd" | "even" | "custom";
+type FontFamilyType =
+  | "Helvetica"
+  | "HelveticaBold"
+  | "TimesRoman"
+  | "TimesRomanBold"
+  | "Courier"
+  | "CourierBold";
+
+const TEXT_PRESETS = [
+  "CONFIDENTIAL",
+  "DO NOT COPY",
+  "DRAFT",
+  "APPROVED",
+  "SAMPLE",
+  "TOP SECRET",
+  "URGENT",
+  "COPYRIGHT",
+];
+
+const COLOR_SWATCHES = [
+  { name: "Gray", hex: "#94a3b8" },
+  { name: "Dark", hex: "#0f172a" },
+  { name: "Red", hex: "#ef4444" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Emerald", hex: "#10b981" },
+  { name: "Amber", hex: "#f59e0b" },
+  { name: "Purple", hex: "#8b5cf6" },
+];
+
+const POSITION_LABELS: Record<PositionType, string> = {
+  "top-left": "Top Left",
+  "top-center": "Top Center",
+  "top-right": "Top Right",
+  "middle-left": "Middle Left",
+  "middle-center": "Center",
+  "middle-right": "Middle Right",
+  "bottom-left": "Bottom Left",
+  "bottom-center": "Bottom Center",
+  "bottom-right": "Bottom Right",
+};
+
 export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
-  const theme = CATEGORY_THEME[tool.category];
+  const theme = CATEGORY_THEME[tool.category] || {
+    button: "bg-red-600 hover:bg-red-500 text-white shadow-red-600/20",
+    accent: "text-red-600 dark:text-red-400",
+    accentBg: "bg-red-500/10",
+    accentBorder: "border-red-500/20",
+    icon: FileText,
+  };
+
   const [file, setFile] = useState<File | null>(null);
   const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1.0);
 
-  // Watermark Mode Toggle: "text" | "image"
-  const [watermarkType, setWatermarkType] = useState<"text" | "image">("text");
+  // Watermark Settings
+  const [watermarkType, setWatermarkType] = useState<WatermarkType>("text");
 
   // Text Settings
   const [text, setText] = useState("CONFIDENTIAL");
-  const [fontFamily, setFontFamily] = useState<
-    "Helvetica" | "HelveticaBold" | "TimesRoman" | "TimesRomanBold" | "Courier" | "CourierBold"
-  >("HelveticaBold");
+  const [fontFamily, setFontFamily] = useState<FontFamilyType>("HelveticaBold");
   const [fontSize, setFontSize] = useState<number>(36);
-  const [color, setColor] = useState<string>("#e5e7eb");
+  const [color, setColor] = useState<string>("#ef4444");
 
   // Image Settings
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageScale, setImageScale] = useState<number>(100);
   const [watermarkImgUrl, setWatermarkImgUrl] = useState<string | null>(null);
 
-  // Universal Settings
+  // Universal Options
   const [opacity, setOpacity] = useState<number>(0.35);
   const [rotation, setRotation] = useState<number>(-45);
-  const [position, setPosition] = useState<
-    | "top-left"
-    | "top-center"
-    | "top-right"
-    | "middle-left"
-    | "middle-center"
-    | "middle-right"
-    | "bottom-left"
-    | "bottom-center"
-    | "bottom-right"
-  >("middle-center");
-  const [layer, setLayer] = useState<"over" | "under">("over");
+  const [position, setPosition] = useState<PositionType>("middle-center");
+  const [layer, setLayer] = useState<LayerType>("over");
 
-  // Page Targeting Settings
-  const [pageRangeType, setPageRangeType] = useState<"all" | "odd" | "even" | "custom">("all");
+  // Page Targeting
+  const [pageRangeType, setPageRangeType] = useState<PageRangeType>("all");
   const [customRange, setCustomRange] = useState("");
 
-  // Preset Colors
-  const swatches = [
-    "#e5e7eb", // Light Gray (Default watermark)
-    "#000000", // Black
-    "#ef4444", // Red
-    "#3b82f6", // Blue
-    "#10b981", // Green
-    "#f59e0b", // Yellow / Gold
-  ];
+  // Result state
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
-  // Watermark Image URL creator
-  useEffect(() => {
-    if (!imageFile) {
-      setWatermarkImgUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(imageFile);
-    setWatermarkImgUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [imageFile]);
-
-  // Dynamic PDFJS injection
+  // PDF.js script loader
   useEffect(() => {
     if (typeof window === "undefined") return;
     if ((window as any).pdfjsLib) {
@@ -116,7 +153,20 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
     document.body.appendChild(script);
   }, []);
 
-  // Initialize PDF file & render first page
+  // Image URL cleaner
+  useEffect(() => {
+    if (!imageFile) {
+      setWatermarkImgUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setWatermarkImgUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [imageFile]);
+
+  // Load PDF & render page 1 preview
   useEffect(() => {
     if (!file || !pdfjsLoaded) return;
     const currentFile = file;
@@ -124,15 +174,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
 
     async function loadPdf() {
       setLoading(true);
+      setPreviewUrl(null);
+      setResultBlob(null);
+
       try {
         const arrayBuffer = await currentFile.arrayBuffer();
         const pdfjsLib = (window as any).pdfjsLib;
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        
+
         if (active) {
           setTotalPages(pdfDoc.numPages);
-          
-          // Render page 1
           const page = await pdfDoc.getPage(1);
           const viewport = page.getViewport({ scale: 1.5 });
           const canvas = document.createElement("canvas");
@@ -147,16 +198,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("PDF load error:", err);
         if (active) {
-          toast.error("Could not load PDF document preview");
+          toast.error("Could not load PDF preview");
         }
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadPdf();
+    void loadPdf();
     return () => {
       active = false;
     };
@@ -170,6 +221,7 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
         return;
       }
       setFile(selected);
+      setResultBlob(null);
     }
   };
 
@@ -177,20 +229,28 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
     const selected = e.target.files?.[0];
     if (selected) {
       if (!selected.type.startsWith("image/")) {
-        toast.error("Please upload an image file (PNG/JPG)");
+        toast.error("Please upload an image file (PNG, JPG)");
         return;
       }
       setImageFile(selected);
     }
   };
 
+  const handleReset = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setImageFile(null);
+    setResultBlob(null);
+    setResultFileName("");
+  };
+
   const handleProcess = async () => {
     if (!file) return;
     if (watermarkType === "image" && !imageFile) {
-      toast.error("Please select a watermark image first.");
+      toast.error("Please upload a watermark image first.");
       return;
     }
-    
+
     setProcessing(true);
     try {
       const options: Partial<pdf.WatermarkOptions> = {
@@ -209,9 +269,14 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
         imageScale,
       };
 
-      const resultBlob = await pdf.watermarkPdf(file, text, options);
-      pdf.downloadBlob(resultBlob, `${file.name.replace(/\.[^/.]+$/, "")}_watermarked.pdf`);
-      toast.success("Successfully added watermark!");
+      const outBlob = await pdf.watermarkPdf(file, text, options);
+      const outName = `${file.name.replace(/\.[^/.]+$/, "")}_watermarked.pdf`;
+      setResultBlob(outBlob);
+      setResultFileName(outName);
+
+      // Download
+      pdf.downloadBlob(outBlob, outName);
+      toast.success("Successfully added watermark to PDF!");
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to add watermark");
@@ -220,12 +285,10 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    if (!bytes) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  const handleDownloadAgain = () => {
+    if (!resultBlob || !resultFileName) return;
+    pdf.downloadBlob(resultBlob, resultFileName);
+    toast.success("Downloaded watermarked PDF!");
   };
 
   const getCssFontFamily = () => {
@@ -253,16 +316,16 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
 
     if (watermarkType === "text") {
       styleObj.fontFamily = getCssFontFamily();
-      styleObj.fontWeight = getCssFontWeight(),
-      styleObj.fontSize = `${fontSize * 0.45 * zoom}px`;
+      styleObj.fontWeight = getCssFontWeight();
+      styleObj.fontSize = `${fontSize * 0.42 * zoom}px`;
       styleObj.color = color;
     } else {
-      const baseWidth = 100;
+      const baseWidth = 110;
       styleObj.width = `${baseWidth * (imageScale / 100) * zoom}px`;
       styleObj.height = "auto";
     }
 
-    const pad = "24px"; // padding from edges
+    const pad = "20px";
 
     if (position === "middle-center") {
       styleObj.top = "50%";
@@ -301,18 +364,42 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
     return styleObj;
   };
 
+  const originalSizeMb = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
   const Icon = theme.icon;
 
   return (
-    <div className={cn(!file ? "mx-auto max-w-6xl px-4 py-10" : "w-full h-full p-0")}>
+    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
       <Toaster position="top-center" richColors />
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/#pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to PDF Tools
+        </Link>
+
+        {file && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Watermark Another File
+          </button>
+        )}
+      </div>
+
+      {/* Header */}
       {!file && (
         <div className="mb-8 text-center">
           <span
             className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
           >
             <Icon className="h-3.5 w-3.5" />
-            PDF Tools
+            PDF Security & Branding
           </span>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {tool.name}
@@ -323,554 +410,577 @@ export function WatermarkPdfWorkspace({ tool }: WatermarkPdfWorkspaceProps) {
         </div>
       )}
 
-      {/* Back Navigation Bar */}
-      <div className={cn("flex items-center justify-between mb-4", file ? "px-4 pt-4 lg:px-6" : "")}>
-        <Link
-          href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to PDF Tools
-        </Link>
-      </div>
+      {/* Upload State */}
+      {!file && (
+        <label className="upload-dropzone upload-dropzone-pdf w-full relative group cursor-pointer">
+          <input
+            type="file"
+            accept=".pdf"
+            className="absolute inset-0 z-10 cursor-pointer opacity-0"
+            onChange={handleFileChange}
+          />
+          <span className="upload-icon-container group-hover:scale-105 transition-transform">
+            <Layers className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </span>
+          <span className="text-center">
+            <p className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+              Click or drag a PDF document here to add watermark
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Apply customizable text or logo stamp watermarks across all pages.
+            </p>
+            <p className="mt-2 text-[11px] font-medium text-zinc-400">
+              Max file size: {tool.maxMb} MB
+            </p>
+          </span>
+        </label>
+      )}
 
-      <div className={cn(
-        "pdf-workspace-theme-wrapper flex flex-col overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white lg:flex-row",
-        !file
-          ? "lg:h-[450px] min-h-[450px] rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl justify-center items-center"
-          : "lg:h-[calc(100vh-80px)] min-h-[550px] w-full"
-      )}>
-        {!file ? (
-          <div className="flex w-full max-w-xl flex-col items-center justify-center p-6 mx-auto my-auto">
-            <label className="upload-dropzone upload-dropzone-pdf w-full">
-              <span className="upload-icon-container">
-                <Upload />
-              </span>
-              <span className="text-center">
-                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                  Upload PDF file to watermark
-                </p>
-                <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-                  Max size {tool.maxMb} MB · Local document processing
-                </p>
-              </span>
-              <input
-                type="file"
-                className="hidden"
-                accept="application/pdf"
-                onChange={handleFileChange}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            {/* CENTER PANEL: LIVE PREVIEW */}
-            <div className="flex flex-1 flex-col items-center bg-[radial-gradient(ellipse_at_top,rgba(20,20,25,0.7),rgba(9,9,11,1))] relative lg:h-full overflow-hidden">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
-
-              {/* Preview Header / File info */}
-              <div className="w-full p-4 flex items-center justify-between border-b border-zinc-900 z-10 bg-zinc-950/40 backdrop-blur-sm shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800">
-                    <FileText className="h-4 w-4 text-zinc-300" />
-                  </div>
-                  <div>
-                    <span className="max-w-[200px] block truncate text-xs font-bold text-zinc-200">
-                      {file.name}
+      {/* Active Workspace */}
+      {file && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Column: Visual Canvas & Real-time Live Preview */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            {/* Header Document Card */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 shadow-xs">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white max-w-xs sm:max-w-md truncate">
+                    {file.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      {originalSizeMb} MB
                     </span>
-                    <span className="text-[9px] text-zinc-500 font-mono block">
-                      {formatBytes(file.size)} • {totalPages} pages
+                    <span>•</span>
+                    <span>{totalPages} Pages</span>
+                    <span>•</span>
+                    <span className="text-red-600 dark:text-red-400 font-semibold">
+                      Position: {POSITION_LABELS[position]}
                     </span>
                   </div>
                 </div>
-                
+              </div>
+
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900 text-xs">
                 <button
-                  onClick={() => {
-                    setFile(null);
-                    setPreviewUrl(null);
-                  }}
-                  className="flex items-center gap-2 rounded-lg bg-zinc-900 border border-zinc-850 px-3 py-1.5 text-xs font-bold text-zinc-200 hover:bg-red-950/20 hover:border-red-500/30 hover:text-red-400 transition-all duration-200 shadow-md cursor-pointer"
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.7, z - 0.1))}
+                  className="rounded p-1 text-zinc-600 hover:bg-white hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white transition"
+                  title="Zoom Out"
                 >
-                  <X className="h-3.5 w-3.5" /> Clear File
+                  <ZoomOut className="h-3.5 w-3.5" />
                 </button>
-              </div>
-
-              {/* Viewport Frame with interactive zoom */}
-              <div className="flex-1 w-full flex items-center justify-center relative z-10 overflow-auto scrollbar-thin p-8">
-                {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-                    <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rendering preview...</p>
-                  </div>
-                ) : (
-                  previewUrl && (
-                    <div
-                      className="relative shadow-2xl rounded-lg border border-zinc-900 overflow-hidden bg-white select-none"
-                      style={{
-                        width: `${360 * zoom}px`,
-                        height: `${480 * zoom}px`,
-                      }}
-                    >
-                      {/* PDF Preview background */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl}
-                        alt="PDF Live Mockup"
-                        className="w-full h-full object-contain pointer-events-none absolute inset-0 z-0"
-                        draggable={false}
-                      />
-
-                      {/* Mockup content lines layer if under watermark is previewed */}
-                      {layer === "under" && (
-                        <div className="absolute inset-0 bg-transparent pointer-events-none select-none z-5 mix-blend-multiply opacity-90">
-                          <div className="absolute inset-0 p-8 space-y-4 opacity-5 pointer-events-none">
-                            <div className="h-2.5 w-full bg-zinc-800 rounded" />
-                            <div className="h-2.5 w-5/6 bg-zinc-800 rounded" />
-                            <div className="h-2.5 w-11/12 bg-zinc-800 rounded" />
-                            <div className="h-2.5 w-3/4 bg-zinc-800 rounded" />
-                            <div className="h-2.5 w-2/3 bg-zinc-800 rounded" />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Watermark Overlay Element */}
-                      {watermarkType === "image" && watermarkImgUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={watermarkImgUrl}
-                          alt="Watermark Overlay"
-                          style={getMockupPositionStyle()}
-                          className="pointer-events-none"
-                        />
-                      ) : watermarkType === "text" ? (
-                        <div style={getMockupPositionStyle()}>
-                          {text || "CONFIDENTIAL"}
-                        </div>
-                      ) : (
-                        <div className="absolute text-[9px] text-zinc-400 bg-zinc-950/80 border border-zinc-800 px-3 py-1.5 rounded-xl z-10">
-                          Select watermark image in settings
-                        </div>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* Zoom controls */}
-              <div className="w-full p-4 border-t border-zinc-900 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm shrink-0 z-10">
-                <div className="flex items-center gap-4 bg-zinc-950/90 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-zinc-800 shadow-lg">
-                  <button
-                    onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                    className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                    title="Zoom Out"
-                  >
-                    <ZoomOut className="h-4.5 w-4.5" />
-                  </button>
-                  <span className="text-[10px] font-bold font-mono text-zinc-400 w-10 text-center">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                  <button
-                    onClick={() => setZoom((z) => Math.min(2.0, z + 0.25))}
-                    className="p-1.5 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                    title="Zoom In"
-                  >
-                    <ZoomIn className="h-4.5 w-4.5" />
-                  </button>
-                </div>
+                <span className="px-1.5 font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
+                  className="rounded p-1 text-zinc-600 hover:bg-white hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white transition"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
 
-        {/* RIGHT PANEL: SETTINGS & TRIGGER ACTIONS (FIXED TO HEIGHT) */}
-        <div className="w-full bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 lg:border-t-0 lg:border-l lg:border-zinc-200 dark:border-zinc-900 lg:w-80 flex flex-col z-20 lg:h-full overflow-hidden shrink-0">
-          
+            {/* Conversion Result Banner (Shown after processing) */}
+            {resultBlob && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                    <FileCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      Watermark Applied!
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black text-white uppercase">
+                        Ready
+                      </span>
+                    </h4>
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
+                      Your document has been stamped with high-precision vector watermarks.
+                    </p>
+                  </div>
+                </div>
 
-              {/* Header & Tabs */}
-              <div className="p-4 border-b border-zinc-200 dark:border-zinc-900 space-y-3 shrink-0 bg-zinc-50 dark:bg-zinc-950">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                  <Settings className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                  <span>Watermark Settings</span>
-                </span>
+                <button
+                  onClick={handleDownloadAgain}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-bold shadow-sm transition active:scale-95 shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download Again
+                </button>
+              </div>
+            )}
 
-                {/* Placing Text vs Placing Image toggle */}
-                <div className="flex rounded-xl bg-zinc-200/60 dark:bg-zinc-900 p-1 border border-zinc-300/40 dark:border-zinc-800">
+            {/* Live PDF Canvas Stage */}
+            <div className="rounded-xl border border-zinc-200 bg-zinc-100/60 p-4 sm:p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[420px] flex items-center justify-center relative overflow-auto">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-red-600 dark:text-red-400 mb-3" />
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Generating document canvas...
+                  </p>
+                </div>
+              ) : previewUrl ? (
+                <div
+                  className="relative rounded-lg shadow-xl border border-zinc-300 bg-white dark:border-zinc-800 overflow-hidden select-none transition-all"
+                  style={{
+                    width: `${320 * zoom}px`,
+                    height: `${440 * zoom}px`,
+                  }}
+                >
+                  {/* PDF Page Background */}
+                  <img
+                    src={previewUrl}
+                    alt="PDF Page Preview"
+                    className="w-full h-full object-contain pointer-events-none absolute inset-0 z-0"
+                    draggable={false}
+                  />
+
+                  {/* Layer Mockup effect if 'under' layer is selected */}
+                  {layer === "under" && (
+                    <div className="absolute inset-0 bg-transparent pointer-events-none select-none z-5 mix-blend-multiply opacity-80">
+                      <div className="absolute inset-0 p-6 space-y-3 opacity-10 pointer-events-none">
+                        <div className="h-2 w-full bg-zinc-800 rounded" />
+                        <div className="h-2 w-5/6 bg-zinc-800 rounded" />
+                        <div className="h-2 w-11/12 bg-zinc-800 rounded" />
+                        <div className="h-2 w-3/4 bg-zinc-800 rounded" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Watermark Overlay Element */}
+                  {watermarkType === "image" && watermarkImgUrl ? (
+                    <img
+                      src={watermarkImgUrl}
+                      alt="Watermark Overlay"
+                      style={getMockupPositionStyle()}
+                      className="pointer-events-none"
+                    />
+                  ) : watermarkType === "text" ? (
+                    <div style={getMockupPositionStyle()}>
+                      {text || "CONFIDENTIAL"}
+                    </div>
+                  ) : (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-zinc-400 bg-zinc-900/80 px-2 py-1 rounded">
+                      Upload Logo to Preview
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400">No preview available</p>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Customization Controls Sidebar */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              {/* Type Selector Tabs */}
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-2">
+                  <Sliders className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  Watermark Settings
+                </h3>
+
+                <div className="flex rounded-xl border border-zinc-200 bg-zinc-100/80 p-1 dark:border-zinc-800 dark:bg-zinc-900 text-xs font-semibold">
                   <button
+                    type="button"
                     onClick={() => setWatermarkType("text")}
                     className={cn(
-                      "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                      "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all",
                       watermarkType === "text"
-                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                     )}
                   >
-                    Place Text
+                    <Type className="h-3.5 w-3.5" />
+                    Text Stamp
                   </button>
                   <button
+                    type="button"
                     onClick={() => setWatermarkType("image")}
                     className={cn(
-                      "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                      "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all",
                       watermarkType === "image"
-                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                     )}
                   >
-                    Place Image
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Image Logo
                   </button>
                 </div>
               </div>
 
-              {/* Settings scrollable area */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
-                
-                {/* Conditional Type Configs */}
-                {watermarkType === "text" ? (
-                  /* TEXT CONFIGURATIONS */
-                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <Type className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                      <span>Text & Font</span>
-                    </span>
+              {/* Text Mode Controls */}
+              {watermarkType === "text" && (
+                <div className="space-y-4">
+                  {/* Text Input */}
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Watermark Text:
+                    </label>
+                    <input
+                      type="text"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="e.g. CONFIDENTIAL"
+                      className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-900 focus:border-red-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                    />
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Watermark Text</label>
-                      <input
-                        type="text"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
-                        placeholder="CONFIDENTIAL"
-                      />
+                    {/* Quick Presets */}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {TEXT_PRESETS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setText(preset)}
+                          className={cn(
+                            "rounded-md px-2 py-0.5 text-[10px] font-semibold transition",
+                            text === preset
+                              ? "bg-red-600 text-white"
+                              : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                          )}
+                        >
+                          {preset}
+                        </button>
+                      ))}
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Font Family</label>
+                  {/* Font Family & Size */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                        Font Family:
+                      </label>
                       <select
                         value={fontFamily}
-                        onChange={(e) => setFontFamily(e.target.value as any)}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition cursor-pointer"
+                        onChange={(e) => setFontFamily(e.target.value as FontFamilyType)}
+                        className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-xs font-medium text-zinc-900 focus:border-red-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                       >
-                        <option value="Helvetica">Helvetica</option>
                         <option value="HelveticaBold">Helvetica Bold</option>
-                        <option value="TimesRoman">Times New Roman</option>
-                        <option value="TimesRomanBold">Times New Roman Bold</option>
-                        <option value="Courier">Courier</option>
+                        <option value="Helvetica">Helvetica Normal</option>
+                        <option value="TimesRomanBold">Times Roman Bold</option>
+                        <option value="TimesRoman">Times Roman</option>
                         <option value="CourierBold">Courier Bold</option>
+                        <option value="Courier">Courier</option>
                       </select>
                     </div>
 
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Font Size</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min={10}
-                          max={120}
-                          value={fontSize}
-                          onChange={(e) => setFontSize(Number(e.target.value))}
-                          className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
-                        />
-                        <input
-                          type="number"
-                          min={10}
-                          max={120}
-                          value={fontSize}
-                          onChange={(e) => setFontSize(Math.max(10, Math.min(120, Number(e.target.value) || 36)))}
-                          className="w-14 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Preset Color Swatches */}
-                    <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-900">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Text Color</label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {swatches.map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => setColor(s)}
-                            className={cn(
-                              "h-5 w-5 rounded-full border transition-all cursor-pointer relative",
-                              color === s ? "border-zinc-950 dark:border-white scale-110 ring-2 ring-zinc-950/10 dark:ring-white/10" : "border-zinc-300 dark:border-zinc-800 hover:scale-105"
-                            )}
-                            style={{ backgroundColor: s }}
-                          />
-                        ))}
-                        
-                        {/* Custom color selector */}
-                        <label className="h-5 w-5 rounded-full border border-zinc-300 dark:border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 transition-all">
-                          <input
-                            type="color"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            className="w-10 h-10 border-0 p-0 cursor-pointer"
-                          />
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                          Font Size:
                         </label>
+                        <span className="text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-400">
+                          {fontSize}px
+                        </span>
                       </div>
+                      <input
+                        type="range"
+                        min="12"
+                        max="100"
+                        step="2"
+                        value={fontSize}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="w-full accent-red-600"
+                      />
                     </div>
                   </div>
-                ) : (
-                  /* IMAGE CONFIGURATIONS */
-                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <ImageIcon className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                      <span>Image settings</span>
-                    </span>
 
-                    {/* Image Dropzone */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Watermark Image</label>
-                      {!imageFile ? (
-                        <label className="flex flex-col items-center justify-center border border-dashed border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/40 rounded-xl p-6 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-700 transition">
-                          <Upload className="h-5 w-5 text-zinc-500 mb-1.5" />
-                          <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400">Upload PNG/JPG</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/png, image/jpeg, image/jpg"
-                            onChange={handleWatermarkImageChange}
-                          />
-                        </label>
-                      ) : (
-                        <div className="flex items-center justify-between bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl p-3">
-                          <div className="flex items-center gap-2">
-                            <ImageIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[120px]">
-                              {imageFile.name}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => setImageFile(null)}
-                            className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-850 hover:text-red-500 transition"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Scale Slider */}
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
-                      <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
-                        <span>Image Scale</span>
-                        <span className="font-mono text-zinc-650">{imageScale}%</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min={10}
-                          max={300}
-                          step={5}
-                          value={imageScale}
-                          onChange={(e) => setImageScale(Number(e.target.value))}
-                          className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
+                  {/* Color Swatches */}
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Watermark Color:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {COLOR_SWATCHES.map((swatch) => (
+                        <button
+                          key={swatch.hex}
+                          type="button"
+                          onClick={() => setColor(swatch.hex)}
+                          style={{ backgroundColor: swatch.hex }}
+                          className={cn(
+                            "h-7 w-7 rounded-full border-2 transition-transform",
+                            color === swatch.hex
+                              ? "scale-110 border-red-500 ring-2 ring-red-500/30"
+                              : "border-zinc-300 dark:border-zinc-700 hover:scale-105"
+                          )}
+                          title={swatch.name}
                         />
-                        <input
-                          type="number"
-                          min={10}
-                          max={300}
-                          value={imageScale}
-                          onChange={(e) => setImageScale(Math.max(10, Math.min(300, Number(e.target.value) || 100)))}
-                          className="w-14 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl py-1 text-center text-xs font-bold font-mono text-zinc-800 dark:text-zinc-300 focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Position & Layer */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Layout className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                    <span>Alignment & Layer</span>
-                  </span>
-
-                  {/* 3x3 grid selector */}
-                  <div className="space-y-2">
-                    <label className="text-[9px] text-zinc-500 dark:text-zinc-550 font-bold uppercase block">Position Placement</label>
-                    <div className="flex justify-center py-1">
-                      <div className="grid grid-cols-3 gap-2.5 p-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl">
-                        {(
-                          [
-                            "top-left", "top-center", "top-right",
-                            "middle-left", "middle-center", "middle-right",
-                            "bottom-left", "bottom-center", "bottom-right",
-                          ] as const
-                        ).map((pos) => {
-                          const isSelected = position === pos;
-                          return (
-                            <button
-                              key={pos}
-                              onClick={() => setPosition(pos)}
-                              className={cn(
-                                "h-7 w-7 rounded-md flex items-center justify-center border transition-all cursor-pointer relative group",
-                                isSelected
-                                  ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
-                                  : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-850 text-zinc-400 dark:text-zinc-650 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-600 dark:hover:text-zinc-400"
-                              )}
-                              title={pos.replace("-", " ")}
-                            >
-                              <span className={cn(
-                                "h-1.5 w-1.5 rounded-full transition-all",
-                                isSelected 
-                                  ? "bg-white dark:bg-zinc-950 scale-110" 
-                                  : "bg-zinc-400 dark:bg-zinc-700 group-hover:bg-zinc-600 dark:group-hover:bg-zinc-500"
-                              )} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Over/Under Layer Toggle */}
-                  <div className="space-y-2 pt-3 border-t border-zinc-200 dark:border-zinc-900">
-                    <label className="text-[9px] text-zinc-500 dark:text-zinc-550 font-bold uppercase block">Watermark Layer</label>
-                    <div className="flex rounded-xl bg-zinc-200/60 dark:bg-zinc-950 p-1 border border-zinc-300/40 dark:border-zinc-900">
-                      <button
-                        onClick={() => setLayer("over")}
-                        className={cn(
-                          "flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
-                          layer === "over"
-                            ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
-                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                        )}
-                      >
-                        Over Content
-                      </button>
-                      <button
-                        onClick={() => setLayer("under")}
-                        className={cn(
-                          "flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
-                          layer === "under"
-                        ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-sm"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                        )}
-                      >
-                        Under Content
-                      </button>
+                      ))}
+                      <input
+                        type="color"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="h-7 w-7 cursor-pointer rounded border border-zinc-300 bg-transparent p-0 dark:border-zinc-700"
+                        title="Custom Color"
+                      />
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Universal Effects: Opacity, Rotation */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Palette className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                    <span>Opacity & Rotation</span>
-                  </span>
+              {/* Image Mode Controls */}
+              {watermarkType === "image" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Upload Watermark Image / Logo:
+                    </label>
+                    <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50/50 p-4 text-center cursor-pointer hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900/40">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        className="hidden"
+                        onChange={handleWatermarkImageChange}
+                      />
+                      {imageFile ? (
+                        <div className="flex items-center gap-2">
+                          <ImageIcon className="h-4 w-4 text-emerald-600" />
+                          <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]">
+                            {imageFile.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-6 w-6 text-zinc-400 mb-1" />
+                          <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                            Click to select PNG or JPG logo
+                          </span>
+                          <span className="text-[10px] text-zinc-400 mt-0.5">
+                            Transparent PNG recommended
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  </div>
 
-                  {/* Opacity */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
-                      <span>Opacity</span>
-                      <span className="font-mono text-zinc-650">{Math.round(opacity * 100)}%</span>
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                        Image Scale:
+                      </label>
+                      <span className="text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-400">
+                        {imageScale}%
+                      </span>
                     </div>
                     <input
                       type="range"
-                      min={0.05}
-                      max={1.0}
-                      step={0.05}
-                      value={opacity}
-                      onChange={(e) => setOpacity(Number(e.target.value))}
-                      className="w-full h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
+                      min="20"
+                      max="200"
+                      step="5"
+                      value={imageScale}
+                      onChange={(e) => setImageScale(Number(e.target.value))}
+                      className="w-full accent-red-600"
                     />
                   </div>
-
-                  {/* Rotation */}
-                  <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900">
-                    <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase">
-                      <span>Rotation Angle</span>
-                      <span className="font-mono text-zinc-650">{rotation}°</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min={-180}
-                        max={180}
-                        step={5}
-                        value={rotation}
-                        onChange={(e) => setRotation(Number(e.target.value))}
-                        className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-950 dark:accent-white"
-                      />
-                      <button
-                        onClick={() => setRotation(0)}
-                        className="p-1 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-pointer"
-                        title="Reset to 0"
-                      >
-                        <RotateCw className="h-2.5 w-2.5" />
-                      </button>
-                    </div>
-                  </div>
                 </div>
+              )}
 
-                {/* Page Range Targeting */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-900 bg-zinc-100/50 dark:bg-zinc-900/10 p-4 space-y-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                    <Sliders className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
-                    <span>Page Range</span>
-                  </span>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { key: "all" as const, label: "All Pages" },
-                      { key: "odd" as const, label: "Odd Pages" },
-                      { key: "even" as const, label: "Even Pages" },
-                      { key: "custom" as const, label: "Custom Range" },
-                    ].map((btn) => (
-                      <button
-                        key={btn.key}
-                        onClick={() => setPageRangeType(btn.key)}
-                        className={cn(
-                          "py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
-                          pageRangeType === btn.key
-                            ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white text-white dark:text-zinc-950 shadow-md"
-                            : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-300"
-                        )}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {pageRangeType === "custom" && (
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-900 animate-fadeIn">
-                      <label className="text-[9px] text-zinc-500 dark:text-zinc-500 font-bold uppercase block">Pages range string</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 1-3, 5, 7-10"
-                        value={customRange}
-                        onChange={(e) => setCustomRange(e.target.value)}
-                        className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 font-bold focus:border-zinc-400 dark:focus:border-white focus:outline-none transition"
-                      />
-                    </div>
-                  )}
+              {/* Universal: 3x3 Position Grid */}
+              <div>
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Stamp Position:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+                  {(
+                    [
+                      "top-left",
+                      "top-center",
+                      "top-right",
+                      "middle-left",
+                      "middle-center",
+                      "middle-right",
+                      "bottom-left",
+                      "bottom-center",
+                      "bottom-right",
+                    ] as PositionType[]
+                  ).map((pos) => (
+                    <button
+                      key={pos}
+                      type="button"
+                      onClick={() => setPosition(pos)}
+                      className={cn(
+                        "flex items-center justify-center rounded-lg py-2 text-[11px] font-semibold transition",
+                        position === pos
+                          ? "bg-red-600 text-white shadow-xs"
+                          : "bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                      )}
+                    >
+                      {POSITION_LABELS[pos]}
+                    </button>
+                  ))}
                 </div>
-
               </div>
 
-              {/* Action trigger button - FIXED/LOCKED at the bottom of sidebar to fit view screen height */}
-              <div className="p-5 border-t border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-950 shrink-0">
-                <button
-                  onClick={handleProcess}
-                  disabled={!file || processing || loading}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 cursor-pointer",
-                    theme.button
-                  )}
-                >
-                  {processing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Watermarking PDF...
-                    </>
-                  ) : (
-                    "Watermark PDF"
-                  )}
-                </button>
+              {/* Sliders: Opacity & Rotation */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      Opacity:
+                    </label>
+                    <span className="text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-400">
+                      {Math.round(opacity * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.05"
+                    max="1"
+                    step="0.05"
+                    value={opacity}
+                    onChange={(e) => setOpacity(Number(e.target.value))}
+                    className="w-full accent-red-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      Rotation:
+                    </label>
+                    <span className="text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-400">
+                      {rotation}°
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="5"
+                    value={rotation}
+                    onChange={(e) => setRotation(Number(e.target.value))}
+                    className="w-full accent-red-600"
+                  />
+                </div>
               </div>
+
+              {/* Layer Position (Over / Under Content) */}
+              <div>
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Layer Placement:
+                </label>
+                <div className="flex rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setLayer("over")}
+                    className={cn(
+                      "flex-1 rounded py-1.5 font-semibold transition",
+                      layer === "over"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    )}
+                  >
+                    Above Content (Overlay)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayer("under")}
+                    className={cn(
+                      "flex-1 rounded py-1.5 font-semibold transition",
+                      layer === "under"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    )}
+                  >
+                    Below Content (Background)
+                  </button>
+                </div>
+              </div>
+
+              {/* Page Range Targeting */}
+              <div>
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Target Pages:
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900 text-xs mb-2">
+                  {(["all", "odd", "even", "custom"] as PageRangeType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setPageRangeType(type)}
+                      className={cn(
+                        "rounded py-1 font-semibold uppercase transition",
+                        pageRangeType === type
+                          ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                          : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {pageRangeType === "custom" && (
+                  <input
+                    type="text"
+                    placeholder="e.g. 1-3, 5"
+                    value={customRange}
+                    onChange={(e) => setCustomRange(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-900 focus:border-red-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                  />
+                )}
+              </div>
+
+              {/* Watermark Features Checklist Card */}
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-1.5">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Vector PDF Watermark Guarantee:
+                </span>
+                <div className="grid grid-cols-1 gap-1 text-[11px] text-zinc-600 dark:text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Permanent vector watermark embedding</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Exact rotation & alpha opacity transparency</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>100% Client-side privacy & encryption</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => void handleProcess()}
+                disabled={processing}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-white shadow-md transition-all active:scale-[0.98]",
+                  theme.button,
+                  processing && "opacity-80 cursor-not-allowed"
+                )}
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Applying Watermark...</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers className="h-4 w-4" />
+                    <span>Apply Watermark to PDF</span>
+                  </>
+                )}
+              </button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

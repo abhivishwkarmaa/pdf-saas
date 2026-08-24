@@ -406,6 +406,9 @@ export interface PageNumberOptions {
   suffix?: string;
   fontFamily?: "Helvetica" | "TimesRoman" | "Courier";
   fontSize?: number;
+  color?: string;
+  pageRangeType?: "all" | "odd" | "even" | "custom";
+  customRange?: string;
 }
 
 export async function addPageNumbers(file: File, options: PageNumberOptions = {}): Promise<Blob> {
@@ -418,14 +421,39 @@ export async function addPageNumbers(file: File, options: PageNumberOptions = {}
     StandardFonts.Helvetica;
   const font = await doc.embedFont(fontRef);
 
-  doc.getPages().forEach((page, i) => {
+  // Parse color (default black)
+  let textColor = rgb(0.1, 0.1, 0.1);
+  if (options.color && options.color.startsWith("#") && options.color.length === 7) {
+    const r = parseInt(options.color.slice(1, 3), 16) / 255;
+    const g = parseInt(options.color.slice(3, 5), 16) / 255;
+    const b = parseInt(options.color.slice(5, 7), 16) / 255;
+    textColor = rgb(r, g, b);
+  }
+
+  const allPages = doc.getPages();
+  const totalCount = allPages.length;
+
+  allPages.forEach((page, i) => {
+    const pageNum = i + 1;
+
+    // Check page filter
+    if (options.pageRangeType === "odd" && pageNum % 2 === 0) return;
+    if (options.pageRangeType === "even" && pageNum % 2 !== 0) return;
+    if (options.pageRangeType === "custom" && options.customRange) {
+      const allowed = parsePageRange(options.customRange, totalCount);
+      if (!allowed.includes(pageNum)) return;
+    }
+
     const { width, height } = page.getSize();
+    const rawPrefix = (options.prefix || "").replace(/\{total\}/gi, String(totalCount));
+    const rawSuffix = (options.suffix || "").replace(/\{total\}/gi, String(totalCount));
+
     const text = formatPageNumber(
       i,
       options.startNumber || 1,
       options.style || "1,2,3",
-      options.prefix || "",
-      options.suffix || ""
+      rawPrefix,
+      rawSuffix
     );
     const textWidth = font.widthOfTextAtSize(text, options.fontSize || 12);
     const textHeight = (options.fontSize || 12) * 0.8; // approximate cap height
@@ -459,10 +487,38 @@ export async function addPageNumbers(file: File, options: PageNumberOptions = {}
       y,
       size: options.fontSize || 12,
       font,
+      color: textColor,
     });
   });
 
   return blobFromPdf(doc);
+}
+
+function parsePageRange(rangeStr: string, totalPages: number): number[] {
+  const pages: Set<number> = new Set();
+  const parts = rangeStr.split(",");
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    if (trimmed.includes("-")) {
+      const [startStr, endStr] = trimmed.split("-");
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        const from = Math.max(1, Math.min(start, end));
+        const to = Math.min(totalPages, Math.max(start, end));
+        for (let i = from; i <= to; i++) {
+          pages.add(i);
+        }
+      }
+    } else {
+      const pageNum = parseInt(trimmed, 10);
+      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+        pages.add(pageNum);
+      }
+    }
+  }
+  return Array.from(pages);
 }
 
 function formatPageNumber(pageIndex: number, startNumber: number, style: string, prefix: string, suffix: string): string {
