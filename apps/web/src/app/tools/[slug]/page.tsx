@@ -39,6 +39,8 @@ import { PowerPointToPdfWorkspace } from "@/components/tools/PowerPointToPdfWork
 import { ExcelToPdfWorkspace } from "@/components/tools/ExcelToPdfWorkspace";
 import { PdfToTextWorkspace } from "@/components/tools/PdfToTextWorkspace";
 import { JsonFormatterWorkspace } from "@/components/tools/JsonFormatterWorkspace";
+import { DeveloperWorkspace } from "@/components/tools/DeveloperWorkspace";
+import { CalculatorWorkspace } from "@/components/tools/CalculatorWorkspace";
 import { ProtectPdfWorkspace } from "@/components/tools/ProtectPdfWorkspace";
 import { UnlockPdfWorkspace } from "@/components/tools/UnlockPdfWorkspace";
 import { OcrPdfWorkspace } from "@/components/tools/OcrPdfWorkspace";
@@ -305,11 +307,26 @@ export default async function ToolPage({ params }: PageProps) {
   }
 
   if (slug === "json-formatter") {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <JsonFormatterWorkspace tool={tool} />
-      </div>
-    );
+    return <JsonFormatterWorkspace tool={tool} />;
+  }
+
+  if (
+    slug === "base64-encode" ||
+    slug === "base64-decode" ||
+    slug === "url-encode" ||
+    slug === "url-decode" ||
+    slug === "hash-generator"
+  ) {
+    return <DeveloperWorkspace tool={tool} />;
+  }
+
+  if (
+    slug === "percentage-calculator" ||
+    slug === "age-calculator" ||
+    slug === "bmi-calculator" ||
+    slug === "unit-converter"
+  ) {
+    return <CalculatorWorkspace tool={tool} />;
   }
 
   if (slug === "protect-pdf") {
