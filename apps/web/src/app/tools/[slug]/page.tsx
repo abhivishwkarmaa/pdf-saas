@@ -10,6 +10,12 @@ import { CropImageWorkspace } from "@/components/tools/CropImageWorkspace";
 import { RedactPdfWorkspace } from "@/components/tools/RedactPdfWorkspace";
 import { HtmlToPdfWorkspace } from "@/components/tools/HtmlToPdfWorkspace";
 import { TextToPdfWorkspace } from "@/components/tools/TextToPdfWorkspace";
+import { MarkdownToPdfWorkspace } from "@/components/tools/MarkdownToPdfWorkspace";
+import { MarkdownToWordWorkspace } from "@/components/tools/MarkdownToWordWorkspace";
+import { RtfToPdfWorkspace } from "@/components/tools/RtfToPdfWorkspace";
+import { TexToWordWorkspace } from "@/components/tools/TexToWordWorkspace";
+import { PagesToWordWorkspace } from "@/components/tools/PagesToWordWorkspace";
+import { EpubToPdfWorkspace } from "@/components/tools/EpubToPdfWorkspace";
 import { PageNumbersWorkspace } from "@/components/tools/PageNumbersWorkspace";
 import { WatermarkPdfWorkspace } from "@/components/tools/WatermarkPdfWorkspace";
 import { SignPdfWorkspace } from "@/components/tools/SignPdfWorkspace";
@@ -108,6 +114,30 @@ export default async function ToolPage({ params }: PageProps) {
 
   if (slug === "txt-to-pdf") {
     return <TextToPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "markdown-to-pdf") {
+    return <MarkdownToPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "markdown-to-word") {
+    return <MarkdownToWordWorkspace tool={tool} />;
+  }
+
+  if (slug === "rtf-to-pdf") {
+    return <RtfToPdfWorkspace tool={tool} />;
+  }
+
+  if (slug === "tex-to-word") {
+    return <TexToWordWorkspace tool={tool} />;
+  }
+
+  if (slug === "pages-to-word") {
+    return <PagesToWordWorkspace tool={tool} />;
+  }
+
+  if (slug === "epub-to-pdf") {
+    return <EpubToPdfWorkspace tool={tool} />;
   }
 
   if (slug === "page-numbers") {

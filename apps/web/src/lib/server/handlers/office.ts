@@ -6,6 +6,7 @@ import { ocrPdf } from "./ocr";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import pptxgen from "pptxgenjs";
 import mammoth from "mammoth";
+import JSZip from "jszip";
 import { htmlToPdf } from "./html";
 
 const extMap: Record<string, string> = {
@@ -1218,6 +1219,97 @@ async function convertDocxToPdfViaMammoth(buffer: Buffer): Promise<Buffer> {
   });
 }
 
+async function convertEpubToPdfViaHtml(buffer: Buffer): Promise<Buffer> {
+  const zip = await JSZip.loadAsync(buffer);
+  const chapterFiles: { name: string; content: string }[] = [];
+
+  const fileKeys = Object.keys(zip.files).filter(
+    (k) => /\.(xhtml|html|htm)$/i.test(k) && !zip.files[k].dir
+  );
+
+  fileKeys.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+
+  for (const k of fileKeys) {
+    try {
+      const raw = await zip.files[k].async("string");
+      const bodyMatch = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      const chapterHtml = bodyMatch ? bodyMatch[1] : raw;
+      if (chapterHtml && chapterHtml.trim().length > 10) {
+        chapterFiles.push({ name: k, content: chapterHtml });
+      }
+    } catch {
+      // skip unreadable entry
+    }
+  }
+
+  const combinedBody = chapterFiles
+    .map(
+      (c) =>
+        `<div class="epub-chapter" style="page-break-after: always; margin-bottom: 2rem;">${c.content}</div>`
+    )
+    .join("\n");
+
+  const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 20mm;
+    }
+    body {
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #1a1a1a;
+      background: #ffffff;
+      padding: 0;
+      margin: 0;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #0f172a;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      page-break-after: avoid;
+    }
+    h1 { font-size: 20pt; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+    h2 { font-size: 16pt; }
+    h3 { font-size: 13pt; }
+    p { margin-bottom: 1em; text-align: justify; }
+    img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+    blockquote {
+      border-left: 3px solid #6366f1;
+      padding-left: 1em;
+      margin: 1em 0;
+      color: #475569;
+      font-style: italic;
+    }
+    pre, code {
+      font-family: "Courier New", monospace;
+      background: #f8fafc;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 9.5pt;
+    }
+    .epub-chapter {
+      page-break-after: always;
+    }
+  </style>
+</head>
+<body>
+  ${combinedBody || "<p>eBook Document Content</p>"}
+</body>
+</html>`;
+
+  return await htmlToPdf(fullHtml, undefined, {
+    pageSize: "A4",
+    orientation: "portrait",
+    margin: "default",
+  });
+}
+
 export async function convertOffice(
   buffer: Buffer,
   targetFormat: string,
@@ -1359,6 +1451,18 @@ except Exception:
       return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
     } catch (mammothErr) {
       console.error("Mammoth DOCX to PDF fallback failed:", mammothErr);
+    }
+  }
+
+  // Fallback for EPUB to PDF using JSZip extraction + HTML-to-PDF engine (Puppeteer / Edge / Chrome)
+  if (targetFormat === "pdf" && (inputExt === ".epub" || toolSlug === "epub-to-pdf")) {
+    try {
+      console.log("Converting EPUB to PDF via JSZip + HTML engine...");
+      const out = await convertEpubToPdfViaHtml(buffer);
+      console.log("EPUB to PDF conversion via JSZip + HTML engine successful!");
+      return { buffer: out, mimeType: mimeFor("pdf"), fileName: outFileName };
+    } catch (epubErr) {
+      console.error("JSZip EPUB to PDF fallback failed:", epubErr);
     }
   }
 
