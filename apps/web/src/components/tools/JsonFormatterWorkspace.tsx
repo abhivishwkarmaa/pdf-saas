@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { ToolDefinition } from "@pdf-saas/shared";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import { toast, Toaster } from "sonner";
 import {
   Copy,
@@ -714,18 +715,11 @@ export function JsonFormatterWorkspace({ tool }: JsonFormatterWorkspaceProps) {
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-4 py-6 sm:py-8 space-y-4">
       <Toaster position="top-center" richColors />
+      <ToolTopNav tool={tool} />
 
       {/* TOP HEADER & CONTROLS */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/#developer"
-            className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Developer Tools
-          </Link>
-
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <FileJson className="h-4 w-4" />

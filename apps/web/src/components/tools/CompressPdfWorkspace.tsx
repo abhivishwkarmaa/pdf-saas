@@ -15,7 +15,6 @@ import {
   RefreshCw,
   ArrowLeft,
   Download,
-  Sparkles,
   Zap,
   ShieldCheck,
   Gauge,
@@ -27,6 +26,10 @@ import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { ProcessingSuccessView } from "./ProcessingSuccessView";
+import { MobileStickyProcessBar } from "./MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
 
 interface CompressPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -161,7 +164,9 @@ export function CompressPdfWorkspace({ tool }: CompressPdfWorkspaceProps) {
         }
       } catch (err) {
         console.error("Error reading PDF pages:", err);
-        toast.error("Could not load preview for this PDF file.");
+        if (!handleEncryptedPdfToast(err, file?.name)) {
+          toast.error("Could not load preview for this PDF file.");
+        }
       } finally {
         if (!isCancelled) {
           setLoadingPdf(false);
@@ -314,7 +319,9 @@ export function CompressPdfWorkspace({ tool }: CompressPdfWorkspaceProps) {
       );
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "Compression failed");
+      if (!handleEncryptedPdfToast(err, file?.name)) {
+        toast.error(err instanceof Error ? err.message : "Compression failed");
+      }
     } finally {
       setProcessing(false);
       setStatusMessage("");
@@ -342,6 +349,22 @@ export function CompressPdfWorkspace({ tool }: CompressPdfWorkspaceProps) {
 
   const Icon = theme.icon;
 
+  if (resultBlob && file) {
+    return (
+      <div className="mx-auto max-w-4xl px-3 sm:px-4 py-6 sm:py-8">
+        <Toaster position="top-center" richColors />
+        <ProcessingSuccessView
+          tool={tool}
+          resultBlob={resultBlob}
+          resultFileName={resultFileName || `${file.name.replace(/\.[^/.]+$/, "")}_compressed.pdf`}
+          originalFileName={file.name}
+          originalSize={file.size}
+          onReset={handleReset}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <Toaster position="top-center" richColors />
@@ -363,27 +386,22 @@ export function CompressPdfWorkspace({ tool }: CompressPdfWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className={cn("flex flex-col gap-6", file && "pb-20 md:pb-0")}>
         {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Compress Another PDF
-            </button>
-          )}
-        </div>
+        <ToolTopNav
+          tool={tool}
+          action={
+            file ? (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Change File
+              </button>
+            ) : null
+          }
+        />
 
         {/* Upload Dropzone */}
         {!file && (
@@ -703,6 +721,20 @@ export function CompressPdfWorkspace({ tool }: CompressPdfWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {file && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${originalSizeMb} MB · ${COMPRESSION_PRESETS.find((p) => p.id === compressionLevel)?.title}`}
+          actionLabel="Compress"
+          onAction={() => void handleCompress()}
+          loading={processing}
+          loadingLabel="Compressing..."
+          icon={<Minimize2 className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Page Zoom View */}
       {previewModalPage !== null && (

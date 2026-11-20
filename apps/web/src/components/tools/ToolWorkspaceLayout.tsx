@@ -1,8 +1,9 @@
 import type { ToolDefinition } from "@pdf-saas/shared";
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
-import { ChevronLeft } from "lucide-react";
+import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BreadcrumbNav, ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 
 interface ToolWorkspaceLayoutProps {
   tool: ToolDefinition;
@@ -13,6 +14,8 @@ interface ToolWorkspaceLayoutProps {
   editorLabel?: string;
   /** Wider single-column card (e.g. side-by-side code editors). */
   wide?: boolean;
+  /** Sticky mobile bottom action bar for thumb-zone execution */
+  mobileAction?: React.ReactNode;
 }
 
 const BADGE_STYLES = {
@@ -90,19 +93,14 @@ export function ToolWorkspaceLayout({
   preview,
   editorLabel = "Editor",
   wide = false,
+  mobileAction,
 }: ToolWorkspaceLayoutProps) {
   const theme = CATEGORY_THEME[tool.category];
   const maxWidth = preview ? "max-w-6xl" : wide ? "max-w-5xl" : "max-w-2xl";
 
   return (
-    <section className={cn("mx-auto w-full", maxWidth)}>
-      <Link
-        href={`/#${tool.category}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-800 dark:hover:text-zinc-200"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to {theme.label} tools
-      </Link>
+    <section className={cn("mx-auto w-full", maxWidth, mobileAction && "pb-20 md:pb-0")}>
+      <ToolTopNav tool={tool} />
 
       {preview ? (
         <section className="grid items-start gap-6 lg:grid-cols-2">
@@ -120,6 +118,13 @@ export function ToolWorkspaceLayout({
         <WorkspaceCard tool={tool} badge={badge} badgeTone={badgeTone}>
           {children}
         </WorkspaceCard>
+      )}
+
+      {/* Sticky Mobile Bottom CTA Dock */}
+      {mobileAction && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 p-3.5 backdrop-blur-xl md:hidden shadow-lg">
+          {mobileAction}
+        </div>
       )}
     </section>
   );

@@ -28,6 +28,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import Link from "next/link";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
@@ -323,25 +324,20 @@ export function ComparePdfWorkspace({ tool }: ComparePdfWorkspaceProps) {
       <Toaster position="top-center" richColors />
 
       {/* Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to PDF Tools
-        </Link>
-
-        {files.length > 0 && (
-          <button
+      <ToolTopNav
+        tool={tool}
+        action={
+          files.length > 0 ? (
+            <button
             onClick={handleReset}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Compare Other Files
           </button>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       {/* Header */}
       {files.length < 2 && (

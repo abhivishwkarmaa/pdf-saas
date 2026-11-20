@@ -20,12 +20,14 @@ import {
   Layout,
   Maximize2,
   Sliders,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { ProcessingSuccessView } from "@/components/tools/ProcessingSuccessView";
+import { MobileStickyProcessBar } from "@/components/tools/MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 
 interface ImageToPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -71,6 +73,10 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [processing, setProcessing] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
+
+  // Result state for success view
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
   // Layout settings
   const [orientation, setOrientation] = useState<PageOrientation>("auto");
@@ -231,6 +237,8 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
   const handleClearAll = () => {
     images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
     setImages([]);
+    setResultBlob(null);
+    setResultFileName("");
   };
 
   // Helper to convert rotated/format image to canvas/bytes
@@ -367,6 +375,9 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
         const baseName = images[0].name.replace(/\.[^/.]+$/, "");
         const downloadName = images.length === 1 ? `${baseName}.pdf` : "images_combined.pdf";
 
+        setResultBlob(blob);
+        setResultFileName(downloadName);
+
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -376,7 +387,7 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success(`Successfully converted ${images.length} images into PDF!`);
+        toast.success(`Converted ${images.length} image(s) into PDF`);
       } else {
         // Individual PDF per image into ZIP
         setStatusMessage("Converting images into individual PDFs...");
@@ -431,16 +442,20 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
 
         setStatusMessage("Archiving into ZIP package...");
         const zipBlob = await zip.generateAsync({ type: "blob" });
+        const downloadName = "converted_pdfs.zip";
+        setResultBlob(zipBlob);
+        setResultFileName(downloadName);
+
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "converted_pdfs.zip";
+        a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success(`Downloaded ${images.length} converted PDFs in a ZIP archive!`);
+        toast.success(`Converted ${images.length} images to PDF ZIP`);
       }
     } catch (err) {
       console.error("Image to PDF Error:", err);
@@ -479,8 +494,18 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
     ? "group-hover:bg-blue-50 group-hover:text-blue-600"
     : "group-hover:bg-red-50 group-hover:text-red-600";
 
-  const backLinkHref = isImageCategory ? "/#image" : "/#pdf";
-  const backLinkLabel = isImageCategory ? "Back to Image Tools" : "Back to PDF Tools";
+  if (resultBlob) {
+    return (
+      <ProcessingSuccessView
+        tool={tool}
+        resultBlob={resultBlob}
+        resultFileName={resultFileName}
+        itemCount={images.length}
+        customMessage={`Converted ${images.length} image(s) to PDF successfully.`}
+        onReset={handleClearAll}
+      />
+    );
+  }
 
   return (
     <>
@@ -503,26 +528,20 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Link
-            href={backLinkHref}
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {backLinkLabel}
-          </Link>
-
-          {images.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              Clear All Images
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", images.length > 0 && "pb-20 md:pb-0")}>
+        <ToolTopNav
+          tool={tool}
+          action={
+            images.length > 0 ? (
+              <button
+                onClick={handleClearAll}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                Clear All Images
+              </button>
+            ) : null
+          }
+        />
 
         {/* Initial Upload State */}
         {images.length === 0 && (
@@ -974,6 +993,21 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {images.length > 0 && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${images.length} image(s) · ${totalSizeMb} MB`}
+          actionLabel="Convert"
+          onAction={() => void handleConvertToPdf()}
+          disabled={images.length === 0}
+          loading={processing}
+          loadingLabel={statusMessage || "Generating PDF..."}
+          icon={<FileText className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Image Zoom View */}
       {previewModalImage !== null && (

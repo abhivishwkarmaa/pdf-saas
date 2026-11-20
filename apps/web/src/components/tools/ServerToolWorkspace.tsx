@@ -10,6 +10,7 @@ import { FileDropZone } from "./FileDropZone";
 import { PrimaryButton } from "./PrimaryButton";
 import { ToolOptionsForm } from "./ToolOptionsForm";
 import { SubmissionPreview } from "./SubmissionPreview";
+import { ProcessingSuccessView } from "./ProcessingSuccessView";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { getToolOptionDefaults } from "@/lib/tool-options";
 
@@ -25,6 +26,12 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
     getToolOptionDefaults(tool.slug)
   );
   const [statusMessage, setStatusMessage] = useState("");
+  const [resultData, setResultData] = useState<{
+    blob: Blob;
+    fileName: string;
+    originalSize: number;
+    originalFileName: string;
+  } | null>(null);
   const fileUrls = useFilePreviewUrls(files);
   const textSnippet = useTextFilePreview(files);
 
@@ -137,16 +144,28 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
       });
 
       const { blob, fileName } = await responsePromise;
-      
+      const originalTotalSize = filesToSend.reduce((acc, f) => acc + f.size, 0);
+      const originalFirstName = filesToSend[0]?.name || "document";
+      const decodedFileName = decodeURIComponent(fileName);
+
+      // Trigger browser download immediately
       setStatusMessage("Starting download...");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = decodeURIComponent(fileName);
+      a.download = decodedFileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      // Mount the success view
+      setResultData({
+        blob,
+        fileName: decodedFileName,
+        originalSize: originalTotalSize,
+        originalFileName: originalFirstName,
+      });
 
       toast.success("Done! Your file has been processed successfully.");
     } catch (e) {
@@ -157,11 +176,55 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
     }
   };
 
+  if (resultData) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <Toaster position="top-center" richColors />
+        <ProcessingSuccessView
+          tool={tool}
+          resultBlob={resultData.blob}
+          resultFileName={resultData.fileName}
+          originalFileName={resultData.originalFileName}
+          originalSize={resultData.originalSize}
+          itemCount={files.length}
+          onReset={() => {
+            setResultData(null);
+            setFiles([]);
+            setEditedText("");
+            setOriginalFileText("");
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <Toaster position="top-center" richColors />
       <ToolWorkspaceLayout
         tool={tool}
+        mobileAction={
+          (files.length > 0 || editedText.trim().length > 0) ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-zinc-900 dark:text-white">
+                  {tool.name}
+                </p>
+                <p className="text-[10px] text-muted truncate">
+                  {files.length > 0 ? `${files.length} file(s) selected` : "Text content ready"}
+                </p>
+              </div>
+              <PrimaryButton
+                className={`!w-auto !py-2 !px-4 text-xs font-bold ${theme.button}`}
+                label="Process Now"
+                loading={processing}
+                loadingLabel={statusMessage || "Processing..."}
+                disabled={files.length === 0 && editedText.trim().length === 0}
+                onClick={() => void process()}
+              />
+            </div>
+          ) : null
+        }
         preview={
           <SubmissionPreview
             tool={tool}

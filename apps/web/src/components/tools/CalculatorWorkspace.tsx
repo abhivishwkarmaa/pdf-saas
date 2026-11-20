@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
 import {
@@ -58,18 +59,11 @@ export function CalculatorWorkspace({ tool }: CalculatorWorkspaceProps) {
   return (
     <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-8 space-y-6">
       <Toaster position="top-center" richColors />
+      <ToolTopNav tool={tool} />
 
-      {/* TOP NAVIGATION & HEADER */}
+      {/* TOP HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/#calculator"
-            className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Calculators
-          </Link>
-
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
               <Calculator className="h-4 w-4" />

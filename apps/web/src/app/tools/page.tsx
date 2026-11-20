@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TOOLS, TOOL_CATEGORIES, type ToolCategory } from "@pdf-saas/shared";
 import { Search, FileText, Image, Video, Type, Code2, Calculator, Sparkles, Music, ArrowRight } from "lucide-react";
+import { BreadcrumbNav } from "@/components/navigation/BreadcrumbNav";
 
 export const metadata: Metadata = {
   title: "All Tools — ConvertHub",
@@ -32,7 +33,16 @@ export default function AllToolsPage() {
       {/* Hero */}
       <div className="relative border-b border-border bg-gradient-to-b from-card to-background">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(124,58,237,0.1),transparent)]" />
-        <div className="relative mx-auto max-w-5xl px-4 py-16 text-center">
+        <div className="relative mx-auto max-w-5xl px-4 pt-6 pb-2">
+          <BreadcrumbNav
+            items={[
+              { label: "Home", href: "/" },
+              { label: "All Tools" },
+            ]}
+            showHomeIcon
+          />
+        </div>
+        <div className="relative mx-auto max-w-5xl px-4 py-12 text-center">
           <h1 className="text-4xl font-extrabold tracking-tight mb-3 text-zinc-900 dark:text-white">
             All{" "}
             <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">

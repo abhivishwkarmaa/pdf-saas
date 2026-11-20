@@ -20,12 +20,18 @@ import {
   Shuffle,
   ArrowDownAZ,
   Layers,
-  Sparkles,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { BatchActionsToolbar } from "@/components/tools/BatchActionsToolbar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
+import { ProcessingSuccessView } from "@/components/tools/ProcessingSuccessView";
+import { MobileStickyProcessBar } from "@/components/tools/MobileStickyProcessBar";
 
 interface OrganizePdfWorkspaceProps {
   tool: ToolDefinition;
@@ -58,6 +64,13 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
 
   // Drag & drop state for reordering
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Multi-page batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Result state for success view
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
   // Zoom modal & sizing
   const [previewModalPage, setPreviewModalPage] = useState<PageItem | null>(null);
@@ -114,7 +127,9 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
         }
       } catch (err) {
         console.error("Error reading PDF pages:", err);
-        toast.error("Could not load preview for this PDF file.");
+        if (!handleEncryptedPdfToast(err, file?.name)) {
+          toast.error("Could not load preview for this PDF file.");
+        }
       } finally {
         if (!isCancelled) {
           setLoadingPdf(false);
@@ -151,6 +166,53 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
     setFile(null);
     setPages([]);
     setTotalPages(0);
+    setSelectedIds(new Set());
+    setResultBlob(null);
+    setResultFileName("");
+  };
+
+  const toggleSelectPage = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(pages.filter((p) => !p.deleted).map((p) => p.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleInvertSelection = () => {
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      for (const p of pages) {
+        if (!p.deleted && !prev.has(p.id)) next.add(p.id);
+      }
+      return next;
+    });
+  };
+
+  const handleRotateSelected = () => {
+    setPages((prev) =>
+      prev.map((p) =>
+        selectedIds.has(p.id) ? { ...p, rotation: (p.rotation + 90) % 360 } : p
+      )
+    );
+    toast.info("Rotated selected pages 90°");
+  };
+
+  const handleDeleteSelected = () => {
+    setPages((prev) =>
+      prev.map((p) => (selectedIds.has(p.id) ? { ...p, deleted: true } : p))
+    );
+    setSelectedIds(new Set());
+    toast.info("Removed selected pages");
   };
 
   // Reordering controls
@@ -263,14 +325,19 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
       const baseName = file.name.replace(/\.[^/.]+$/, "");
       const downloadName = `${baseName}_organized.pdf`;
 
+      setResultBlob(blob);
+      setResultFileName(downloadName);
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = downloadName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success("Successfully organized and downloaded your PDF!");
+      toast.success("PDF organized successfully!");
     } catch (err) {
       console.error("Error organizing PDF:", err);
       toast.error(err instanceof Error ? err.message : "Failed to organize PDF.");
@@ -282,6 +349,21 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
 
   const activePagesCount = pages.filter((p) => !p.deleted).length;
   const Icon = theme.icon;
+
+  if (resultBlob) {
+    return (
+      <ProcessingSuccessView
+        tool={tool}
+        resultBlob={resultBlob}
+        resultFileName={resultFileName}
+        originalFileName={file?.name}
+        originalSize={file?.size}
+        itemCount={activePagesCount}
+        customMessage={`Organized ${activePagesCount} pages successfully.`}
+        onReset={handleReset}
+      />
+    );
+  }
 
   return (
     <>
@@ -304,26 +386,21 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Change PDF File
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", file && "pb-20 md:pb-0")}>
+        <ToolTopNav
+          tool={tool}
+          action={
+            file ? (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Change File
+              </button>
+            ) : null
+          }
+        />
 
         {!file && (
           <label className="upload-dropzone upload-dropzone-pdf w-full relative group cursor-pointer">
@@ -436,6 +513,18 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                 </div>
               </div>
 
+              {/* Batch Actions Toolbar */}
+              <BatchActionsToolbar
+                totalCount={pages.filter((p) => !p.deleted).length}
+                selectedCount={selectedIds.size}
+                itemLabel="pages"
+                onSelectAll={handleSelectAll}
+                onDeselectAll={handleDeselectAll}
+                onInvertSelection={handleInvertSelection}
+                onRotateSelected={handleRotateSelected}
+                onDeleteSelected={handleDeleteSelected}
+              />
+
               {/* Thumbnails Grid */}
               <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[400px] max-h-[calc(100vh-220px)] overflow-y-auto">
                 {loadingPdf && pages.length < totalPages ? (
@@ -456,6 +545,7 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                     )}
                   >
                     {pages.map((p, idx) => {
+                      const isSelected = selectedIds.has(p.id);
                       return (
                         <div
                           key={p.id}
@@ -466,6 +556,7 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                           className={cn(
                             "group relative flex flex-col rounded-xl border transition-all duration-150 p-2 select-none",
                             draggedIndex === idx && "opacity-30 border-dashed border-red-500",
+                            isSelected && "ring-2 ring-red-500 border-red-500 bg-red-50/20 dark:bg-red-950/20",
                             p.deleted
                               ? "opacity-40 border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900"
                               : "border-zinc-200 bg-zinc-50/50 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900/40 cursor-grab active:cursor-grabbing"
@@ -491,6 +582,25 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
                             <div className="absolute top-2 left-2 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900/80 text-[10px] font-bold text-white shadow-sm">
                               {idx + 1}
                             </div>
+
+                            {/* Select Checkbox top-right */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSelectPage(p.id);
+                              }}
+                              className={cn(
+                                "absolute top-2 right-9 flex h-6 w-6 items-center justify-center rounded-md border text-white transition shadow-sm",
+                                isSelected
+                                  ? "bg-red-600 border-red-600 text-white"
+                                  : "bg-black/50 border-white/20 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-black/70"
+                              )}
+                              title={isSelected ? "Deselect page" : "Select page"}
+                            >
+                              {isSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                            </button>
+
                             {/* Zoom Preview Button */}
                             <button
                               type="button"
@@ -623,6 +733,20 @@ export function OrganizePdfWorkspace({ tool }: OrganizePdfWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {file && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${activePagesCount} active pages`}
+          actionLabel="Save PDF"
+          onAction={() => void handleSaveOrganized()}
+          loading={processing}
+          loadingLabel={statusMessage || "Saving..."}
+          icon={<Layers className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Page Zoom View */}
       {previewModalPage !== null && (

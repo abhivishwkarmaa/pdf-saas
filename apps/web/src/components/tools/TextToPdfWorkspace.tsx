@@ -32,6 +32,7 @@ import {
 import { txtToPdf, downloadBlob, type TextToPdfOptions } from "@/lib/client/pdf-tools";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 
 interface TextToPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -272,15 +273,7 @@ export function TextToPdfWorkspace({ tool }: TextToPdfWorkspaceProps) {
       <Toaster position="top-center" richColors />
 
       {/* Top Back Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/#text"
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Text Tools
-        </Link>
-      </div>
+      <ToolTopNav tool={tool} />
 
       {/* STEP 1: INITIAL SELECTION SCREEN (Choose Upload .txt OR Direct Typing) */}
       {!hasStarted ? (
@@ -662,7 +655,7 @@ export function TextToPdfWorkspace({ tool }: TextToPdfWorkspaceProps) {
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     )}
                   >
-                    <span>📄</span> Portrait
+                    Portrait
                   </button>
                   <button
                     onClick={() => setOrientation("landscape")}
@@ -673,7 +666,7 @@ export function TextToPdfWorkspace({ tool }: TextToPdfWorkspaceProps) {
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     )}
                   >
-                    <span>📜</span> Landscape
+                    Landscape
                   </button>
                 </div>
               </div>

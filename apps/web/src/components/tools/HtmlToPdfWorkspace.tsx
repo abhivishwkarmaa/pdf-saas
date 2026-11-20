@@ -31,6 +31,7 @@ import {
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 
 interface HtmlToPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -296,25 +297,7 @@ export function HtmlToPdfWorkspace({ tool }: HtmlToPdfWorkspaceProps) {
       <Toaster position="top-center" richColors />
 
       {/* Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/#pdf"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to PDF Tools
-        </Link>
-
-        {(file || resultBlob) && (
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Convert Another Document
-          </button>
-        )}
-      </div>
+      <ToolTopNav tool={tool} />
 
       {/* Header */}
       {!file && !resultBlob && (

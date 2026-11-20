@@ -19,13 +19,17 @@ import {
   Sliders,
   FileArchive,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { ProcessingSuccessView } from "@/components/tools/ProcessingSuccessView";
+import { BatchActionsToolbar } from "@/components/tools/BatchActionsToolbar";
+import { MobileStickyProcessBar } from "@/components/tools/MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
 
 interface PdfToImageWorkspaceProps {
   tool: ToolDefinition;
@@ -73,6 +77,10 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
 
   // Output packaging option: ZIP vs Single
   const [packageAsZip, setPackageAsZip] = useState<boolean>(true);
+
+  // Success view state
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
   // Zoom modal & sizing
   const [previewModalPage, setPreviewModalPage] = useState<number | null>(null);
@@ -134,7 +142,9 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         }
       } catch (err) {
         console.error("Error reading PDF pages:", err);
-        toast.error("Could not load preview for this PDF file.");
+        if (!handleEncryptedPdfToast(err, file?.name)) {
+          toast.error("Could not load preview for this PDF file.");
+        }
       } finally {
         if (!isCancelled) {
           setLoadingPdf(false);
@@ -173,6 +183,8 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
     setTotalPages(0);
     setSelectedPages(new Set());
     setPagesTextInput("");
+    setResultBlob(null);
+    setResultFileName("");
   };
 
   const formatPagesToString = (set: Set<number>): string => {
@@ -242,11 +254,27 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
     for (let i = 1; i <= totalPages; i++) all.add(i);
     setSelectedPages(all);
     setPagesTextInput(formatPagesToString(all));
+    setConversionMode("selected");
   };
 
   const clearSelection = () => {
     setSelectedPages(new Set());
     setPagesTextInput("");
+    setConversionMode("selected");
+  };
+
+  const invertSelection = () => {
+    const inverted = new Set<number>();
+    const current =
+      conversionMode === "all"
+        ? new Set(Array.from({ length: totalPages }, (_, i) => i + 1))
+        : selectedPages;
+    for (let i = 1; i <= totalPages; i++) {
+      if (!current.has(i)) inverted.add(i);
+    }
+    setSelectedPages(inverted);
+    setPagesTextInput(formatPagesToString(inverted));
+    setConversionMode("selected");
   };
 
   const selectOddPages = () => {
@@ -410,6 +438,9 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
       if (convertedImages.length === 1 && !packageAsZip) {
         setStatusMessage("Downloading image...");
         const single = convertedImages[0];
+        setResultBlob(single.blob);
+        setResultFileName(single.name);
+
         const url = URL.createObjectURL(single.blob);
         const a = document.createElement("a");
         a.href = url;
@@ -418,7 +449,7 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success(`Downloaded ${single.name}!`);
+        toast.success(`Converted ${single.name}`);
       } else {
         setStatusMessage("Packaging into ZIP archive...");
         const zip = new JSZip();
@@ -426,17 +457,19 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
           zip.file(item.name, item.blob);
         }
         const zipBlob = await zip.generateAsync({ type: "blob" });
+        const downloadName = `${baseName}_${format.toUpperCase()}_images.zip`;
+        setResultBlob(zipBlob);
+        setResultFileName(downloadName);
+
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${baseName}_${format.toUpperCase()}_images.zip`;
+        a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success(
-          `Successfully converted & downloaded ${convertedImages.length} images as ZIP!`
-        );
+        toast.success(`Converted ${convertedImages.length} images to ZIP`);
       }
     } catch (err) {
       console.error("Conversion error:", err);
@@ -448,6 +481,21 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
   };
 
   const Icon = theme.icon;
+
+  if (resultBlob) {
+    return (
+      <ProcessingSuccessView
+        tool={tool}
+        resultBlob={resultBlob}
+        resultFileName={resultFileName}
+        originalFileName={file?.name}
+        originalSize={file?.size}
+        itemCount={pagesToConvert.length}
+        customMessage={`Converted ${pagesToConvert.length} page(s) to ${format.toUpperCase()} successfully.`}
+        onReset={handleReset}
+      />
+    );
+  }
 
   return (
     <>
@@ -470,27 +518,21 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Change PDF File
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", file && "pb-20 md:pb-0")}>
+        <ToolTopNav
+          tool={tool}
+          action={
+            file ? (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Change File
+              </button>
+            ) : null
+          }
+        />
 
         {/* Upload Dropzone */}
         {!file && (
@@ -577,52 +619,21 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
                 </div>
               </div>
 
-              {/* Mode Selection Quick Bar */}
+              {/* Batch Actions Toolbar */}
               {conversionMode !== "extract" && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50/70 p-3 text-xs dark:border-red-900/50 dark:bg-red-950/20">
-                  <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    <span>
-                      {conversionMode === "all"
-                        ? "Converting all pages. Click any page to customize selection."
-                        : `Selected ${selectedPages.size} of ${totalPages} pages to convert.`}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        setConversionMode("all");
-                        selectAllPages();
-                      }}
-                      className={cn(
-                        "rounded-md px-2.5 py-1 font-semibold shadow-xs transition",
-                        conversionMode === "all"
-                          ? "bg-red-600 text-white"
-                          : "bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                      )}
-                    >
-                      All Pages
-                    </button>
-                    <button
-                      onClick={selectOddPages}
-                      className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                    >
-                      Odd Pages
-                    </button>
-                    <button
-                      onClick={selectEvenPages}
-                      className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                    >
-                      Even Pages
-                    </button>
-                    <button
-                      onClick={clearSelection}
-                      className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
+                <BatchActionsToolbar
+                  totalCount={totalPages}
+                  selectedCount={conversionMode === "all" ? totalPages : selectedPages.size}
+                  itemLabel="pages"
+                  onSelectAll={selectAllPages}
+                  onDeselectAll={clearSelection}
+                  onInvertSelection={invertSelection}
+                  customActions={[
+                    { label: "Odd Pages", onClick: selectOddPages },
+                    { label: "Even Pages", onClick: selectEvenPages },
+                  ]}
+                  sticky
+                />
               )}
 
               {/* Thumbnails Grid */}
@@ -932,6 +943,20 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {file && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${pagesToConvert.length} pages to ${format.toUpperCase()}`}
+          actionLabel="Convert"
+          onAction={() => void handleConvert()}
+          loading={processing}
+          loadingLabel={statusMessage || "Converting..."}
+          icon={<ImageIcon className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Page Zoom View */}
       {previewModalPage !== null && (

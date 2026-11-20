@@ -194,7 +194,7 @@ function OrganizePdfHelper({
                     : "bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-950/30 dark:border-violet-800 dark:text-violet-300"
                 }`}
               >
-                {isBlank ? "📄 Blank" : `📄 Page ${token}`}
+                {isBlank ? "Blank" : `Page ${token}`}
                 <button
                   type="button"
                   onClick={() => removeToken(idx)}
@@ -288,10 +288,10 @@ function RotatePdfHelper({
         <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
           {tokens.map((token, idx) => {
             const hasColon = token.includes(":");
-            let label = `🔄 Page ${token} (Default)`;
+            let label = `Page ${token} (Default)`;
             if (hasColon) {
               const [p, a] = token.split(":");
-              label = `🔄 Page ${p} @ ${a}°`;
+              label = `Page ${p} @ ${a}°`;
             }
             return (
               <span

@@ -840,7 +840,7 @@ function AccordionItem({
             </button>
             {vote && (
               <span className="text-xs text-zinc-600 ml-1">
-                {vote === "up" ? "Thanks for your feedback! 🎉" : "We'll improve this answer."}
+                {vote === "up" ? "Thanks for your feedback." : "We'll improve this answer."}
               </span>
             )}
           </div>

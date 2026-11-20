@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, X, ShieldAlert, CloudUpload } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, X, ShieldAlert, CloudUpload, ClipboardPaste } from "lucide-react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,29 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
     }
   };
 
+  // Support direct Ctrl+V clipboard pasting of files/screenshots
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const pastedFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) pastedFiles.push(file);
+        }
+      }
+      if (pastedFiles.length > 0) {
+        e.preventDefault();
+        toast.info(`Pasted ${pastedFiles.length} file(s) from clipboard`);
+        void handleFileSelection(pastedFiles);
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [files, tool]);
+
   return (
     <label
       className={cn(
@@ -83,16 +106,31 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
       }}
     >
       <span className="upload-icon-container transition-transform duration-200">
-        <Upload className={cn(isDragging && "animate-bounce text-violet-600 dark:text-violet-400")} />
+        <Upload className={cn("transition-transform", isDragging && "text-violet-600 dark:text-violet-400 scale-110")} />
       </span>
       <span className="text-center">
         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-          {isDragging ? "Drop your files here!" : "Click to upload or drag files here"}
+          {isDragging ? "Drop files to upload" : "Choose files or drag here"}
         </p>
         <p className="mt-1 text-xs text-zinc-500">
           {tool.maxFiles > 1 ? `Up to ${tool.maxFiles} files` : "Single file"} · max{" "}
           {tool.maxMb} MB
         </p>
+        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-muted">
+          <span className="font-medium text-zinc-400">Supports:</span>
+          {tool.accept
+            .filter((ext) => ext.startsWith("."))
+            .slice(0, 4)
+            .map((ext) => (
+              <span
+                key={ext}
+                className="rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold text-zinc-600 dark:text-zinc-300"
+              >
+                {ext.replace(".", "")}
+              </span>
+            ))}
+          <span className="text-[10px] text-zinc-400 font-medium">· Paste (Ctrl+V)</span>
+        </div>
       </span>
       <input
         type="file"

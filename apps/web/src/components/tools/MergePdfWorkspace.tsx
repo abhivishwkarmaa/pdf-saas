@@ -15,11 +15,16 @@ import {
   RefreshCw,
   Plus,
   ArrowLeft,
+  GripVertical,
 } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { ProcessingSuccessView } from "./ProcessingSuccessView";
+import { MobileStickyProcessBar } from "./MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
 
 interface MergePdfWorkspaceProps {
   tool: ToolDefinition;
@@ -46,6 +51,51 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
   const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [mergedResult, setMergedResult] = useState<{
+    blob: Blob;
+    fileName: string;
+    count: number;
+  } | null>(null);
+
+  // HTML5 Drag-and-drop reordering state
+  const [draggedFileIndex, setDraggedFileIndex] = useState<number | null>(null);
+  const [dragOverFileIndex, setDragOverFileIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedFileIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverFileIndex !== index) {
+      setDragOverFileIndex(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedFileIndex === null || draggedFileIndex === dropIndex) {
+      setDraggedFileIndex(null);
+      setDragOverFileIndex(null);
+      return;
+    }
+
+    const reordered = [...files];
+    const [movedItem] = reordered.splice(draggedFileIndex, 1);
+    reordered.splice(dropIndex, 0, movedItem);
+    setFiles(reordered);
+    setDraggedFileIndex(null);
+    setDragOverFileIndex(null);
+    toast.info("Updated file merge sequence");
+  };
+
+  const handleDragEnd = () => {
+    setDraggedFileIndex(null);
+    setDragOverFileIndex(null);
+  };
 
   
 
@@ -84,7 +134,9 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
       );
     } catch (err) {
       console.error("Error loading PDF pages:", err);
-      toast.error(`Could not read pages for ${file.name}`);
+      if (!handleEncryptedPdfToast(err, file.name)) {
+        toast.error(`Could not read pages for ${file.name}`);
+      }
       // Remove file if failed to load
       setFiles((prev) => prev.filter((f) => f.id !== id));
     } finally {
@@ -223,9 +275,17 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "merged.pdf";
+      a.download = "merged_document.pdf";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      setMergedResult({
+        blob,
+        fileName: "merged_document.pdf",
+        count: files.length,
+      });
 
       toast.success("Done! Your merged PDF is ready.");
     } catch (err) {
@@ -241,6 +301,25 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
   const activePagesCount = files.reduce((sum, f) => sum + f.pages.filter(p => !p.deleted).length, 0);
 
   const Icon = theme.icon;
+
+  if (mergedResult) {
+    return (
+      <div className="mx-auto max-w-4xl px-3 sm:px-4 py-6 sm:py-8">
+        <Toaster position="top-center" richColors />
+        <ProcessingSuccessView
+          tool={tool}
+          resultBlob={mergedResult.blob}
+          resultFileName={mergedResult.fileName}
+          itemCount={mergedResult.count}
+          customMessage={`Successfully merged ${mergedResult.count} PDF files into a single document.`}
+          onReset={() => {
+            setMergedResult(null);
+            setFiles([]);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -261,25 +340,21 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
           </p>
         </div>
       )}
-      <div className="flex flex-col gap-6">
-        {/* Back Navigation Bar */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-          {files.length > 0 && (
-            <button
-              onClick={() => setFiles([])}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              Clear All
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", files.length > 0 && "pb-20 md:pb-0")}>
+        {/* Top Navigation & Breadcrumb */}
+        <ToolTopNav
+          tool={tool}
+          action={
+            files.length > 0 ? (
+              <button
+                onClick={() => setFiles([])}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                Clear All
+              </button>
+            ) : null
+          }
+        />
 
         {/* Upload Box (Only when no files are uploaded) */}
         {files.length === 0 && (
@@ -313,11 +388,26 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
               {files.map((file, fileIdx) => (
                 <div
                   key={file.id}
-                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, fileIdx)}
+                  onDragOver={(e) => handleDragOver(e, fileIdx)}
+                  onDrop={(e) => handleDrop(e, fileIdx)}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    "rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-150 dark:border-zinc-800 dark:bg-zinc-950",
+                    draggedFileIndex === fileIdx && "opacity-40 scale-[0.98] border-dashed border-violet-500",
+                    dragOverFileIndex === fileIdx && "ring-2 ring-violet-500 border-violet-500 bg-violet-50/20 dark:bg-violet-950/20"
+                  )}
                 >
                   {/* File Header */}
                   <div className="mb-4 flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-900">
                     <div className="flex items-center gap-2">
+                      <div
+                        className="cursor-grab active:cursor-grabbing p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                        title="Drag to reorder merge sequence"
+                      >
+                        <GripVertical className="h-5 w-5" />
+                      </div>
                       <FileText className="h-5 w-5 text-zinc-500" />
                       <div>
                         <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
@@ -509,6 +599,20 @@ export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {files.length > 0 && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${files.length} file(s) · ${activePagesCount} total pages`}
+          actionLabel="Merge Now"
+          onAction={() => void handleMerge()}
+          loading={processing}
+          loadingLabel={statusMessage || "Merging..."}
+          icon={<RefreshCw className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
     </>
   );
 }

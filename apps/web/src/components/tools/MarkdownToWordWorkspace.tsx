@@ -54,6 +54,7 @@ import {
 } from "docx";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 
 interface MarkdownToWordWorkspaceProps {
@@ -64,10 +65,10 @@ const DEFAULT_MARKDOWN = `# Business Strategy & Technical Overview
 
 Welcome to the **Markdown to Word (.docx) Converter**! Convert your Markdown notes and documentation into beautifully formatted Microsoft Word documents.
 
-## 🎯 Executive Summary
+## Executive Summary
 Markdown enables fast and structured writing. This tool transforms raw markdown syntax into styled Word documents with proper heading hierarchies, tables, bullet points, and callouts.
 
-### 📊 Quarterly Milestones
+### Quarterly Milestones
 | Milestone | Target Quarter | Status | Priority |
 | :--- | :--- | :--- | :--- |
 | Core Architecture | Q1 2026 | **Completed** | High |
@@ -76,7 +77,7 @@ Markdown enables fast and structured writing. This tool transforms raw markdown 
 
 > "Excellence is not an act, but a habit." — Aristotle
 
-### 💻 Code Snippet
+### Code Snippet
 \`\`\`typescript
 interface Config {
   title: string;
@@ -85,7 +86,7 @@ interface Config {
 }
 \`\`\`
 
-### 📝 Next Action Items
+### Next Action Items
 - [x] Review document typography & margins
 - [x] Verify table borders & column alignment
 - [ ] Export final Microsoft Word (.docx) file
@@ -454,25 +455,20 @@ export function MarkdownToWordWorkspace({ tool }: MarkdownToWordWorkspaceProps) 
       <Toaster position="top-center" richColors />
 
       {/* Top Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/#text"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Text Tools
-        </Link>
-
-        {hasStarted && (
-          <button
+      <ToolTopNav
+        tool={tool}
+        action={
+          hasStarted ? (
+            <button
             onClick={handleReset}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             New Document
           </button>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       {/* Header (When on Start Screen) */}
       {!hasStarted && (

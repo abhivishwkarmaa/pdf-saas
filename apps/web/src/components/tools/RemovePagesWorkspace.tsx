@@ -16,12 +16,16 @@ import {
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { BatchActionsToolbar } from "@/components/tools/BatchActionsToolbar";
+import { ProcessingSuccessView } from "@/components/tools/ProcessingSuccessView";
+import { MobileStickyProcessBar } from "@/components/tools/MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
 
 interface RemovePagesWorkspaceProps {
   tool: ToolDefinition;
@@ -52,6 +56,10 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
   // Set of page numbers (1-based) to be REMOVED
   const [deletedPages, setDeletedPages] = useState<Set<number>>(new Set());
   const [pagesTextInput, setPagesTextInput] = useState<string>("");
+
+  // Result state for success view
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
   // Page zoom modal
   const [previewModalPage, setPreviewModalPage] = useState<number | null>(null);
@@ -109,7 +117,9 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
         }
       } catch (err) {
         console.error("Error reading PDF pages:", err);
-        toast.error("Could not load preview for this PDF file.");
+        if (!handleEncryptedPdfToast(err, file?.name)) {
+          toast.error("Could not load preview for this PDF file.");
+        }
       } finally {
         if (!isCancelled) {
           setLoadingPdf(false);
@@ -148,6 +158,8 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
     setTotalPages(0);
     setDeletedPages(new Set());
     setPagesTextInput("");
+    setResultBlob(null);
+    setResultFileName("");
   };
 
   // Helper: Format set of page numbers to range string (e.g. "1-3, 5")
@@ -230,6 +242,22 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
     setPagesTextInput("");
   };
 
+  const selectAllPagesToRemove = () => {
+    const all = new Set<number>();
+    for (let i = 1; i <= totalPages; i++) all.add(i);
+    setDeletedPages(all);
+    setPagesTextInput(formatPagesToString(all));
+  };
+
+  const invertDeletions = () => {
+    const next = new Set<number>();
+    for (let i = 1; i <= totalPages; i++) {
+      if (!deletedPages.has(i)) next.add(i);
+    }
+    setDeletedPages(next);
+    setPagesTextInput(formatPagesToString(next));
+  };
+
   // Remove pages and download resulting PDF
   const handleRemovePages = async () => {
     if (!file || totalPages === 0) return;
@@ -272,14 +300,19 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
       const baseName = file.name.replace(/\.[^/.]+$/, "");
       const downloadName = `${baseName}_pages_removed.pdf`;
 
+      setResultBlob(blob);
+      setResultFileName(downloadName);
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = downloadName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success(`Removed ${deletedPages.size} page(s) successfully!`);
+      toast.success(`Removed ${deletedPages.size} page(s) successfully.`);
     } catch (err) {
       console.error("Error removing pages:", err);
       toast.error(err instanceof Error ? err.message : "Failed to remove pages.");
@@ -291,6 +324,21 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
 
   const remainingCount = totalPages - deletedPages.size;
   const Icon = theme.icon;
+
+  if (resultBlob) {
+    return (
+      <ProcessingSuccessView
+        tool={tool}
+        resultBlob={resultBlob}
+        resultFileName={resultFileName}
+        originalFileName={file?.name}
+        originalSize={file?.size}
+        itemCount={remainingCount}
+        customMessage={`Successfully removed ${deletedPages.size} page(s). Document now has ${remainingCount} page(s).`}
+        onReset={handleReset}
+      />
+    );
+  }
 
   return (
     <>
@@ -313,26 +361,21 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Change PDF File
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", file && "pb-20 md:pb-0")}>
+        <ToolTopNav
+          tool={tool}
+          action={
+            file ? (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Change File
+              </button>
+            ) : null
+          }
+        />
 
         {!file && (
           <label className="upload-dropzone upload-dropzone-pdf w-full relative group cursor-pointer">
@@ -417,33 +460,20 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
                 </div>
               </div>
 
-              {/* Quick Actions Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50/70 p-3 text-xs dark:border-red-900/50 dark:bg-red-950/20">
-                <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-medium">
-                  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  <span>Click thumbnails to mark pages for removal</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    onClick={selectOddPages}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Delete Odd Pages
-                  </button>
-                  <button
-                    onClick={selectEvenPages}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Delete Even Pages
-                  </button>
-                  <button
-                    onClick={clearAllDeletions}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Reset (Keep All)
-                  </button>
-                </div>
-              </div>
+              {/* Batch Actions Toolbar */}
+              <BatchActionsToolbar
+                totalCount={totalPages}
+                selectedCount={deletedPages.size}
+                itemLabel="pages to remove"
+                onSelectAll={selectAllPagesToRemove}
+                onDeselectAll={clearAllDeletions}
+                onInvertSelection={invertDeletions}
+                customActions={[
+                  { label: "Delete Odd", onClick: selectOddPages, variant: "danger" },
+                  { label: "Delete Even", onClick: selectEvenPages, variant: "danger" },
+                ]}
+                sticky
+              />
 
               {/* Thumbnails Grid */}
               <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[400px] max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -645,6 +675,21 @@ export function RemovePagesWorkspace({ tool }: RemovePagesWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {file && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${deletedPages.size} marked to remove · ${remainingCount} keep`}
+          actionLabel="Remove"
+          onAction={() => void handleRemovePages()}
+          disabled={deletedPages.size === 0 || deletedPages.size >= totalPages}
+          loading={processing}
+          loadingLabel={statusMessage || "Removing..."}
+          icon={<Trash2 className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Page Zoom View */}
       {previewModalPage !== null && (

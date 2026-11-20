@@ -7,6 +7,7 @@ import {
   Music, ArrowRight, CheckCircle2, Zap, Shield, Clock
 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { BreadcrumbNav } from "@/components/navigation/BreadcrumbNav";
 
 const CATEGORY_META: Record<string, {
   icon: React.ElementType; color: string; bg: string; border: string;
@@ -96,11 +97,14 @@ export default async function CategoryPage({ params }: PageProps) {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(124,58,237,0.1),transparent)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-xs text-muted mb-6">
-            <Link href="/" className="hover:text-foreground transition">Home</Link>
-            <span>/</span>
-            <span className={meta.color}>{catInfo.label}</span>
-          </nav>
+          <BreadcrumbNav
+            items={[
+              { label: "Home", href: "/" },
+              { label: `${catInfo.label} Tools` },
+            ]}
+            showHomeIcon
+            className="mb-6"
+          />
 
           <div className="flex flex-col md:flex-row md:items-center gap-8">
             <div className="flex-1">

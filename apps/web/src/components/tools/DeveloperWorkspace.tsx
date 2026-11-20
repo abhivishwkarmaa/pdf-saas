@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast, Toaster } from "sonner";
 import {
@@ -43,7 +44,7 @@ interface DeveloperWorkspaceProps {
 // Sample presets for instant testing
 const SAMPLE_PRESETS: Record<string, { label: string; text: string }[]> = {
   "base64-encode": [
-    { label: "Hello World", text: "Hello, World! 🚀 Secure PDF SaaS Studio." },
+    { label: "Hello World", text: "Hello, World! Secure PDF SaaS Studio." },
     { label: "JSON Payload", text: '{"user":"admin","role":"superuser","active":true}' },
     { label: "Multi-line Text", text: "Line 1: Authentication Token\nLine 2: Client Secret\nLine 3: Public Key" },
   ],
@@ -99,7 +100,7 @@ export function DeveloperWorkspace({ tool }: DeveloperWorkspaceProps) {
     if (presets && presets.length > 0) {
       setInput(presets[0].text);
     } else {
-      setInput("Hello, World! 🚀");
+      setInput("Hello, World!");
     }
   }, [tool.slug]);
 
@@ -288,18 +289,11 @@ export function DeveloperWorkspace({ tool }: DeveloperWorkspaceProps) {
   return (
     <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-8 space-y-6">
       <Toaster position="top-center" richColors />
+      <ToolTopNav tool={tool} />
 
       {/* TOP HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/#developer"
-            className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Developer Tools
-          </Link>
-
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <Zap className="h-4 w-4" />

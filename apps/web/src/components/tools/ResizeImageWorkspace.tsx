@@ -7,7 +7,6 @@ import {
   Upload,
   X,
   Download,
-  Sparkles,
   ArrowLeft,
   RefreshCw,
   CheckCircle2,
@@ -30,6 +29,7 @@ import {
   Tv,
 } from "lucide-react";
 import Link from "next/link";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
 import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
@@ -352,25 +352,20 @@ export function ResizeImageWorkspace({ tool }: ResizeImageWorkspaceProps) {
       <Toaster position="top-center" richColors />
 
       {/* Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/#image"
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Image Tools
-        </Link>
-
-        {images.length > 0 && (
-          <button
+      <ToolTopNav
+        tool={tool}
+        action={
+          images.length > 0 ? (
+            <button
             onClick={handleReset}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Resize Other Images
           </button>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       {/* Header */}
       {images.length === 0 && (
@@ -379,7 +374,7 @@ export function ResizeImageWorkspace({ tool }: ResizeImageWorkspaceProps) {
             className={`mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${theme.accentBg} ${theme.accentBorder} ${theme.accent}`}
           >
             <Icon className="h-3.5 w-3.5" />
-            High-Precision Image Dimension Scaler
+            Image Utility
           </span>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {tool.name}
@@ -408,10 +403,10 @@ export function ResizeImageWorkspace({ tool }: ResizeImageWorkspaceProps) {
               Click or drag images here to resize
             </p>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Scale dimensions by exact pixels, percentage, or social media aspect ratios.
+              Scale dimensions by exact pixels, percentage, or presets.
             </p>
             <p className="mt-2 text-[11px] font-medium text-zinc-400">
-              Max {tool.maxFiles} images · Up to {tool.maxMb} MB each · 100% Private in Browser
+              Max {tool.maxFiles} images · Up to {tool.maxMb} MB each · Local client processing
             </p>
           </span>
         </label>

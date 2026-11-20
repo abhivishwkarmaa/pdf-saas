@@ -43,6 +43,7 @@ import {
   ArrowLeft,
   Layers as LayersIcon,
   Palette,
+  Image as ImageIcon,
   Maximize2,
   Copy,
   Move,
@@ -1184,8 +1185,8 @@ export function ImageEditorWorkspace({ tool }: { tool: ToolDefinition }) {
                 selectedId === layer.id ? "bg-violet-600/30 border border-violet-600/50 text-white" : "hover:bg-zinc-800 text-zinc-300 border border-transparent"
               }`}
             >
-              <span className="text-base leading-none shrink-0">
-                {layer.type === "image" ? "🖼️" : layer.type === "text" ? "T" : layer.type === "sticker" ? (layer as StickerLayer).emoji : "■"}
+              <span className="text-base leading-none shrink-0 flex items-center justify-center">
+                {layer.type === "image" ? <ImageIcon className="h-4 w-4 text-zinc-400" /> : layer.type === "text" ? "T" : layer.type === "sticker" ? (layer as StickerLayer).emoji : "■"}
               </span>
               <span className="flex-1 truncate font-medium">{layer.name}</span>
               <button onClick={e => { e.stopPropagation(); updateLayer(layer.id, { visible: !layer.visible }); }} className="text-zinc-500 hover:text-zinc-300 p-0.5">

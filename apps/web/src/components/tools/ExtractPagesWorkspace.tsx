@@ -23,6 +23,11 @@ import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
 import { usePdfJs } from "@/hooks/use-pdfjs";
+import { BatchActionsToolbar } from "@/components/tools/BatchActionsToolbar";
+import { ProcessingSuccessView } from "@/components/tools/ProcessingSuccessView";
+import { MobileStickyProcessBar } from "@/components/tools/MobileStickyProcessBar";
+import { ToolTopNav } from "@/components/navigation/BreadcrumbNav";
+import { handleEncryptedPdfToast } from "@/lib/pdf-security";
 
 interface ExtractPagesWorkspaceProps {
   tool: ToolDefinition;
@@ -54,6 +59,10 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set([1]));
   const [pagesTextInput, setPagesTextInput] = useState<string>("1");
   const [mergeIntoOne, setMergeIntoOne] = useState<boolean>(true);
+
+  // Result state for success view
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [resultFileName, setResultFileName] = useState<string>("");
 
   // Zoom modal & sizing
   const [previewModalPage, setPreviewModalPage] = useState<number | null>(null);
@@ -113,7 +122,9 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
         }
       } catch (err) {
         console.error("Error reading PDF pages:", err);
-        toast.error("Could not load preview for this PDF file.");
+        if (!handleEncryptedPdfToast(err, file?.name)) {
+          toast.error("Could not load preview for this PDF file.");
+        }
       } finally {
         if (!isCancelled) {
           setLoadingPdf(false);
@@ -152,6 +163,8 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
     setTotalPages(0);
     setSelectedPages(new Set([1]));
     setPagesTextInput("1");
+    setResultBlob(null);
+    setResultFileName("");
   };
 
   const formatPagesToString = (set: Set<number>): string => {
@@ -239,6 +252,15 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
     setPagesTextInput(formatPagesToString(even));
   };
 
+  const invertSelection = () => {
+    const next = new Set<number>();
+    for (let i = 1; i <= totalPages; i++) {
+      if (!selectedPages.has(i)) next.add(i);
+    }
+    setSelectedPages(next);
+    setPagesTextInput(formatPagesToString(next));
+  };
+
   const handleExtractPages = async () => {
     if (!file || totalPages === 0) return;
 
@@ -266,15 +288,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
 
         const pdfBytes = await newDoc.save();
         const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+        const downloadName = `${baseName}_extracted.pdf`;
+
+        setResultBlob(blob);
+        setResultFileName(downloadName);
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${baseName}_extracted.pdf`;
+        a.download = downloadName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success(`Successfully extracted ${sortedPages.length} page(s) into 1 PDF!`);
+        toast.success(`Extracted ${sortedPages.length} page(s) into 1 PDF`);
       } else {
         if (sortedPages.length === 1) {
           const pageNum = sortedPages[0];
@@ -284,15 +312,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
 
           const pdfBytes = await newDoc.save();
           const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+          const downloadName = `${baseName}_page_${pageNum}.pdf`;
+
+          setResultBlob(blob);
+          setResultFileName(downloadName);
 
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `${baseName}_page_${pageNum}.pdf`;
+          a.download = downloadName;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
 
-          toast.success(`Downloaded page ${pageNum}!`);
+          toast.success(`Extracted page ${pageNum}`);
         } else {
           setStatusMessage("Extracting individual pages into ZIP archive...");
           const zip = new JSZip();
@@ -310,14 +344,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
 
           setStatusMessage("Creating ZIP package...");
           const zipBlob = await zip.generateAsync({ type: "blob" });
+          const downloadName = `${baseName}_extracted_pages.zip`;
+
+          setResultBlob(zipBlob);
+          setResultFileName(downloadName);
+
           const url = URL.createObjectURL(zipBlob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `${baseName}_extracted_pages.zip`;
+          a.download = downloadName;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
 
-          toast.success(`Downloaded ${sortedPages.length} extracted pages in a ZIP archive!`);
+          toast.success(`Extracted ${sortedPages.length} pages in a ZIP archive`);
         }
       }
     } catch (err) {
@@ -330,6 +371,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
   };
 
   const Icon = theme.icon;
+
+  if (resultBlob) {
+    return (
+      <ProcessingSuccessView
+        tool={tool}
+        resultBlob={resultBlob}
+        resultFileName={resultFileName}
+        originalFileName={file?.name}
+        originalSize={file?.size}
+        itemCount={selectedPages.size}
+        customMessage={`Successfully extracted ${selectedPages.size} page(s).`}
+        onReset={handleReset}
+      />
+    );
+  }
 
   return (
     <>
@@ -352,26 +408,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/#pdf"
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to PDF Tools
-          </Link>
-
-          {file && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Change PDF File
-            </button>
-          )}
-        </div>
+      <div className={cn("flex flex-col gap-6", file && "pb-20 md:pb-0")}>
+        <ToolTopNav
+          tool={tool}
+          action={
+            file ? (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Change File
+              </button>
+            ) : null
+          }
+        />
 
         {!file && (
           <label className="upload-dropzone upload-dropzone-pdf w-full relative group cursor-pointer">
@@ -455,39 +506,20 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
                 </div>
               </div>
 
-              {/* Selection Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50/70 p-3 text-xs dark:border-red-900/50 dark:bg-red-950/20">
-                <div className="flex items-center gap-2 text-red-900 dark:text-red-200 font-medium">
-                  <CheckCircle2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  <span>Click thumbnails to select pages for extraction</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    onClick={selectAllPages}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={clearSelection}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Clear All
-                  </button>
-                  <button
-                    onClick={selectOddPages}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Odd Pages
-                  </button>
-                  <button
-                    onClick={selectEvenPages}
-                    className="rounded-md bg-white px-2.5 py-1 font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  >
-                    Even Pages
-                  </button>
-                </div>
-              </div>
+              {/* Batch Actions Toolbar */}
+              <BatchActionsToolbar
+                totalCount={totalPages}
+                selectedCount={selectedPages.size}
+                itemLabel="pages to extract"
+                onSelectAll={selectAllPages}
+                onDeselectAll={clearSelection}
+                onInvertSelection={invertSelection}
+                customActions={[
+                  { label: "Odd Pages", onClick: selectOddPages },
+                  { label: "Even Pages", onClick: selectEvenPages },
+                ]}
+                sticky
+              />
 
               {/* Thumbnails Grid */}
               <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 min-h-[400px] max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -690,6 +722,21 @@ export function ExtractPagesWorkspace({ tool }: ExtractPagesWorkspaceProps) {
           </div>
         )}
       </div>
+
+      {/* Mobile Sticky Bottom Process CTA */}
+      {file && (
+        <MobileStickyProcessBar
+          title={tool.name}
+          subtitle={`${selectedPages.size} pages selected to extract`}
+          actionLabel="Extract"
+          onAction={() => void handleExtractPages()}
+          disabled={selectedPages.size === 0}
+          loading={processing}
+          loadingLabel={statusMessage || "Extracting..."}
+          icon={<Layers className="h-3.5 w-3.5" />}
+          themeButtonClass={theme.button}
+        />
+      )}
 
       {/* Modal: Full Page Zoom View */}
       {previewModalPage !== null && (
