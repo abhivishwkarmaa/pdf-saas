@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { run, exists } from "../exec";
 import puppeteer, { Browser } from "puppeteer-core";
+import { validateSafeUrl, isSyntacticallySafeUrl } from "../url-guard";
 
 /**
  * CONVERSION PIPELINE DOCUMENTATION
@@ -156,11 +157,30 @@ export async function htmlToPdf(
     );
   }
 
+  if (url) {
+    const check = await validateSafeUrl(url);
+    if (!check.valid) {
+      throw new Error(`SSRF Blocked: ${check.error || "The requested URL is not permitted."}`);
+    }
+  }
+
   const browser = await getBrowser(browserPath);
   const page = await browser.newPage();
 
   try {
     if (url) {
+      // Enable request interception to prevent redirects and subresource fetches to private/internal IPs
+      await page.setRequestInterception(true);
+      page.on("request", (interceptedReq) => {
+        const reqUrl = interceptedReq.url();
+        const syntaxCheck = isSyntacticallySafeUrl(reqUrl);
+        if (!syntaxCheck.valid) {
+          interceptedReq.abort("blockedbyclient");
+          return;
+        }
+        interceptedReq.continue();
+      });
+
       await page.goto(url, {
         waitUntil: "networkidle0",
         timeout: 60000,

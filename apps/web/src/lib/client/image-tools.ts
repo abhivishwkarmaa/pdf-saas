@@ -150,3 +150,67 @@ export async function cropImage(
     );
   });
 }
+
+/**
+ * Encodes a Canvas element into an authentic 24-bit uncompressed Windows BMP file
+ * (with standard 54-byte BITMAPFILEHEADER + BITMAPINFOHEADER and 4-byte row padding).
+ * Eliminates the fake PNG-renamed-to-BMP fallback in standard browsers.
+ */
+export function encodeBmpFromCanvas(canvas: HTMLCanvasElement): Blob {
+  const width = canvas.width;
+  const height = canvas.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas context is not available");
+
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const rgba = imgData.data;
+
+  // In BMP, each scanline is padded to a multiple of 4 bytes
+  const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+  const pixelArraySize = rowSize * height;
+  const fileSize = 54 + pixelArraySize;
+  const buffer = new ArrayBuffer(fileSize);
+  const view = new DataView(buffer);
+
+  // BITMAPFILEHEADER (14 bytes)
+  view.setUint8(0, 0x42); // 'B'
+  view.setUint8(1, 0x4d); // 'M'
+  view.setUint32(2, fileSize, true); // Total file size
+  view.setUint16(6, 0, true); // Reserved 1
+  view.setUint16(8, 0, true); // Reserved 2
+  view.setUint32(10, 54, true); // Offset to pixel data
+
+  // BITMAPINFOHEADER (40 bytes)
+  view.setUint32(14, 40, true); // Header size (40)
+  view.setInt32(18, width, true); // Width
+  view.setInt32(22, height, true); // Height (positive for bottom-up DIB)
+  view.setUint16(26, 1, true); // Color planes (1)
+  view.setUint16(28, 24, true); // Bits per pixel (24-bit BGR)
+  view.setUint32(30, 0, true); // Compression: 0 = BI_RGB (uncompressed)
+  view.setUint32(34, pixelArraySize, true); // Image data size
+  view.setInt32(38, 2835, true); // Horizontal resolution (~72 DPI)
+  view.setInt32(42, 2835, true); // Vertical resolution (~72 DPI)
+  view.setUint32(46, 0, true); // Colors in color palette (0)
+  view.setUint32(50, 0, true); // Important colors (0)
+
+  const bytes = new Uint8Array(buffer);
+  let offset = 54;
+
+  // BMP stores pixel rows bottom-to-top in BGR format
+  for (let y = height - 1; y >= 0; y--) {
+    const rowStart = y * width * 4;
+    for (let x = 0; x < width; x++) {
+      const idx = rowStart + x * 4;
+      bytes[offset++] = rgba[idx + 2]; // Blue
+      bytes[offset++] = rgba[idx + 1]; // Green
+      bytes[offset++] = rgba[idx]; // Red
+    }
+    const padding = rowSize - width * 3;
+    for (let p = 0; p < padding; p++) {
+      bytes[offset++] = 0;
+    }
+  }
+
+  return new Blob([buffer], { type: "image/bmp" });
+}
+

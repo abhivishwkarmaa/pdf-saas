@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToolBySlug, resolveRuntime } from "@pdf-saas/shared";
 import { processOnServer } from "@/lib/server/process";
 import { validateFileSecurity } from "@/lib/file-security";
+import { validateSafeUrl } from "@/lib/server/url-guard";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -33,6 +34,16 @@ export async function POST(
     const files = formData.getAll("files").filter((f): f is File => f instanceof File);
     if (files.length === 0 && !options.url) {
       return NextResponse.json({ error: "No files or URL provided" }, { status: 400 });
+    }
+
+    if (options.url) {
+      const urlCheck = await validateSafeUrl(String(options.url));
+      if (!urlCheck.valid) {
+        return NextResponse.json(
+          { error: urlCheck.error || "Security Error: The provided URL is not permitted." },
+          { status: 400 }
+        );
+      }
     }
     if (files.length > tool.maxFiles) {
       return NextResponse.json({ error: `Too many files. Max allowed is ${tool.maxFiles}` }, { status: 400 });

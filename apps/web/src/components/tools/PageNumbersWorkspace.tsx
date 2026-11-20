@@ -30,6 +30,7 @@ import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface PageNumbersWorkspaceProps {
   tool: ToolDefinition;
@@ -100,7 +101,7 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
   };
 
   const [file, setFile] = useState<File | null>(null);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
@@ -129,22 +130,7 @@ export function PageNumbersWorkspace({ tool }: PageNumbersWorkspaceProps) {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultFileName, setResultFileName] = useState<string>("");
 
-  // PDF.js script loader
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Load PDF & render page preview
   useEffect(() => {

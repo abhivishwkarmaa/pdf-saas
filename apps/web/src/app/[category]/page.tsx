@@ -46,19 +46,30 @@ const CATEGORY_META: Record<string, {
 
 const SLUG_TO_CATEGORY: Record<string, ToolCategory> = {
   "pdf-tools": "pdf",
+  "pdf": "pdf",
   "image-tools": "image",
+  "image": "image",
   "text-tools": "text",
+  "text": "text",
   "developer-tools": "developer",
+  "developer": "developer",
   "calculators": "calculator",
+  "calculator": "calculator",
 };
 
-export async function generateStaticParams() {
-  return Object.keys(SLUG_TO_CATEGORY).map(slug => ({ slug }));
+interface PageProps {
+  params: Promise<{ category: string }>;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const cat = SLUG_TO_CATEGORY[slug];
+export async function generateStaticParams() {
+  return Object.keys(SLUG_TO_CATEGORY).map((category) => ({ category }));
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { category: catParam } = await params;
+  const cat = SLUG_TO_CATEGORY[catParam];
   if (!cat) return { title: "Not Found" };
   const info = TOOL_CATEGORIES[cat];
   return {
@@ -67,9 +78,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const category = SLUG_TO_CATEGORY[slug];
+export default async function CategoryPage({ params }: PageProps) {
+  const { category: catParam } = await params;
+  const category = SLUG_TO_CATEGORY[catParam];
   if (!category) return notFound();
 
   const meta = CATEGORY_META[category];
@@ -78,15 +89,15 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const Icon = meta.icon;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
-      <div className="relative border-b border-zinc-800 overflow-hidden">
+      <div className="relative border-b border-border overflow-hidden bg-gradient-to-b from-card to-background">
         <div className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-5`} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(124,58,237,0.15),transparent)]" />
-        <div className="relative mx-auto max-w-6xl px-4 py-20">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(124,58,237,0.1),transparent)]" />
+        <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-xs text-zinc-500 mb-6">
-            <Link href="/" className="hover:text-zinc-300 transition">Home</Link>
+          <nav className="flex items-center gap-2 text-xs text-muted mb-6">
+            <Link href="/" className="hover:text-foreground transition">Home</Link>
             <span>/</span>
             <span className={meta.color}>{catInfo.label}</span>
           </nav>
@@ -97,29 +108,29 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                 <Icon className="h-4 w-4" />
                 {tools.length} Free Tools
               </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-zinc-900 dark:text-white">
                 {catInfo.label}
               </h1>
-              <p className="text-zinc-400 text-lg mb-6 max-w-xl">{meta.heroDesc}</p>
+              <p className="text-zinc-600 dark:text-zinc-400 text-lg mb-6 max-w-xl">{meta.heroDesc}</p>
               <div className="flex flex-wrap gap-3">
                 {meta.features.map(f => (
-                  <div key={f} className="flex items-center gap-1.5 text-sm text-zinc-400">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <div key={f} className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     {f}
                   </div>
                 ))}
               </div>
             </div>
-            <div className={`flex h-32 w-32 shrink-0 items-center justify-center rounded-3xl ${meta.bg} border ${meta.border} shadow-2xl`}>
-              <Icon className={`h-16 w-16 ${meta.color}`} />
+            <div className={`flex h-28 w-28 sm:h-32 sm:w-32 shrink-0 items-center justify-center rounded-3xl ${meta.bg} border ${meta.border} shadow-xl`}>
+              <Icon className={`h-14 w-14 sm:h-16 sm:w-16 ${meta.color}`} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Trust strip */}
-      <div className="border-b border-zinc-800/50 bg-zinc-900/40">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap gap-6 items-center justify-center md:justify-start text-xs text-zinc-500">
+      <div className="border-b border-border/50 bg-card/60">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap gap-6 items-center justify-center md:justify-start text-xs text-muted">
           {[
             { icon: Shield, text: "Encrypted & Secure" },
             { icon: Clock, text: "Auto-deleted in 1hr" },
@@ -127,7 +138,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             { icon: CheckCircle2, text: "No watermark, No signup" },
           ].map(({ icon: I, text }) => (
             <span key={text} className="flex items-center gap-1.5">
-              <I className="h-3.5 w-3.5 text-emerald-400" />
+              <I className="h-3.5 w-3.5 text-emerald-500" />
               {text}
             </span>
           ))}
@@ -136,23 +147,34 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
       {/* Tools Grid */}
       <div className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="text-xl font-bold text-white mb-6">
-          All {catInfo.label} <span className="text-zinc-500 font-normal text-base ml-1">({tools.length} tools)</span>
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">
+          All {catInfo.label} <span className="text-muted font-normal text-base ml-1">({tools.length} tools)</span>
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {tools.map((tool) => (
             <Link
               key={tool.slug}
               href={`/tools/${tool.slug}`}
-              className="group rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-600 hover:bg-zinc-900 p-5 transition-all duration-200 hover:shadow-xl hover:shadow-black/30 hover:-translate-y-0.5"
+              className="group rounded-2xl border border-border bg-card hover:border-zinc-400 dark:hover:border-zinc-600 p-5 transition-all duration-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5"
             >
-              <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${meta.bg} border ${meta.border} group-hover:scale-110 transition-transform`}>
-                <Icon className={`h-5 w-5 ${meta.color}`} />
+              <div className="flex items-center justify-between mb-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${meta.bg} border ${meta.border} group-hover:scale-105 transition-transform`}>
+                  <Icon className={`h-5 w-5 ${meta.color}`} />
+                </div>
+                {tool.popular && (
+                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Popular
+                  </span>
+                )}
               </div>
-              <h3 className="font-semibold text-white mb-1 text-sm">{tool.name}</h3>
-              <p className="text-xs text-zinc-500 leading-snug mb-3">{tool.description}</p>
-              <div className="flex items-center gap-1 text-xs text-violet-400 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                Open tool <ArrowRight className="h-3 w-3" />
+              <h3 className="font-semibold text-zinc-900 dark:text-white mb-1 text-sm group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                {tool.name}
+              </h3>
+              <p className="text-xs text-muted leading-snug mb-3 line-clamp-2">
+                {tool.description}
+              </p>
+              <div className="flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-violet-400 pt-2 border-t border-border/40">
+                Open tool <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
               </div>
             </Link>
           ))}

@@ -123,6 +123,34 @@ export async function processOnServer(
       const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
       return { buffer: out, mimeType: "image/jpeg", fileName: `${baseName}.jpg` };
     }
+    case "jpg-to-image": {
+      const format = String(options.format || "avif").toLowerCase();
+      const quality = Number(options.quality ?? 85);
+      let img = sharp(buffers[0]);
+      let mimeType = "image/jpeg";
+      let ext = "jpg";
+
+      if (format === "avif") {
+        img = img.avif({ quality });
+        mimeType = "image/avif";
+        ext = "avif";
+      } else if (format === "webp") {
+        img = img.webp({ quality });
+        mimeType = "image/webp";
+        ext = "webp";
+      } else if (format === "png") {
+        img = img.png();
+        mimeType = "image/png";
+        ext = "png";
+      } else {
+        img = img.jpeg({ quality });
+        mimeType = "image/jpeg";
+        ext = "jpg";
+      }
+      const out = await img.toBuffer();
+      const baseName = originalFileName ? getBaseName(originalFileName) : "converted";
+      return { buffer: out, mimeType, fileName: `${baseName}.${ext}` };
+    }
     case "compare-pdf": {
       const { report, mimeType } = await comparePdfs(buffers[0], buffers[1], options);
       return { buffer: report, mimeType: mimeType || "application/pdf", fileName: "comparison.pdf" };

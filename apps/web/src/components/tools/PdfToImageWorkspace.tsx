@@ -25,6 +25,7 @@ import Link from "next/link";
 import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface PdfToImageWorkspaceProps {
   tool: ToolDefinition;
@@ -76,23 +77,7 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
   // Zoom modal & sizing
   const [previewModalPage, setPreviewModalPage] = useState<number | null>(null);
   const [thumbSize, setThumbSize] = useState<"sm" | "md" | "lg">("md");
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  const pdfjsLoaded = usePdfJs();
 
   // Load PDF and render thumbnails
   useEffect(() => {
@@ -340,7 +325,9 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = decodeURIComponent(downloadName);
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
         toast.success("Successfully extracted embedded images!");
@@ -427,7 +414,9 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = single.name;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success(`Downloaded ${single.name}!`);
       } else {
@@ -441,7 +430,9 @@ export function PdfToImageWorkspace({ tool }: PdfToImageWorkspaceProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = `${baseName}_${format.toUpperCase()}_images.zip`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success(
           `Successfully converted & downloaded ${convertedImages.length} images as ZIP!`

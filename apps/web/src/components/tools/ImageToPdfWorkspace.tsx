@@ -371,7 +371,9 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = downloadName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
         toast.success(`Successfully converted ${images.length} images into PDF!`);
@@ -433,7 +435,9 @@ export function ImageToPdfWorkspace({ tool }: ImageToPdfWorkspaceProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = "converted_pdfs.zip";
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
         toast.success(`Downloaded ${images.length} converted PDFs in a ZIP archive!`);

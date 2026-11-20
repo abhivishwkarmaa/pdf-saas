@@ -30,6 +30,7 @@ import {
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface OcrPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -65,7 +66,7 @@ export function OcrPdfWorkspace({ tool }: OcrPdfWorkspaceProps) {
   };
 
   const [file, setFile] = useState<File | null>(null);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -89,22 +90,7 @@ export function OcrPdfWorkspace({ tool }: OcrPdfWorkspaceProps) {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultFileName, setResultFileName] = useState<string>("");
 
-  // PDFJS library injector
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Render PDF pages on file change
   useEffect(() => {

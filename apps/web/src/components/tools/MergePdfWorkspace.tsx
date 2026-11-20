@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface MergePdfWorkspaceProps {
   tool: ToolDefinition;
@@ -41,27 +42,12 @@ interface MergeFile {
 export function MergePdfWorkspace({ tool }: MergePdfWorkspaceProps) {
   const theme = CATEGORY_THEME[tool.category];
   const [files, setFiles] = useState<MergeFile[]>([]);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  // Dynamic PDFJS injection
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   const loadFilePages = async (id: string, file: File) => {
     setLoadingFiles((prev) => ({ ...prev, [id]: true }));

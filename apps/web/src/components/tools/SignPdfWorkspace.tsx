@@ -36,6 +36,7 @@ import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface SignPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -55,7 +56,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
   };
 
   const [file, setFile] = useState<File | null>(null);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
 
@@ -105,34 +106,7 @@ export function SignPdfWorkspace({ tool }: SignPdfWorkspaceProps) {
     sig: { pageIndex: 0, xPercent: 0, yPercent: 0, widthPercent: 0, heightPercent: 0, signatureDataUrl: "" },
   });
 
-  // Google Fonts dynamic injection
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Alex+Brush&family=Caveat:wght@400;700&family=Dancing+Script:wght@600&family=Great+Vibes&family=Monsieur+La+Doulaise&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
-  // PDF.js script loader
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Load PDF on file change
   useEffect(() => {

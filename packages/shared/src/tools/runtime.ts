@@ -27,6 +27,7 @@ export const SERVER_TOOL_SLUGS = new Set<string>([
   "svg-to-png",
   "svg-to-jpg",
   "avif-to-jpg",
+  "jpg-to-image",
   "pdf-to-jpg",
   "pdf-to-png",
   "pdf-to-text",

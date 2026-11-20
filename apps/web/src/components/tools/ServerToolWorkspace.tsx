@@ -88,42 +88,23 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
 
       const xhr = new XMLHttpRequest();
       
-      let progressInterval: NodeJS.Timeout | null = null;
       const responsePromise = new Promise<{ blob: Blob; fileName: string }>((resolve, reject) => {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
             const percent = Math.round((event.loaded / event.total) * 100);
-            setStatusMessage(`Uploading... ${percent}%`);
+            if (percent < 100) {
+              setStatusMessage(`Uploading... ${percent}%`);
+            } else {
+              setStatusMessage("Upload complete. Processing on server...");
+            }
           }
         });
 
         xhr.upload.addEventListener("load", () => {
-          setStatusMessage("Analyzing document... 0%");
-          let percent = 0;
-          progressInterval = setInterval(() => {
-            if (percent < 95) {
-              percent += Math.floor(Math.random() * 3) + 1; // Increment by 1-3%
-              if (percent > 95) percent = 95;
-              
-              if (percent < 25) {
-                setStatusMessage(`Analyzing document... ${percent}%`);
-              } else if (percent < 80) {
-                setStatusMessage(`Converting layout & assets... ${percent}%`);
-              } else {
-                setStatusMessage(`Finalizing output... ${percent}%`);
-              }
-            }
-          }, 350);
+          setStatusMessage("Converting document on server... Please wait");
         });
 
-        const cleanup = () => {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
-        };
-
         xhr.addEventListener("load", async () => {
-          cleanup();
           if (xhr.status >= 200 && xhr.status < 300) {
             const blob = xhr.response as Blob;
             const disposition = xhr.getResponseHeader("Content-Disposition");
@@ -143,12 +124,10 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
         });
 
         xhr.addEventListener("error", () => {
-          cleanup();
-          reject(new Error("Network error occurred"));
+          reject(new Error("Network error occurred during processing"));
         });
 
         xhr.addEventListener("abort", () => {
-          cleanup();
           reject(new Error("Processing aborted"));
         });
 
@@ -159,15 +138,17 @@ export function ServerToolWorkspace({ tool }: ServerToolWorkspaceProps) {
 
       const { blob, fileName } = await responsePromise;
       
-      setStatusMessage("Downloading...");
+      setStatusMessage("Starting download...");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = decodeURIComponent(fileName);
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success("Done! Your file is ready.");
+      toast.success("Done! Your file has been processed successfully.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {

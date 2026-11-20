@@ -30,6 +30,7 @@ import {
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface ComparePdfWorkspaceProps {
   tool: ToolDefinition;
@@ -52,7 +53,7 @@ export function ComparePdfWorkspace({ tool }: ComparePdfWorkspaceProps) {
   };
 
   const [files, setFiles] = useState<File[]>([]);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -76,22 +77,7 @@ export function ComparePdfWorkspace({ tool }: ComparePdfWorkspaceProps) {
   const [similarityScore, setSimilarityScore] = useState<number>(100);
   const [stats, setStats] = useState({ added: 0, removed: 0, unchanged: 0 });
 
-  // PDFJS library injector
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Compute text diff between two strings
   const computeSimpleDiff = (textA: string, textB: string) => {

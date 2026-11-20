@@ -16,32 +16,38 @@ import { TOOLS, type ToolCategory } from "@pdf-saas/shared";
 const NAV_ITEMS = [
   {
     label: "PDF",
-    href: "/#pdf",
+    href: "/pdf-tools",
     icon: FileText,
     color: "text-rose-400",
     tools: TOOLS.filter(t => t.category === "pdf" && t.enabled).slice(0, 8),
   },
   {
     label: "Image",
-    href: "/#image",
+    href: "/image-tools",
     icon: Image,
     color: "text-sky-400",
     tools: TOOLS.filter(t => t.category === "image" && t.enabled).slice(0, 8),
   },
   {
     label: "Text",
-    href: "/#text",
+    href: "/text-tools",
     icon: Type,
     color: "text-emerald-400",
     tools: TOOLS.filter(t => t.category === "text" && t.enabled).slice(0, 8),
   },
-
   {
     label: "Dev",
-    href: "/#developer",
+    href: "/developer-tools",
     icon: Code2,
     color: "text-cyan-400",
     tools: TOOLS.filter(t => t.category === "developer" && t.enabled).slice(0, 8),
+  },
+  {
+    label: "Calculators",
+    href: "/calculators",
+    icon: Calculator,
+    color: "text-orange-400",
+    tools: TOOLS.filter(t => t.category === "calculator" && t.enabled).slice(0, 8),
   },
 ];
 

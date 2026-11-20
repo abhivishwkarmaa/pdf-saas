@@ -30,6 +30,7 @@ import Link from "next/link";
 import JSZip from "jszip";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { encodeBmpFromCanvas } from "@/lib/client/image-tools";
 
 interface JpgToImageWorkspaceProps {
   tool: ToolDefinition;
@@ -118,7 +119,7 @@ export function JpgToImageWorkspace({ tool }: JpgToImageWorkspaceProps) {
     setIsConverted(false);
   };
 
-  // Convert single JPG to target format using canvas
+  // Convert single JPG to target format using high-fidelity encoding
   const convertSingleJpg = (
     item: ConvertItem,
     ext: "png" | "webp" | "bmp" | "gif" | "avif",
@@ -138,29 +139,66 @@ export function JpgToImageWorkspace({ tool }: JpgToImageWorkspaceProps) {
 
         ctx.drawImage(img, 0, 0);
 
+        // 1. True BMP: Authentic uncompressed 24-bit Windows BMP with 54-byte binary header
+        if (ext === "bmp") {
+          try {
+            const bmpBlob = encodeBmpFromCanvas(canvas);
+            resolve(bmpBlob);
+          } catch (bmpErr) {
+            reject(bmpErr);
+          }
+          return;
+        }
+
+        // 2. AVIF: Attempt native client canvas encoding; if unsupported, route through Sharp
+        if (ext === "avif") {
+          canvas.toBlob(
+            async (blob) => {
+              if (blob && blob.type === "image/avif") {
+                resolve(blob);
+                return;
+              }
+              // Seamless server-side Sharp AVIF fallback for Firefox, Safari & legacy browsers
+              try {
+                const formData = new FormData();
+                formData.append("files", item.file);
+                formData.append(
+                  "options",
+                  JSON.stringify({ format: "avif", quality: qualityPercent })
+                );
+                const res = await fetch("/api/process/jpg-to-image", {
+                  method: "POST",
+                  body: formData,
+                });
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  throw new Error(errData.error || "AVIF conversion failed on server");
+                }
+                const avifBlob = await res.blob();
+                resolve(avifBlob);
+              } catch (serverErr) {
+                reject(serverErr);
+              }
+            },
+            "image/avif",
+            qualityPercent / 100
+          );
+          return;
+        }
+
+        // 3. PNG, WebP, GIF standard canvas encoding
         let mimeType = "image/png";
         if (ext === "webp") mimeType = "image/webp";
         else if (ext === "png") mimeType = "image/png";
-        else if (ext === "bmp") mimeType = "image/bmp";
         else if (ext === "gif") mimeType = "image/gif";
-        else if (ext === "avif") mimeType = "image/avif";
 
         canvas.toBlob(
           (blob) => {
             if (blob) resolve(blob);
-            else {
-              // Fallback to PNG if browser doesn't natively encode AVIF/BMP
-              canvas.toBlob(
-                (fallbackBlob) => {
-                  if (fallbackBlob) resolve(fallbackBlob);
-                  else reject(new Error("Format conversion failed"));
-                },
-                "image/png"
-              );
-            }
+            else reject(new Error(`Failed to convert image to ${ext.toUpperCase()}`));
           },
           mimeType,
-          ext === "webp" || ext === "avif" ? qualityPercent / 100 : undefined
+          ext === "webp" ? qualityPercent / 100 : undefined
         );
       };
       img.onerror = () => reject(new Error("Failed to load JPG image"));

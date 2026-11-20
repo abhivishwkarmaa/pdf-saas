@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Twitter,
   Linkedin,
@@ -46,29 +47,27 @@ const FOOTER_LINKS = {
     { label: "OCR PDF", href: "/tools/ocr-pdf" },
   ],
   "Image Tools": [
-    { label: "Image Converter", href: "/tools/jpg-to-png" },
+    { label: "Image to PDF", href: "/tools/jpg-to-pdf" },
     { label: "Image Compressor", href: "/tools/compress-image" },
-    { label: "Background Remover", href: "/tools/image-editor" },
-    { label: "Image Editor", href: "/tools/image-editor" },
     { label: "Resize Image", href: "/tools/resize-image" },
     { label: "Crop Image", href: "/tools/crop-image" },
-    { label: "AI Image Enhancer", href: "/tools/image-editor" },
-    { label: "Image to PDF", href: "/tools/jpg-to-pdf" },
+    { label: "Rotate Image", href: "/tools/rotate-image" },
+    { label: "JPG to PNG", href: "/tools/jpg-to-png" },
+    { label: "PNG to JPG", href: "/tools/png-to-jpg" },
+    { label: "Image Editor", href: "/tools/image-editor" },
   ],
 
   Company: [
     { label: "About Us", href: "/about" },
-    { label: "Careers", href: "/careers" },
-    { label: "Blog", href: "/blog" },
-    { label: "Press Kit", href: "/press" },
-    { label: "Contact", href: "/contact" },
+    { label: "All Tools", href: "/tools" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "System Status", href: "/status" },
   ],
   Support: [
-    { label: "Help Center", href: "/faq" },
-    { label: "FAQ", href: "/faq" },
-    { label: "Report Issue", href: "/contact" },
-    { label: "Community", href: "/contact" },
-    { label: "Status Page", href: "/status" },
+    { label: "Help & FAQ", href: "/faq" },
+    { label: "Report an Issue", href: "/contact" },
+    { label: "Suggest a Tool", href: "/contact" },
+    { label: "Platform Status", href: "/status" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },
@@ -106,8 +105,6 @@ const SOCIALS = [
   { icon: Youtube, label: "YouTube", href: "https://youtube.com", color: "hover:text-red-400" },
   { icon: MessageCircle, label: "Discord", href: "https://discord.com", color: "hover:text-indigo-400" },
 ];
-
-import { usePathname } from "next/navigation";
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -196,7 +193,7 @@ export function Footer() {
               </span>
             </a>
             <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mb-5">
-              The all-in-one file conversion platform. 70+ free tools for PDF, images, text, and developer utilities. 
+              The all-in-one file conversion platform. 70+ free tools for PDF, images, text, and developer utilities.
               No signup. No watermark. Privacy first.
             </p>
             {/* Socials */}
@@ -298,11 +295,10 @@ export function Footer() {
                         href={href}
                         onMouseEnter={() => setHoveredLink(`${section}-${label}`)}
                         onMouseLeave={() => setHoveredLink(null)}
-                        className={`text-sm transition-all duration-150 flex items-center gap-1 group ${
-                          hoveredLink === `${section}-${label}`
+                        className={`text-sm transition-all duration-150 flex items-center gap-1 group ${hoveredLink === `${section}-${label}`
                             ? "text-white"
                             : "text-zinc-500 hover:text-zinc-200"
-                        }`}
+                          }`}
                       >
                         <span className="group-hover:translate-x-0.5 transition-transform duration-150">
                           {label}

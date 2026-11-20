@@ -35,6 +35,7 @@ import Link from "next/link";
 import * as pdf from "@/lib/client/pdf-tools";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface RedactPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -64,7 +65,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
   };
 
   const [file, setFile] = useState<File | null>(null);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
 
@@ -109,22 +110,7 @@ export function RedactPdfWorkspace({ tool }: RedactPdfWorkspaceProps) {
     region: { id: "", pageIndex: 0, xPercent: 0, yPercent: 0, widthPercent: 0, heightPercent: 0, type: "custom" },
   });
 
-  // PDF.js script loader
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Initialize PDF & render first page
   useEffect(() => {

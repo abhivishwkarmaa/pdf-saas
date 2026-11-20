@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { CATEGORY_THEME } from "@/lib/category-theme";
 import { cn } from "@/lib/utils";
+import { usePdfJs } from "@/hooks/use-pdfjs";
 
 interface RepairPdfWorkspaceProps {
   tool: ToolDefinition;
@@ -99,23 +100,9 @@ export function RepairPdfWorkspace({ tool }: RepairPdfWorkspaceProps) {
   // Zoom modal & thumb size
   const [previewModalPage, setPreviewModalPage] = useState<number | null>(null);
   const [thumbSize, setThumbSize] = useState<"sm" | "md" | "lg">("md");
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
+  const pdfjsLoaded = usePdfJs();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if ((window as any).pdfjsLib) {
-      setPdfjsLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.onload = () => {
-      (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      setPdfjsLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
+  
 
   // Load PDF and attempt preview rendering
   useEffect(() => {

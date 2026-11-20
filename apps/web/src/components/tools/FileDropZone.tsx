@@ -1,6 +1,7 @@
 "use client";
 
-import { Upload, X, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import { Upload, X, ShieldAlert, CloudUpload } from "lucide-react";
 import type { ToolDefinition } from "@pdf-saas/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,8 @@ function formatBytes(bytes: number): string {
 }
 
 export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
   const removeFile = (index: number) => {
     onFiles(files.filter((_, i) => i !== index));
   };
@@ -49,26 +52,42 @@ export function FileDropZone({ tool, files, onFiles }: FileDropZoneProps) {
 
   return (
     <label
-      className={cn("upload-dropzone w-full cursor-pointer", `upload-dropzone-${tool.category}`)}
+      className={cn(
+        "upload-dropzone w-full cursor-pointer transition-all duration-200",
+        `upload-dropzone-${tool.category}`,
+        isDragging && "ring-4 ring-violet-500/30 border-violet-500 bg-violet-50/50 dark:bg-violet-950/20 scale-[1.01]"
+      )}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!isDragging) setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
       }}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDragging(false);
         const dropped = Array.from(e.dataTransfer.files ?? []);
         if (dropped.length > 0) {
           void handleFileSelection(dropped);
         }
       }}
     >
-      <span className="upload-icon-container">
-        <Upload />
+      <span className="upload-icon-container transition-transform duration-200">
+        <Upload className={cn(isDragging && "animate-bounce text-violet-600 dark:text-violet-400")} />
       </span>
       <span className="text-center">
         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-          Click to upload or drag files here
+          {isDragging ? "Drop your files here!" : "Click to upload or drag files here"}
         </p>
         <p className="mt-1 text-xs text-zinc-500">
           {tool.maxFiles > 1 ? `Up to ${tool.maxFiles} files` : "Single file"} · max{" "}
