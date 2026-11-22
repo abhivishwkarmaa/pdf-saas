@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ["@pdf-saas/shared"],
   serverExternalPackages: ["sharp"],
+  async redirects() {
+    return [
+      {
+        source: "/calculator-tools",
+        destination: "/calculators",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -53,9 +53,12 @@ const SLUG_TO_CATEGORY: Record<string, ToolCategory> = {
   "text-tools": "text",
   "text": "text",
   "developer-tools": "developer",
+  "dev-tools": "developer",
   "developer": "developer",
+  "dev": "developer",
   "calculators": "calculator",
   "calculator": "calculator",
+  "calculator-tools": "calculator",
 };
 
 interface PageProps {
@@ -100,7 +103,7 @@ export default async function CategoryPage({ params }: PageProps) {
           <BreadcrumbNav
             items={[
               { label: "Home", href: "/" },
-              { label: `${catInfo.label} Tools` },
+              { label: catInfo.label },
             ]}
             showHomeIcon
             className="mb-6"

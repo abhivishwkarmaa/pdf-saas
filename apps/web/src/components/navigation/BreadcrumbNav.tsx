@@ -88,9 +88,11 @@ export interface ToolTopNavProps {
 
 export function ToolTopNav({ tool, action, className }: ToolTopNavProps) {
   const categoryMeta = TOOL_CATEGORIES[tool.category];
+  const categoryHref =
+    tool.category === "calculator" ? "/calculators" : `/${tool.category}-tools`;
   const breadcrumbItems = [
     { label: "Home", href: "/" },
-    { label: `${categoryMeta.label} Tools`, href: `/${tool.category}-tools` },
+    { label: categoryMeta.label, href: categoryHref },
     { label: tool.name },
   ];
 
